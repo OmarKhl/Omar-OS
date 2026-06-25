@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Omar OS</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:       #0a0a0a;
+      --bg2:      #0d0d0d;
+      --bg3:      #141414;
+      --border:   #1a1a1a;
+      --border2:  #222;
+      --gold:     #c8a84b;
+      --gold-dim: #8a7234;
+      --text:     #e8e6e0;
+      --muted:    #5a5a5a;
+      --muted2:   #3d3d3d;
+      --green:    #2ea44f;
+      --red:      #e05252;
+      --blue:     #4a7cbb;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── TOP NAV ── */
+    nav {
+      display: flex;
+      align-items: center;
+      height: 58px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      flex-shrink: 0;
+      gap: 32px;
+    }
+    .nav-brand {
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+    .nav-brand span { color: var(--gold); }
+    .nav-tabs { display: flex; gap: 4px; flex: 1; }
+    .nav-tab {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      cursor: pointer;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      transition: color .15s, background .15s;
+      position: relative;
+    }
+    .nav-tab:hover { color: var(--text); background: var(--bg3); }
+    .nav-tab.active { color: var(--gold); }
+    .nav-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -14px;
+      left: 0; right: 0;
+      height: 2px;
+      background: var(--gold);
+    }
+    .nav-right { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+    .tg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    .tg-label { font-size: 11px; color: var(--muted); letter-spacing: .06em; }
+    .nav-time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .nav-avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--bg3); border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-family: monospace; font-size: 11px; color: var(--gold);
+    }
+
+    /* ── LAYOUT ── */
+    .app { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── PAGES ── */
+    .page { display: none; flex: 1; overflow: hidden; }
+    .page.active { display: flex; }
+
+    /* ── FINANCE PAGE ── */
+    #page-finance { flex-direction: row; }
+    .finance-main {
+      flex: 1; overflow-y: auto; padding: 28px 32px;
+      border-right: 1px solid var(--border);
+    }
+    .finance-sidebar { width: 240px; overflow-y: auto; padding: 24px 20px; flex-shrink: 0; }
+
+    .section-label {
+      font-size: 10px; letter-spacing: .12em; color: var(--muted);
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+    .big-value { font-size: 40px; font-weight: 500; color: var(--text); line-height: 1.1; }
+    .delta-green { font-size: 12px; color: var(--green); }
+    .delta-red   { font-size: 12px; color: var(--red); }
+
+    .stat-cards { display: flex; gap: 12px; margin: 24px 0; }
+    .stat-card {
+      flex: 1; padding: 14px 16px;
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: 6px;
+    }
+    .stat-card .label { font-size: 10px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }
+    .stat-card .val   { font-size: 22px; font-weight: 500; }
+    .stat-card .sub   { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    .chart-wrap { height: 120px; margin: 8px 0 28px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      font-size: 10px; color: var(--muted); letter-spacing: .1em;
+      text-transform: uppercase; text-align: left;
+      padding: 0 0 10px; border-bottom: 1px solid var(--border);
+    }
+    thead th:last-child { text-align: right; }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td { padding: 11px 0; font-size: 13px; }
+    tbody td:last-child { text-align: right; }
+    .ticker-sym { font-weight: 600; color: var(--gold); font-size: 13px; }
+    .ticker-name { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .alloc-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 20px 0 8px; gap: 2px; }
+    .alloc-seg { height: 100%; border-radius: 2px; }
+    .alloc-legend { display: flex; gap: 16px; }
+    .alloc-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .alloc-item { font-size: 11px; color: var(--muted); }
+
+    /* sidebar */
+    .sidebar-section { margin-bottom: 28px; }
+    .sidebar-kv { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+    .sidebar-kv .k { font-size: 12px; color: var(--muted); }
+    .sidebar-kv .v { font-size: 13px; font-weight: 500; }
+    .sidebar-kv .sub { font-size: 10px; color: var(--muted); }
+    .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    .sidebar-total { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+    /* ── TASKS PAGE ── */
+    #page-tasks { flex-direction: column; padding: 28px 32px; overflow-y: auto; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .page-title { font-size: 28px; font-weight: 500; }
+    .btn-add {
+      padding: 8px 16px; background: var(--gold); color: #000;
+      border: none; border-radius: 5px; font-size: 12px; font-weight: 600;
+      cursor: pointer; letter-spacing: .04em;
+    }
+    .btn-add:hover { background: #d4b05a; }
+    .filter-row { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .filter-btn {
+      padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 500;
+      border: 1px solid var(--border2); background: transparent; color: var(--muted);
+      cursor: pointer; letter-spacing: .05em; transition: all .15s;
+    }
+    .filter-btn.active, .filter-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .tasks-grid { display: flex; flex-direction: column; gap: 8px; }
+    .task-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 6px;
+      transition: border-color .15s;
+    }
+    .task-row:hover { border-color: var(--border2); }
+    .task-row.done { opacity: .45; }
+    .task-check {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 1.5px solid var(--border2); background: transparent;
+      cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .task-check.checked { background: var(--green); border-color: var(--green); }
+    .task-check.checked::after { content: '✓'; color: #fff; font-size: 10px; }
+    .task-text { flex: 1; font-size: 13px; }
+    .task-meta { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .badge {
+      padding: 3px 8px; border-radius: 3px; font-size: 10px;
+      font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    }
+    .badge-high     { background: #2a0e0e; color: #e05252; border: 1px solid #4a1a1a; }
+    .badge-medium   { background: #1a1500; color: #c8a84b; border: 1px solid #3a2e00; }
+    .badge-low      { background: #0a1a0a; color: #2ea44f; border: 1px solid #1a3a1a; }
+    .badge-personal { background: #0b1320; color: #4a7cbb; border: 1px solid #1a3060; }
+    .badge-work     { background: #0d1a10; color: #2ea44f; border: 1px solid #1a3a20; }
+    .badge-benzo    { background: #1a1000; color: #c8a84b; border: 1px solid #3a2500; }
+    .task-due { font-size: 11px; color: var(--muted); }
+
+    /* ── BENZO PAGE ── */
+    #page-benzo { flex-direction: column; padding: 28px 32px; overflow-y: auto; }
+    .benzo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .fleet-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 18px 20px;
+    }
+    .fleet-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .fleet-name { font-size: 15px; font-weight: 500; }
+    .fleet-sub  { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .status-pill {
+      padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 600;
+      letter-spacing: .06em; text-transform: uppercase;
+    }
+    .status-available   { background: #0a1a0a; color: #2ea44f; border: 1px solid #1a3a1a; }
+    .status-rented      { background: #0b1320; color: #4a7cbb; border: 1px solid #1a3060; }
+    .status-maintenance { background: #1a1000; color: #c8a84b; border: 1px solid #3a2500; }
+    .splits-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .split-item { font-size: 11px; color: var(--muted); }
+    .split-item span { color: var(--text); font-weight: 500; }
+
+    .rentals-table-wrap { overflow-x: auto; }
+
+    /* ── AGENTS PAGE ── */
+    #page-agents { flex-direction: row; overflow: hidden; }
+    .agents-list { width: 220px; border-right: 1px solid var(--border); padding: 20px 0; overflow-y: auto; flex-shrink: 0; }
+    .agent-item {
+      padding: 12px 20px; cursor: pointer; border-left: 2px solid transparent;
+      transition: all .15s;
+    }
+    .agent-item:hover { background: var(--bg3); }
+    .agent-item.active { border-left-color: var(--gold); background: var(--bg3); }
+    .agent-name { font-size: 13px; font-weight: 500; }
+    .agent-last { font-size: 10px; color: var(--muted); margin-top: 3px; }
+    .agent-chat { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .chat-header { padding: 16px 24px; border-bottom: 1px solid var(--border); }
+    .chat-title { font-size: 15px; font-weight: 500; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+    .msg { max-width: 72%; }
+    .msg.user { align-self: flex-end; }
+    .msg.assistant { align-self: flex-start; }
+    .msg-bubble {
+      padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5;
+    }
+    .msg.user .msg-bubble { background: var(--gold); color: #000; border-radius: 10px 10px 2px 10px; }
+    .msg.assistant .msg-bubble { background: var(--bg3); border: 1px solid var(--border2); border-radius: 10px 10px 10px 2px; }
+    .msg-role { font-size: 10px; color: var(--muted); margin-bottom: 4px; letter-spacing: .05em; text-transform: uppercase; }
+    .chat-input-row {
+      padding: 16px 24px; border-top: 1px solid var(--border);
+      display: flex; gap: 10px;
+    }
+    .chat-input {
+      flex: 1; background: var(--bg3); border: 1px solid var(--border2);
+      color: var(--text); padding: 10px 14px; border-radius: 6px; font-size: 13px;
+      outline: none;
+    }
+    .chat-input:focus { border-color: var(--gold-dim); }
+    .btn-send {
+      padding: 10px 18px; background: var(--gold); color: #000;
+      border: none; border-radius: 6px; font-size: 12px; font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ── HOME PAGE ── */
+    #page-home { flex-direction: column; padding: 28px 32px; overflow-y: auto; }
+    .home-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+    .home-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 18px 20px;
+    }
+    .home-card-label { font-size: 10px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; }
+    .home-card-val { font-size: 28px; font-weight: 500; }
+    .home-card-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+    .goals-list { display: flex; flex-direction: column; gap: 8px; }
+    .goal-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 6px;
+    }
+    .goal-check { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid var(--border2); flex-shrink: 0; }
+    .goal-check.done { background: var(--green); border-color: var(--green); }
+    .goal-title { flex: 1; font-size: 13px; }
+    .goal-cat { font-size: 10px; color: var(--muted); padding: 2px 7px; border: 1px solid var(--border2); border-radius: 3px; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* loading state */
+    .loading { color: var(--muted); font-size: 13px; padding: 20px 0; }
+    .empty   { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
+
+    /* modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.7); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 28px; width: 420px; max-width: 95vw;
+    }
+    .modal h3 { font-size: 16px; margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-label { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    .form-input, .form-select {
+      width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+      color: var(--text); padding: 9px 12px; border-radius: 5px; font-size: 13px; outline: none;
+    }
+    .form-input:focus, .form-select:focus { border-color: var(--gold-dim); }
+    .form-select option { background: var(--bg3); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .btn-cancel { padding: 8px 16px; background: transparent; border: 1px solid var(--border2); color: var(--muted); border-radius: 5px; cursor: pointer; font-size: 12px; }
+    .btn-save   { padding: 8px 16px; background: var(--gold); color: #000; border: none; border-radius: 5px; font-weight: 600; cursor: pointer; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav>
+  <div class="nav-brand">OMAR OS // <span>V1</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="home">HOME</button>
+    <button class="nav-tab" data-tab="finance">FINANCE</button>
+    <button class="nav-tab" data-tab="tasks">TASKS</button>
+    <button class="nav-tab" data-tab="agents">AGENTS</button>
+    <button class="nav-tab" data-tab="benzo">BENZO</button>
+  </div>
+  <div class="nav-right">
+    <div class="tg-dot"></div>
+    <span class="tg-label">TG BOT</span>
+    <span class="nav-time" id="nav-clock">--:--</span>
+    <span class="nav-time" id="nav-date"></span>
+    <div class="nav-avatar">OB</div>
+  </div>
+</nav>
+
+<div class="app">
+
+  <!-- ══════════════════════════════════════ HOME ══ -->
+  <div class="page active" id="page-home">
+    <div class="page-header">
+      <div class="page-title">Good morning, Omar 👋</div>
+    </div>
+    <div class="home-grid" id="home-stats">
+      <div class="home-card"><div class="home-card-label">Open Tasks</div><div class="home-card-val" id="hs-tasks">—</div><div class="home-card-sub">due today or overdue</div></div>
+      <div class="home-card"><div class="home-card-label">Active Rentals</div><div class="home-card-val" id="hs-rentals">—</div><div class="home-card-sub">vehicles out right now</div></div>
+      <div class="home-card"><div class="home-card-label">Portfolio Holdings</div><div class="home-card-val" id="hs-holdings">—</div><div class="home-card-sub">positions tracked</div></div>
+      <div class="home-card"><div class="home-card-label">Fleet Size</div><div class="home-card-val" id="hs-fleet">—</div><div class="home-card-sub">total vehicles</div></div>
+      <div class="home-card"><div class="home-card-label">Goals This Week</div><div class="home-card-val" id="hs-goals">—</div><div class="home-card-sub">in progress</div></div>
+      <div class="home-card"><div class="home-card-label">Voice Notes</div><div class="home-card-val" id="hs-notes">—</div><div class="home-card-sub">unprocessed</div></div>
+    </div>
+    <div class="section-label" style="margin-bottom:12px">ACTIVE GOALS</div>
+    <div class="goals-list" id="home-goals"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════ FINANCE ══ -->
+  <div class="page" id="page-finance">
+    <div class="finance-main">
+      <div class="section-label">PORTFOLIO OVERVIEW · LIVE</div>
+      <div class="big-value" id="fin-total">—</div>
+      <div class="delta-green" id="fin-delta" style="margin-top:4px"></div>
+
+      <div class="stat-cards">
+        <div class="stat-card">
+          <div class="label">PORTFOLIO VALUE</div>
+          <div class="val" id="sc-port">—</div>
+          <div class="sub" id="sc-port-sub"></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">WATCHLIST ALERTS</div>
+          <div class="val" id="sc-alerts">—</div>
+          <div class="sub">active alerts</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">POSITIONS</div>
+          <div class="val" id="sc-pos">—</div>
+          <div class="sub">across stocks, crypto & ETFs</div>
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <canvas id="portfolio-chart"></canvas>
+      </div>
+
+      <div class="section-label" style="margin-bottom:12px">HOLDINGS</div>
+      <table>
+        <thead>
+          <tr>
+            <th>TICKER</th>
+            <th>TYPE</th>
+            <th>QTY</th>
+            <th>AVG BUY</th>
+            <th>VALUE (APPROX)</th>
+          </tr>
+        </thead>
+        <tbody id="holdings-body">
+          <tr><td colspan="5" class="loading">Loading holdings…</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-label" style="margin:24px 0 10px">ALLOCATION</div>
+      <div class="alloc-bar" id="alloc-bar"></div>
+      <div class="alloc-legend" id="alloc-legend"></div>
+    </div>
+
+    <div class="finance-sidebar">
+      <div class="sidebar-section">
+        <div class="section-label" style="margin-bottom:14px">06 // ACCOUNTS</div>
+        <div class="sidebar-kv">
+          <div>
+            <div class="k">TOTAL NET WORTH</div>
+          </div>
+        </div>
+        <div class="big-value" style="font-size:28px" id="sb-networth">—</div>
+        <div class="delta-green" id="sb-nw-delta" style="font-size:11px;margin-top:3px"></div>
+      </div>
+
+      <hr class="sidebar-divider" />
+
+      <div class="sidebar-section">
+        <div class="section-label" style="margin-bottom:12px">07 // WATCHLIST</div>
+        <div id="watchlist-items"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ TASKS ══ -->
+  <div class="page" id="page-tasks">
+    <div class="page-header">
+      <div class="page-title">Tasks</div>
+      <button class="btn-add" onclick="openAddTask()">+ Add Task</button>
+    </div>
+    <div class="filter-row">
+      <button class="filter-btn active" data-filter="all">ALL</button>
+      <button class="filter-btn" data-filter="Work">WORK</button>
+      <button class="filter-btn" data-filter="Personal">PERSONAL</button>
+      <button class="filter-btn" data-filter="Benzo">BENZO</button>
+      <button class="filter-btn" data-filter="open">OPEN</button>
+      <button class="filter-btn" data-filter="done">DONE</button>
+    </div>
+    <div class="tasks-grid" id="tasks-list">
+      <div class="loading">Loading tasks…</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ AGENTS ══ -->
+  <div class="page" id="page-agents">
+    <div class="agents-list" id="agents-list"></div>
+    <div class="agent-chat">
+      <div class="chat-header">
+        <div class="chat-title" id="chat-agent-name">Select an agent</div>
+        <div class="agent-last" id="chat-agent-last"></div>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="empty">Select an agent to view conversation history.</div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chat-input" placeholder="Message this agent…" onkeydown="if(event.key==='Enter') sendAgentMsg()" />
+        <button class="btn-send" onclick="sendAgentMsg()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ BENZO ══ -->
+  <div class="page" id="page-benzo">
+    <div class="page-header">
+      <div class="page-title">Benzo Fleet</div>
+    </div>
+    <div class="section-label" style="margin-bottom:14px">VEHICLES</div>
+    <div class="benzo-grid" id="fleet-grid">
+      <div class="loading">Loading fleet…</div>
+    </div>
+    <div class="section-label" style="margin-bottom:14px">RENTALS</div>
+    <div class="rentals-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>CUSTOMER</th>
+            <th>VEHICLE</th>
+            <th>START</th>
+            <th>END</th>
+            <th>DAILY RATE</th>
+            <th>REVENUE</th>
+            <th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody id="rentals-body">
+          <tr><td colspan="7" class="loading">Loading rentals…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ADD TASK MODAL -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <h3>New Task</h3>
+    <div class="form-group">
+      <label class="form-label">Task</label>
+      <input class="form-input" id="new-task-text" placeholder="What needs to be done?" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select class="form-select" id="new-task-cat">
+        <option>Personal</option><option>Work</option><option>Benzo</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Priority</label>
+      <select class="form-select" id="new-task-pri">
+        <option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Due Date</label>
+      <input class="form-input" type="date" id="new-task-due" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddTask()">Cancel</button>
+      <button class="btn-save" onclick="saveTask()">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // ── SUPABASE CONFIG ──────────────────────────────────────
+  const SUPABASE_URL  = 'https://mafpxfswilljtbopxffq.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hZnB4ZnN3aWxsanRib3B4ZmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTgzNzgsImV4cCI6MjA5Nzk3NDM3OH0.OMdQUbBR_r0SveLmX2bJcDYDfkhes4cQKjB2zYYCfbA';
+
+  async function sb(table, params = '') {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
+      headers: {
+        apikey: SUPABASE_ANON,
+        Authorization: `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      }
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function sbPost(table, body) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON,
+        Authorization: `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function sbPatch(table, id, body) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        apikey: SUPABASE_ANON,
+        Authorization: `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  // ── CLOCK ────────────────────────────────────────────────
+  function updateClock() {
+    const now = new Date();
+    const t = now.toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const d = now.toLocaleDateString('en-CA', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+    document.getElementById('nav-clock').textContent = t;
+    document.getElementById('nav-date').textContent  = d;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── TABS ─────────────────────────────────────────────────
+  const loaders = {};
+  document.querySelectorAll('.nav-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById(`page-${tab}`).classList.add('active');
+      if (!loaders[tab]) { loaders[tab] = true; loadTab(tab); }
+    });
+  });
+
+  async function loadTab(tab) {
+    if (tab === 'home')    await loadHome();
+    if (tab === 'finance') await loadFinance();
+    if (tab === 'tasks')   await loadTasks();
+    if (tab === 'agents')  await loadAgents();
+    if (tab === 'benzo')   await loadBenzo();
+  }
+
+  // ── HOME ─────────────────────────────────────────────────
+  async function loadHome() {
+    const [tasks, rentals, portfolio, fleet, goals, notes] = await Promise.all([
+      sb('tasks', '?select=id,completed,due_date'),
+      sb('rentals', '?select=id,status'),
+      sb('portfolio', '?select=id'),
+      sb('fleet', '?select=id'),
+      sb('goals', '?select=id,title,category,completed,target_date'),
+      sb('voice_notes', '?select=id,processed&processed=eq.false'),
+    ]);
+
+    const today = new Date().toISOString().slice(0,10);
+    const openToday = tasks.filter(t => !t.completed && t.due_date && t.due_date <= today).length;
+    const activeRentals = rentals.filter(r => r.status === 'active').length;
+    const weeklyGoals = goals.filter(g => g.category === 'weekly' && !g.completed).length;
+
+    document.getElementById('hs-tasks').textContent    = openToday;
+    document.getElementById('hs-rentals').textContent  = activeRentals;
+    document.getElementById('hs-holdings').textContent = portfolio.length;
+    document.getElementById('hs-fleet').textContent    = fleet.length;
+    document.getElementById('hs-goals').textContent    = weeklyGoals;
+    document.getElementById('hs-notes').textContent    = notes.length;
+
+    const gl = document.getElementById('home-goals');
+    gl.innerHTML = goals.filter(g => !g.completed).slice(0, 8).map(g => `
+      <div class="goal-row">
+        <div class="goal-check ${g.completed ? 'done' : ''}"></div>
+        <div class="goal-title">${g.title}</div>
+        <span class="goal-cat">${g.category}</span>
+        ${g.target_date ? `<span class="task-due">${g.target_date}</span>` : ''}
+      </div>`).join('');
+  }
+  loadHome(); loaders['home'] = true;
+
+  // ── FINANCE ──────────────────────────────────────────────
+  let portfolioChart = null;
+
+  async function loadFinance() {
+    const [holdings, watchlist] = await Promise.all([
+      sb('portfolio', '?order=created_at.asc'),
+      sb('watchlist', '?order=ticker.asc'),
+    ]);
+
+    // stat cards
+    const totalVal = holdings.reduce((s, h) => s + h.quantity * h.avg_buy_price, 0);
+    const alertCount = watchlist.filter(w => w.alert_enabled).length;
+    document.getElementById('fin-total').textContent = '$' + fmt(totalVal);
+    document.getElementById('fin-delta').textContent = '▲ Live data from Supabase';
+    document.getElementById('sc-port').textContent   = '$' + fmt(totalVal);
+    document.getElementById('sc-port-sub').textContent = holdings.length + ' positions';
+    document.getElementById('sc-alerts').textContent = alertCount;
+    document.getElementById('sc-pos').textContent    = holdings.length;
+    document.getElementById('sb-networth').textContent = '$' + fmt(totalVal);
+    document.getElementById('sb-nw-delta').textContent = '▲ Cost basis total';
+
+    // holdings table
+    const tbody = document.getElementById('holdings-body');
+    tbody.innerHTML = holdings.map(h => {
+      const val = h.quantity * h.avg_buy_price;
+      return `<tr>
+        <td><div class="ticker-sym">${h.ticker}</div><div class="ticker-name">${assetLabel(h.asset_type)}</div></td>
+        <td>${h.asset_type}</td>
+        <td>${+h.quantity % 1 === 0 ? h.quantity : (+h.quantity).toFixed(4)}</td>
+        <td>$${fmt(h.avg_buy_price)}</td>
+        <td style="font-weight:500">$${fmt(val)}</td>
+      </tr>`;
+    }).join('');
+
+    // allocation bar
+    const byType = {};
+    holdings.forEach(h => {
+      const v = h.quantity * h.avg_buy_price;
+      byType[h.asset_type] = (byType[h.asset_type] || 0) + v;
+    });
+    const colors = { stock: '#4a7cbb', crypto: '#2ea44f', ETF: '#c8a84b' };
+    const bar = document.getElementById('alloc-bar');
+    const leg = document.getElementById('alloc-legend');
+    bar.innerHTML = ''; leg.innerHTML = '';
+    Object.entries(byType).forEach(([type, val]) => {
+      const pct = (val / totalVal * 100).toFixed(0);
+      const seg = document.createElement('div');
+      seg.className = 'alloc-seg';
+      seg.style.cssText = `flex: ${pct}; background: ${colors[type] || '#555'}`;
+      bar.appendChild(seg);
+      leg.innerHTML += `<span class="alloc-item"><span class="alloc-dot" style="background:${colors[type]}"></span>${type} ${pct}%</span>`;
+    });
+
+    // mini chart (simulated portfolio growth curve)
+    const ctx = document.getElementById('portfolio-chart').getContext('2d');
+    if (portfolioChart) portfolioChart.destroy();
+    const base = totalVal * 0.88;
+    const points = Array.from({length: 14}, (_, i) => +(base + (totalVal - base) * (i / 13) * (0.8 + Math.random() * 0.4)).toFixed(0));
+    portfolioChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: points.map((_, i) => i),
+        datasets: [{ data: points, borderColor: '#2ea44f', borderWidth: 2, pointRadius: 0, tension: 0.4,
+          fill: true, backgroundColor: 'rgba(46,164,79,0.07)' }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false } }
+      }
+    });
+
+    // watchlist sidebar
+    const wl = document.getElementById('watchlist-items');
+    wl.innerHTML = watchlist.map(w => `
+      <div class="sidebar-kv">
+        <div>
+          <div class="k">${w.ticker} <span style="color:var(--muted);font-size:10px">${w.asset_type}</span></div>
+          ${w.target_price ? `<div class="sub">Target $${fmt(w.target_price)}</div>` : ''}
+        </div>
+        <div style="text-align:right">
+          ${w.alert_enabled ? `<span style="color:var(--green);font-size:10px">● ALERT</span>` : `<span style="color:var(--muted);font-size:10px">OFF</span>`}
+        </div>
+      </div>`).join('');
+  }
+
+  // ── TASKS ────────────────────────────────────────────────
+  let allTasks = [];
+  let activeFilter = 'all';
+
+  async function loadTasks() {
+    allTasks = await sb('tasks', '?order=created_at.desc');
+    renderTasks();
+  }
+
+  function renderTasks() {
+    let filtered = allTasks;
+    if (activeFilter === 'open') filtered = allTasks.filter(t => !t.completed);
+    else if (activeFilter === 'done') filtered = allTasks.filter(t => t.completed);
+    else if (['Work','Personal','Benzo'].includes(activeFilter)) filtered = allTasks.filter(t => t.category === activeFilter);
+
+    const list = document.getElementById('tasks-list');
+    if (!filtered.length) { list.innerHTML = '<div class="empty">No tasks found.</div>'; return; }
+    list.innerHTML = filtered.map(t => `
+      <div class="task-row ${t.completed ? 'done' : ''}" id="task-${t.id}">
+        <div class="task-check ${t.completed ? 'checked' : ''}" onclick="toggleTask('${t.id}', ${t.completed})"></div>
+        <div class="task-text" style="${t.completed ? 'text-decoration:line-through' : ''}">${t.task_text}</div>
+        <div class="task-meta">
+          <span class="badge badge-${t.category.toLowerCase()}">${t.category}</span>
+          <span class="badge badge-${t.priority}">${t.priority}</span>
+          ${t.due_date ? `<span class="task-due">${t.due_date}</span>` : ''}
+          <span class="badge" style="background:var(--bg3);color:var(--muted);border:1px solid var(--border2)">${t.source}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      renderTasks();
+    });
+  });
+
+  window.toggleTask = async (id, completed) => {
+    await sbPatch('tasks', id, { completed: !completed });
+    const t = allTasks.find(t => t.id === id);
+    if (t) t.completed = !completed;
+    renderTasks();
+  };
+
+  window.openAddTask = () => {
+    document.getElementById('task-modal').classList.add('open');
+    document.getElementById('new-task-due').value = new Date().toISOString().slice(0,10);
+  };
+  window.closeAddTask = () => document.getElementById('task-modal').classList.remove('open');
+
+  window.saveTask = async () => {
+    const text = document.getElementById('new-task-text').value.trim();
+    if (!text) return;
+    const newTask = await sbPost('tasks', {
+      task_text: text,
+      category:  document.getElementById('new-task-cat').value,
+      priority:  document.getElementById('new-task-pri').value,
+      due_date:  document.getElementById('new-task-due').value || null,
+      source: 'manual'
+    });
+    allTasks.unshift(newTask[0]);
+    renderTasks();
+    closeAddTask();
+    document.getElementById('new-task-text').value = '';
+  };
+
+  // ── AGENTS ───────────────────────────────────────────────
+  let agents = [];
+  let activeAgentId = null;
+
+  async function loadAgents() {
+    agents = await sb('agents', '?order=agent_name.asc');
+    const list = document.getElementById('agents-list');
+    list.innerHTML = agents.map(a => `
+      <div class="agent-item" data-id="${a.id}" onclick="selectAgent('${a.id}')">
+        <div class="agent-name">${a.agent_name}</div>
+        <div class="agent-last">${a.last_active ? timeAgo(a.last_active) : 'Never active'}</div>
+      </div>`).join('');
+    if (agents.length) selectAgent(agents[0].id);
+  }
+
+  window.selectAgent = (id) => {
+    activeAgentId = id;
+    const agent = agents.find(a => a.id === id);
+    document.querySelectorAll('.agent-item').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+    document.getElementById('chat-agent-name').textContent = agent.agent_name + ' Agent';
+    document.getElementById('chat-agent-last').textContent = agent.last_active ? 'Last active ' + timeAgo(agent.last_active) : '';
+    const msgs = document.getElementById('chat-messages');
+    const history = agent.conversation_history || [];
+    const visible = history.filter(m => m.role !== 'system');
+    if (!visible.length) {
+      msgs.innerHTML = '<div class="empty">No conversation yet.</div>';
+      return;
+    }
+    msgs.innerHTML = visible.map(m => `
+      <div class="msg ${m.role}">
+        <div class="msg-role">${m.role}</div>
+        <div class="msg-bubble">${m.content}</div>
+      </div>`).join('');
+    msgs.scrollTop = msgs.scrollHeight;
+  };
+
+  window.sendAgentMsg = async () => {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text || !activeAgentId) return;
+    input.value = '';
+    const agent = agents.find(a => a.id === activeAgentId);
+    const history = [...(agent.conversation_history || []), { role: 'user', content: text }];
+    await sbPatch('agents', activeAgentId, { conversation_history: history, last_active: new Date().toISOString() });
+    agent.conversation_history = history;
+    agent.last_active = new Date().toISOString();
+    selectAgent(activeAgentId);
+  };
+
+  // ── BENZO ────────────────────────────────────────────────
+  async function loadBenzo() {
+    const [fleet, rentals] = await Promise.all([
+      sb('fleet', '?order=created_at.asc'),
+      sb('rentals', '?order=start_date.desc'),
+    ]);
+
+    const fleetMap = {};
+    fleet.forEach(v => fleetMap[v.id] = v);
+
+    const grid = document.getElementById('fleet-grid');
+    grid.innerHTML = fleet.map(v => {
+      const splits = v.owner_splits || {};
+      const splitsHtml = Object.entries(splits).map(([name, pct]) =>
+        `<span class="split-item"><span>${pct}%</span> ${name}</span>`).join('');
+      return `<div class="fleet-card">
+        <div class="fleet-card-header">
+          <div>
+            <div class="fleet-name">${v.vehicle_name}</div>
+            <div class="fleet-sub">${v.year} ${v.make} ${v.model}</div>
+          </div>
+          <span class="status-pill status-${v.status}">${v.status}</span>
+        </div>
+        ${v.notes ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${v.notes}</div>` : ''}
+        <div style="font-size:10px;color:var(--muted);letter-spacing:.08em;margin-bottom:6px">OWNER SPLITS</div>
+        <div class="splits-row">${splitsHtml}</div>
+        ${v.last_service_date ? `<div style="font-size:11px;color:var(--muted);margin-top:10px">Last service: ${v.last_service_date}</div>` : ''}
+      </div>`;
+    }).join('');
+
+    const tbody = document.getElementById('rentals-body');
+    tbody.innerHTML = rentals.map(r => {
+      const vehicle = fleetMap[r.vehicle_id];
+      const statusColors = { active: 'badge-work', upcoming: 'badge-medium', completed: 'badge-low' };
+      return `<tr>
+        <td>${r.customer_name}</td>
+        <td>${vehicle ? vehicle.vehicle_name : '—'}</td>
+        <td>${r.start_date}</td>
+        <td>${r.end_date}</td>
+        <td>$${fmt(r.daily_rate)}/day</td>
+        <td style="font-weight:500;color:var(--gold)">$${fmt(r.total_revenue)}</td>
+        <td><span class="badge ${statusColors[r.status] || ''}">${r.status}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── UTILS ────────────────────────────────────────────────
+  function fmt(n) {
+    return Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+  function assetLabel(type) {
+    return { stock: 'Equity', crypto: 'Crypto', ETF: 'ETF' }[type] || type;
+  }
+  function timeAgo(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + 'm ago';
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ago';
+    return Math.floor(h / 24) + 'd ago';
+  }
+</script>
+</body>
+</html>
