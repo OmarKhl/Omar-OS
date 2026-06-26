@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Omar OS</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -293,6 +294,57 @@
     .loading { color: var(--muted); font-size: 13px; padding: 20px 0; }
     .empty   { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
 
+    /* ── AUTH SCREEN ── */
+    #auth-screen {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+    }
+    #auth-screen.hidden { display: none; }
+    .auth-box {
+      width: 360px; padding: 40px 36px;
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: 12px;
+    }
+    .auth-brand {
+      font-family: monospace; font-size: 14px; color: var(--muted);
+      letter-spacing: .1em; margin-bottom: 6px;
+    }
+    .auth-brand span { color: var(--gold); }
+    .auth-title { font-size: 22px; font-weight: 500; margin-bottom: 28px; }
+    .auth-group { margin-bottom: 16px; }
+    .auth-label {
+      font-size: 11px; color: var(--muted); letter-spacing: .08em;
+      text-transform: uppercase; display: block; margin-bottom: 6px;
+    }
+    .auth-input {
+      width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+      color: var(--text); padding: 11px 14px; border-radius: 6px;
+      font-size: 14px; outline: none; transition: border-color .15s;
+    }
+    .auth-input:focus { border-color: var(--gold-dim); }
+    .auth-btn {
+      width: 100%; padding: 12px; background: var(--gold); color: #000;
+      border: none; border-radius: 6px; font-size: 14px; font-weight: 700;
+      cursor: pointer; margin-top: 8px; letter-spacing: .04em;
+      transition: background .15s;
+    }
+    .auth-btn:hover { background: #d4b05a; }
+    .auth-error {
+      color: var(--red); font-size: 12px; margin-top: 12px;
+      min-height: 18px; text-align: center;
+    }
+    .auth-loading { opacity: .6; pointer-events: none; }
+
+    /* sign-out button in nav */
+    .btn-signout {
+      padding: 5px 12px; background: transparent;
+      border: 1px solid var(--border2); color: var(--muted);
+      border-radius: 4px; font-size: 11px; cursor: pointer;
+      letter-spacing: .04em; transition: all .15s;
+    }
+    .btn-signout:hover { border-color: var(--red); color: var(--red); }
+
     /* modal */
     .modal-overlay {
       display: none; position: fixed; inset: 0;
@@ -320,6 +372,25 @@
 </head>
 <body>
 
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-brand">OMAR OS // <span>V1</span></div>
+    <div class="auth-title">Sign in</div>
+    <div class="auth-group">
+      <label class="auth-label">Email</label>
+      <input class="auth-input" id="auth-email" type="email" placeholder="your@email.com" />
+    </div>
+    <div class="auth-group">
+      <label class="auth-label">Password</label>
+      <input class="auth-input" id="auth-password" type="password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter') signIn()" />
+    </div>
+    <button class="auth-btn" id="auth-btn" onclick="signIn()">Sign In →</button>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
 <!-- TOP NAV -->
 <nav>
   <div class="nav-brand">OMAR OS // <span>V1</span></div>
@@ -336,6 +407,7 @@
     <span class="nav-time" id="nav-clock">--:--</span>
     <span class="nav-time" id="nav-date"></span>
     <div class="nav-avatar">OB</div>
+    <button class="btn-signout" onclick="signOut()">Sign out</button>
   </div>
 </nav>
 
@@ -534,11 +606,61 @@
   const SUPABASE_URL  = 'https://mafpxfswilljtbopxffq.supabase.co';
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hZnB4ZnN3aWxsanRib3B4ZmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTgzNzgsImV4cCI6MjA5Nzk3NDM3OH0.OMdQUbBR_r0SveLmX2bJcDYDfkhes4cQKjB2zYYCfbA';
 
+  // ── SUPABASE AUTH CLIENT ─────────────────────────────────
+  const { createClient } = supabase;
+  const sbClient = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  let accessToken = SUPABASE_ANON; // default to anon, overwritten after login
+
+  // ── AUTH FUNCTIONS ───────────────────────────────────────
+  window.signIn = async () => {
+    const email    = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const errEl    = document.getElementById('auth-error');
+    const btn      = document.getElementById('auth-btn');
+    errEl.textContent = '';
+    btn.textContent = 'Signing in…';
+    btn.classList.add('auth-loading');
+
+    const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
+    btn.textContent = 'Sign In →';
+    btn.classList.remove('auth-loading');
+
+    if (error) { errEl.textContent = error.message; return; }
+
+    accessToken = data.session.access_token;
+    document.getElementById('auth-screen').classList.add('hidden');
+    initDashboard();
+  };
+
+  window.signOut = async () => {
+    await sbClient.auth.signOut();
+    accessToken = SUPABASE_ANON;
+    document.getElementById('auth-screen').classList.remove('hidden');
+  };
+
+  // Check if already logged in (persisted session)
+  (async () => {
+    const { data: { session } } = await sbClient.auth.getSession();
+    if (session) {
+      accessToken = session.access_token;
+      document.getElementById('auth-screen').classList.add('hidden');
+      initDashboard();
+    }
+    // Listen for auth changes
+    sbClient.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        accessToken = session.access_token;
+      }
+    });
+  })();
+
+  // ── API HELPERS ──────────────────────────────────────────
   async function sb(table, params = '') {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
       headers: {
         apikey: SUPABASE_ANON,
-        Authorization: `Bearer ${SUPABASE_ANON}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         Prefer: 'return=representation'
       }
@@ -552,7 +674,7 @@
       method: 'POST',
       headers: {
         apikey: SUPABASE_ANON,
-        Authorization: `Bearer ${SUPABASE_ANON}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         Prefer: 'return=representation'
       },
@@ -567,7 +689,7 @@
       method: 'PATCH',
       headers: {
         apikey: SUPABASE_ANON,
-        Authorization: `Bearer ${SUPABASE_ANON}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         Prefer: 'return=representation'
       },
@@ -575,6 +697,13 @@
     });
     if (!r.ok) throw new Error(await r.text());
     return r.json();
+  }
+
+  // ── DASHBOARD INIT (called after successful auth) ────────
+  function initDashboard() {
+    updateClock();
+    loadHome();
+    loaders['home'] = true;
   }
 
   // ── CLOCK ────────────────────────────────────────────────
@@ -585,7 +714,6 @@
     document.getElementById('nav-clock').textContent = t;
     document.getElementById('nav-date').textContent  = d;
   }
-  updateClock();
   setInterval(updateClock, 1000);
 
   // ── TABS ─────────────────────────────────────────────────
@@ -641,7 +769,7 @@
         ${g.target_date ? `<span class="task-due">${g.target_date}</span>` : ''}
       </div>`).join('');
   }
-  loadHome(); loaders['home'] = true;
+  // loadHome called via initDashboard() after auth
 
   // ── FINANCE ──────────────────────────────────────────────
   let portfolioChart = null;
