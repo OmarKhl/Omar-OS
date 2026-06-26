@@ -464,19 +464,26 @@
         <canvas id="portfolio-chart"></canvas>
       </div>
 
-      <div class="section-label" style="margin-bottom:12px">HOLDINGS</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="section-label" style="margin-bottom:0">HOLDINGS · LIVE</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="prices-status" style="font-size:10px;color:var(--muted)">Fetching prices…</span>
+          <button onclick="refreshFinance()" style="padding:4px 10px;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:4px;font-size:10px;cursor:pointer;letter-spacing:.05em">↺ REFRESH</button>
+        </div>
+      </div>
       <table>
         <thead>
           <tr>
             <th>TICKER</th>
-            <th>TYPE</th>
-            <th>QTY</th>
-            <th>AVG BUY</th>
-            <th>VALUE (APPROX)</th>
+            <th>SHARES</th>
+            <th>AVG COST</th>
+            <th>LIVE PRICE</th>
+            <th>VALUE</th>
+            <th style="text-align:right">GAIN / LOSS</th>
           </tr>
         </thead>
         <tbody id="holdings-body">
-          <tr><td colspan="5" class="loading">Loading holdings…</td></tr>
+          <tr><td colspan="6" class="loading">Loading holdings…</td></tr>
         </tbody>
       </table>
 
@@ -829,67 +836,187 @@
   // ── FINANCE ──────────────────────────────────────────────
   let portfolioChart = null;
 
+  // Crypto tickers → Yahoo Finance symbol suffix
+  const CRYPTO_TICKERS = new Set([
+    'BTC','ETH','SOL','BNB','AVAX','ADA','DOT','MATIC','LINK','XRP',
+    'DOGE','LTC','ATOM','NEAR','FTM','ALGO','XLM','VET','UNI','AAVE',
+    'CRO','SAND','MANA','AXS','GALA','ONE','HBAR','ETC','ZEC','DASH'
+  ]);
+
+  function yahooSymbol(ticker) {
+    return CRYPTO_TICKERS.has(ticker) ? ticker + '-USD' : ticker;
+  }
+
+  // Calculate current holdings from transaction log
+  function calcHoldings(txs) {
+    const map = {};
+    const sorted = [...txs].sort((a, b) => new Date(a.trade_date) - new Date(b.trade_date));
+    sorted.forEach(tx => {
+      const t    = tx.ticker;
+      const qty  = Math.abs(parseFloat(tx.quantity) || 0);
+      const price= parseFloat(tx.amount_per_unit) || 0;
+      const fees = parseFloat(tx.trading_fees) || 0;
+      const type = (tx.transaction_type || '').toLowerCase();
+      if (!map[t]) map[t] = { ticker: t, qty: 0, totalCost: 0,
+        isCrypto: CRYPTO_TICKERS.has(t), account: tx.investment_account };
+      if (type === 'buy') {
+        map[t].totalCost += price * qty + fees;
+        map[t].qty += qty;
+      } else if (type === 'sell') {
+        if (map[t].qty > 0) {
+          const ratio = Math.min(qty / map[t].qty, 1);
+          map[t].totalCost -= map[t].totalCost * ratio;
+          map[t].qty = Math.max(0, map[t].qty - qty);
+        }
+      }
+    });
+    return Object.values(map)
+      .filter(h => h.qty > 0.000001)
+      .map(h => ({ ...h, avgCost: h.qty > 0 ? h.totalCost / h.qty : 0 }));
+  }
+
+  // Fetch live prices via Yahoo Finance (all assets incl. crypto-USD)
+  async function fetchLivePrices(tickers) {
+    const symbols = tickers.map(yahooSymbol).join(',');
+    const status  = document.getElementById('prices-status');
+    try {
+      const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}&fields=regularMarketPrice,regularMarketChangePercent,shortName`
+      )}`;
+      const resp  = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      const data  = await resp.json();
+      const quotes = data?.quoteResponse?.result || [];
+      const prices = {};
+      quotes.forEach(q => {
+        const ticker = q.symbol.replace('-USD', '');
+        prices[ticker] = {
+          price:         q.regularMarketPrice || 0,
+          changePct:     q.regularMarketChangePercent || 0,
+          name:          q.shortName || ticker
+        };
+      });
+      if (status) status.textContent = 'Updated ' + new Date().toLocaleTimeString('en-CA', {hour:'2-digit',minute:'2-digit'});
+      return prices;
+    } catch (e) {
+      if (status) status.textContent = '⚠ Price fetch failed — showing cost basis';
+      return {};
+    }
+  }
+
+  window.refreshFinance = () => { loaders['finance'] = false; loadFinance(); loaders['finance'] = true; };
+
   async function loadFinance() {
-    const [holdings, watchlist] = await Promise.all([
-      sb('portfolio', '?order=created_at.asc'),
+    const [txs, watchlist] = await Promise.all([
+      sb('transactions', '?order=trade_date.asc'),
       sb('watchlist', '?order=ticker.asc'),
     ]);
 
-    // stat cards
-    const totalVal = holdings.reduce((s, h) => s + h.quantity * h.avg_buy_price, 0);
+    const holdings = txs.length ? calcHoldings(txs) : [];
+
+    // Fetch live prices for all held tickers
+    const prices = holdings.length
+      ? await fetchLivePrices(holdings.map(h => h.ticker))
+      : {};
+
+    // Calculate totals
+    let liveTotal = 0, costTotal = 0;
+    holdings.forEach(h => {
+      const livePrice = prices[h.ticker]?.price || h.avgCost;
+      liveTotal += livePrice * h.qty;
+      costTotal += h.totalCost;
+    });
+    const totalGainPct = costTotal > 0 ? ((liveTotal - costTotal) / costTotal * 100) : 0;
+    const gainColor = totalGainPct >= 0 ? 'var(--green)' : 'var(--red)';
+
+    // Stat cards
     const alertCount = watchlist.filter(w => w.alert_enabled).length;
-    document.getElementById('fin-total').textContent = '$' + fmt(totalVal);
-    document.getElementById('fin-delta').textContent = '▲ Live data from Supabase';
-    document.getElementById('sc-port').textContent   = '$' + fmt(totalVal);
-    document.getElementById('sc-port-sub').textContent = holdings.length + ' positions';
-    document.getElementById('sc-alerts').textContent = alertCount;
-    document.getElementById('sc-pos').textContent    = holdings.length;
-    document.getElementById('sb-networth').textContent = '$' + fmt(totalVal);
-    document.getElementById('sb-nw-delta').textContent = '▲ Cost basis total';
+    document.getElementById('fin-total').textContent        = '$' + fmt(liveTotal);
+    document.getElementById('fin-delta').style.color        = gainColor;
+    document.getElementById('fin-delta').textContent        =
+      (totalGainPct >= 0 ? '▲ +' : '▼ ') + totalGainPct.toFixed(2) + '% total return · cost basis $' + fmt(costTotal);
+    document.getElementById('sc-port').textContent          = '$' + fmt(liveTotal);
+    document.getElementById('sc-port-sub').textContent      = holdings.length + ' positions';
+    document.getElementById('sc-alerts').textContent        = alertCount;
+    document.getElementById('sc-pos').textContent           = holdings.length;
+    document.getElementById('sb-networth').textContent      = '$' + fmt(liveTotal);
+    document.getElementById('sb-nw-delta').style.color      = gainColor;
+    document.getElementById('sb-nw-delta').textContent      =
+      (totalGainPct >= 0 ? '▲ +' : '▼ ') + totalGainPct.toFixed(2) + '% vs cost basis';
 
-    // holdings table
+    // Holdings table
     const tbody = document.getElementById('holdings-body');
-    tbody.innerHTML = holdings.map(h => {
-      const val = h.quantity * h.avg_buy_price;
-      return `<tr>
-        <td><div class="ticker-sym">${h.ticker}</div><div class="ticker-name">${assetLabel(h.asset_type)}</div></td>
-        <td>${h.asset_type}</td>
-        <td>${+h.quantity % 1 === 0 ? h.quantity : (+h.quantity).toFixed(4)}</td>
-        <td>$${fmt(h.avg_buy_price)}</td>
-        <td style="font-weight:500">$${fmt(val)}</td>
-      </tr>`;
-    }).join('');
+    if (!holdings.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty">No transactions yet — sync your Google Sheet first.</td></tr>`;
+    } else {
+      const sorted = [...holdings].sort((a, b) => {
+        const av = (prices[a.ticker]?.price || a.avgCost) * a.qty;
+        const bv = (prices[b.ticker]?.price || b.avgCost) * b.qty;
+        return bv - av;
+      });
+      tbody.innerHTML = sorted.map(h => {
+        const livePrice = prices[h.ticker]?.price || h.avgCost;
+        const changePct = prices[h.ticker]?.changePct || 0;
+        const liveVal   = livePrice * h.qty;
+        const gainVal   = liveVal - h.totalCost;
+        const gainPct   = h.totalCost > 0 ? (gainVal / h.totalCost * 100) : 0;
+        const gc = gainPct >= 0 ? 'var(--green)' : 'var(--red)';
+        const dc = changePct >= 0 ? 'var(--green)' : 'var(--red)';
+        const qtyFmt = h.qty < 1 ? h.qty.toFixed(6) : h.qty % 1 === 0 ? h.qty.toFixed(0) : h.qty.toFixed(4);
+        return `<tr>
+          <td>
+            <div class="ticker-sym">${h.ticker}</div>
+            <div class="ticker-name">${h.isCrypto ? 'Crypto' : 'Stock / ETF'}</div>
+          </td>
+          <td>${qtyFmt}</td>
+          <td>$${fmt(h.avgCost)}</td>
+          <td>
+            <div style="font-weight:500">${prices[h.ticker] ? '$' + fmt(livePrice) : '—'}</div>
+            ${prices[h.ticker] ? `<div style="font-size:10px;color:${dc}">${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today</div>` : ''}
+          </td>
+          <td style="font-weight:500">$${fmt(liveVal)}</td>
+          <td style="text-align:right;color:${gc}">
+            ${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(1)}%
+            <div style="font-size:10px">${gainVal >= 0 ? '+' : ''}$${fmt(Math.abs(gainVal))}</div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
 
-    // allocation bar
+    // Allocation bar
     const byType = {};
     holdings.forEach(h => {
-      const v = h.quantity * h.avg_buy_price;
-      byType[h.asset_type] = (byType[h.asset_type] || 0) + v;
+      const type = h.isCrypto ? 'Crypto' : 'Equity';
+      const v = (prices[h.ticker]?.price || h.avgCost) * h.qty;
+      byType[type] = (byType[type] || 0) + v;
     });
-    const colors = { stock: '#4a7cbb', crypto: '#2ea44f', ETF: '#c8a84b' };
+    const colors = { Equity: '#4a7cbb', Crypto: '#2ea44f' };
     const bar = document.getElementById('alloc-bar');
     const leg = document.getElementById('alloc-legend');
     bar.innerHTML = ''; leg.innerHTML = '';
     Object.entries(byType).forEach(([type, val]) => {
-      const pct = (val / totalVal * 100).toFixed(0);
+      const pct = liveTotal > 0 ? (val / liveTotal * 100).toFixed(0) : 0;
       const seg = document.createElement('div');
       seg.className = 'alloc-seg';
-      seg.style.cssText = `flex: ${pct}; background: ${colors[type] || '#555'}`;
+      seg.style.cssText = `flex: ${pct}; background: ${colors[type] || '#888'}`;
       bar.appendChild(seg);
       leg.innerHTML += `<span class="alloc-item"><span class="alloc-dot" style="background:${colors[type]}"></span>${type} ${pct}%</span>`;
     });
 
-    // mini chart (simulated portfolio growth curve)
+    // Mini chart (value points based on sorted holdings)
     const ctx = document.getElementById('portfolio-chart').getContext('2d');
     if (portfolioChart) portfolioChart.destroy();
-    const base = totalVal * 0.88;
-    const points = Array.from({length: 14}, (_, i) => +(base + (totalVal - base) * (i / 13) * (0.8 + Math.random() * 0.4)).toFixed(0));
+    const base   = costTotal * 0.92;
+    const points = Array.from({length: 16}, (_, i) => {
+      const progress = i / 15;
+      return +(base + (liveTotal - base) * progress).toFixed(0);
+    });
     portfolioChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: points.map((_, i) => i),
-        datasets: [{ data: points, borderColor: '#2ea44f', borderWidth: 2, pointRadius: 0, tension: 0.4,
-          fill: true, backgroundColor: 'rgba(46,164,79,0.07)' }]
+        datasets: [{ data: points, borderColor: liveTotal >= costTotal ? '#2ea44f' : '#e05252',
+          borderWidth: 2, pointRadius: 0, tension: 0.4, fill: true,
+          backgroundColor: liveTotal >= costTotal ? 'rgba(46,164,79,0.07)' : 'rgba(224,82,82,0.07)' }]
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
@@ -898,18 +1025,27 @@
       }
     });
 
-    // watchlist sidebar
+    // Watchlist sidebar
     const wl = document.getElementById('watchlist-items');
-    wl.innerHTML = watchlist.map(w => `
-      <div class="sidebar-kv">
+    wl.innerHTML = watchlist.map(w => {
+      const lp = prices[w.ticker];
+      const atTarget = lp && w.target_price && lp.price <= w.target_price;
+      return `<div class="sidebar-kv" style="margin-bottom:14px">
         <div>
           <div class="k">${w.ticker} <span style="color:var(--muted);font-size:10px">${w.asset_type}</span></div>
           ${w.target_price ? `<div class="sub">Target $${fmt(w.target_price)}</div>` : ''}
+          ${lp ? `<div style="font-size:11px;color:${lp.changePct>=0?'var(--green)':'var(--red)'}">${lp.changePct>=0?'+':''}${lp.changePct.toFixed(2)}% today</div>` : ''}
         </div>
         <div style="text-align:right">
-          ${w.alert_enabled ? `<span style="color:var(--green);font-size:10px">● ALERT</span>` : `<span style="color:var(--muted);font-size:10px">OFF</span>`}
+          ${lp ? `<div style="font-size:13px;font-weight:500">$${fmt(lp.price)}</div>` : ''}
+          ${w.alert_enabled && atTarget
+            ? `<span style="color:var(--gold);font-size:10px">🎯 TARGET HIT</span>`
+            : w.alert_enabled
+              ? `<span style="color:var(--green);font-size:10px">● ALERT ON</span>`
+              : `<span style="color:var(--muted);font-size:10px">OFF</span>`}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   // ── TASKS ────────────────────────────────────────────────
