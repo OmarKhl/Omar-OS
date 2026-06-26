@@ -868,7 +868,16 @@
           map[t].totalCost -= map[t].totalCost * ratio;
           map[t].qty = Math.max(0, map[t].qty - qty);
         }
+      } else if (type === 'split') {
+        // split_ratio = new shares per old share (e.g. 4 means 4:1 split)
+        const splitRatio = parseFloat(tx.split_ratio) || 1;
+        if (map[t].qty > 0 && splitRatio > 0) {
+          map[t].qty        *= splitRatio;
+          map[t].totalCost;       // cost basis in dollars stays the same
+          // avgCost will naturally be recalculated as totalCost / qty at the end
+        }
       }
+      // type === 'dividend' → cash income only, no change to share count or cost basis
     });
     return Object.values(map)
       .filter(h => h.qty > 0.000001)
