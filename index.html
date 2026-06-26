@@ -274,6 +274,8 @@
     .home-card-label { font-size: 10px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; }
     .home-card-val { font-size: 28px; font-weight: 500; }
     .home-card-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+    .home-card-link { cursor: pointer; transition: border-color .15s, transform .1s; }
+    .home-card-link:hover { border-color: var(--gold-dim); transform: translateY(-1px); }
     .goals-list { display: flex; flex-direction: column; gap: 8px; }
     .goal-row {
       display: flex; align-items: center; gap: 12px;
@@ -416,17 +418,20 @@
   <!-- ══════════════════════════════════════ HOME ══ -->
   <div class="page active" id="page-home">
     <div class="page-header">
-      <div class="page-title">Good morning, Omar 👋</div>
+      <div class="page-title" id="home-greeting"></div>
     </div>
     <div class="home-grid" id="home-stats">
-      <div class="home-card"><div class="home-card-label">Open Tasks</div><div class="home-card-val" id="hs-tasks">—</div><div class="home-card-sub">due today or overdue</div></div>
-      <div class="home-card"><div class="home-card-label">Active Rentals</div><div class="home-card-val" id="hs-rentals">—</div><div class="home-card-sub">vehicles out right now</div></div>
-      <div class="home-card"><div class="home-card-label">Portfolio Holdings</div><div class="home-card-val" id="hs-holdings">—</div><div class="home-card-sub">positions tracked</div></div>
-      <div class="home-card"><div class="home-card-label">Fleet Size</div><div class="home-card-val" id="hs-fleet">—</div><div class="home-card-sub">total vehicles</div></div>
-      <div class="home-card"><div class="home-card-label">Goals This Week</div><div class="home-card-val" id="hs-goals">—</div><div class="home-card-sub">in progress</div></div>
-      <div class="home-card"><div class="home-card-label">Voice Notes</div><div class="home-card-val" id="hs-notes">—</div><div class="home-card-sub">unprocessed</div></div>
+      <div class="home-card home-card-link" onclick="switchTab('tasks')"><div class="home-card-label">Open Tasks ↗</div><div class="home-card-val" id="hs-tasks">—</div><div class="home-card-sub">due today or overdue</div></div>
+      <div class="home-card home-card-link" onclick="switchTab('benzo')"><div class="home-card-label">Active Rentals ↗</div><div class="home-card-val" id="hs-rentals">—</div><div class="home-card-sub">vehicles out right now</div></div>
+      <div class="home-card home-card-link" onclick="switchTab('finance')"><div class="home-card-label">Portfolio Holdings ↗</div><div class="home-card-val" id="hs-holdings">—</div><div class="home-card-sub">positions tracked</div></div>
+      <div class="home-card home-card-link" onclick="switchTab('benzo')"><div class="home-card-label">Fleet Size ↗</div><div class="home-card-val" id="hs-fleet">—</div><div class="home-card-sub">total vehicles</div></div>
+      <div class="home-card home-card-link" onclick="switchTab('tasks')"><div class="home-card-label">Goals This Week ↗</div><div class="home-card-val" id="hs-goals">—</div><div class="home-card-sub">in progress</div></div>
+      <div class="home-card home-card-link" onclick="switchTab('agents')"><div class="home-card-label">Voice Notes ↗</div><div class="home-card-val" id="hs-notes">—</div><div class="home-card-sub">unprocessed</div></div>
     </div>
-    <div class="section-label" style="margin-bottom:12px">ACTIVE GOALS</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="section-label" style="margin-bottom:0">ACTIVE GOALS</div>
+      <button class="btn-add" style="font-size:11px;padding:5px 12px" onclick="openAddGoal()">+ Add Goal</button>
+    </div>
     <div class="goals-list" id="home-goals"></div>
   </div>
 
@@ -507,13 +512,16 @@
       <div class="page-title">Tasks</div>
       <button class="btn-add" onclick="openAddTask()">+ Add Task</button>
     </div>
-    <div class="filter-row">
-      <button class="filter-btn active" data-filter="all">ALL</button>
-      <button class="filter-btn" data-filter="Work">WORK</button>
-      <button class="filter-btn" data-filter="Personal">PERSONAL</button>
-      <button class="filter-btn" data-filter="Benzo">BENZO</button>
-      <button class="filter-btn" data-filter="open">OPEN</button>
-      <button class="filter-btn" data-filter="done">DONE</button>
+    <div class="filter-row" style="justify-content:space-between;align-items:center">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="filter-btn active" data-filter="all">ALL</button>
+        <button class="filter-btn" data-filter="Work">WORK</button>
+        <button class="filter-btn" data-filter="Personal">PERSONAL</button>
+        <button class="filter-btn" data-filter="Benzo">BENZO</button>
+      </div>
+      <button class="filter-btn" id="toggle-done-btn" onclick="toggleShowDone()" style="display:flex;align-items:center;gap:6px">
+        <span id="toggle-done-icon">▸</span> Show Completed
+      </button>
     </div>
     <div class="tasks-grid" id="tasks-list">
       <div class="loading">Loading tasks…</div>
@@ -569,6 +577,32 @@
   </div>
 
 </div><!-- /app -->
+
+<!-- ADD GOAL MODAL -->
+<div class="modal-overlay" id="goal-modal">
+  <div class="modal">
+    <h3>New Goal</h3>
+    <div class="form-group">
+      <label class="form-label">Goal Title</label>
+      <input class="form-input" id="new-goal-title" placeholder="What do you want to achieve?" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select class="form-select" id="new-goal-cat">
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Target Date</label>
+      <input class="form-input" type="date" id="new-goal-date" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddGoal()">Cancel</button>
+      <button class="btn-save" onclick="saveGoal()">Save Goal</button>
+    </div>
+  </div>
+</div>
 
 <!-- ADD TASK MODAL -->
 <div class="modal-overlay" id="task-modal">
@@ -702,9 +736,28 @@
   // ── DASHBOARD INIT (called after successful auth) ────────
   function initDashboard() {
     updateClock();
+    updateGreeting();
     loadHome();
     loaders['home'] = true;
   }
+
+  // ── GREETING ─────────────────────────────────────────────
+  function updateGreeting() {
+    const h = new Date().getHours();
+    const msg = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+    const el = document.getElementById('home-greeting');
+    if (el) el.textContent = msg + ', Omar 👋';
+  }
+
+  // ── TAB SWITCHER (callable from anywhere) ────────────────
+  window.switchTab = (tab) => {
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const btn = document.querySelector(`.nav-tab[data-tab="${tab}"]`);
+    if (btn) btn.classList.add('active');
+    document.getElementById(`page-${tab}`).classList.add('active');
+    if (!loaders[tab]) { loaders[tab] = true; loadTab(tab); }
+  };
 
   // ── CLOCK ────────────────────────────────────────────────
   function updateClock() {
@@ -761,10 +814,12 @@
     document.getElementById('hs-notes').textContent    = notes.length;
 
     const gl = document.getElementById('home-goals');
-    gl.innerHTML = goals.filter(g => !g.completed).slice(0, 8).map(g => `
-      <div class="goal-row">
-        <div class="goal-check ${g.completed ? 'done' : ''}"></div>
-        <div class="goal-title">${g.title}</div>
+    const activeGoals = goals.filter(g => !g.completed);
+    if (!activeGoals.length) { gl.innerHTML = '<div class="empty">No active goals. Add one above!</div>'; return; }
+    gl.innerHTML = activeGoals.slice(0, 10).map(g => `
+      <div class="goal-row" style="${g.completed ? 'opacity:.45' : ''}">
+        <div class="goal-check ${g.completed ? 'done' : ''}" onclick="toggleGoal('${g.id}', ${g.completed})" style="cursor:pointer;border-radius:3px;transition:all .15s"></div>
+        <div class="goal-title" style="${g.completed ? 'text-decoration:line-through' : ''}">${g.title}</div>
         <span class="goal-cat">${g.category}</span>
         ${g.target_date ? `<span class="task-due">${g.target_date}</span>` : ''}
       </div>`).join('');
@@ -860,6 +915,15 @@
   // ── TASKS ────────────────────────────────────────────────
   let allTasks = [];
   let activeFilter = 'all';
+  let showDone = false;
+
+  window.toggleShowDone = () => {
+    showDone = !showDone;
+    document.getElementById('toggle-done-icon').textContent = showDone ? '▾' : '▸';
+    document.getElementById('toggle-done-btn').style.color = showDone ? 'var(--gold)' : '';
+    document.getElementById('toggle-done-btn').style.borderColor = showDone ? 'var(--gold)' : '';
+    renderTasks();
+  };
 
   async function loadTasks() {
     allTasks = await sb('tasks', '?order=created_at.desc');
@@ -868,9 +932,10 @@
 
   function renderTasks() {
     let filtered = allTasks;
-    if (activeFilter === 'open') filtered = allTasks.filter(t => !t.completed);
-    else if (activeFilter === 'done') filtered = allTasks.filter(t => t.completed);
-    else if (['Work','Personal','Benzo'].includes(activeFilter)) filtered = allTasks.filter(t => t.category === activeFilter);
+    // Apply category filter first
+    if (['Work','Personal','Benzo'].includes(activeFilter)) filtered = allTasks.filter(t => t.category === activeFilter);
+    // Always hide completed unless showDone is true
+    if (!showDone) filtered = filtered.filter(t => !t.completed);
 
     const list = document.getElementById('tasks-list');
     if (!filtered.length) { list.innerHTML = '<div class="empty">No tasks found.</div>'; return; }
@@ -887,9 +952,9 @@
       </div>`).join('');
   }
 
-  document.querySelectorAll('.filter-btn').forEach(btn => {
+  document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeFilter = btn.dataset.filter;
       renderTasks();
@@ -923,6 +988,36 @@
     renderTasks();
     closeAddTask();
     document.getElementById('new-task-text').value = '';
+  };
+
+  // ── GOALS ────────────────────────────────────────────────
+  window.openAddGoal = () => {
+    document.getElementById('goal-modal').classList.add('open');
+    const d = new Date(); d.setDate(d.getDate() + 7);
+    document.getElementById('new-goal-date').value = d.toISOString().slice(0,10);
+  };
+  window.closeAddGoal = () => document.getElementById('goal-modal').classList.remove('open');
+  window.saveGoal = async () => {
+    const title = document.getElementById('new-goal-title').value.trim();
+    if (!title) return;
+    await sbPost('goals', {
+      title,
+      category:    document.getElementById('new-goal-cat').value,
+      target_date: document.getElementById('new-goal-date').value || null,
+      completed:   false
+    });
+    document.getElementById('new-goal-title').value = '';
+    closeAddGoal();
+    loaders['home'] = false;
+    await loadHome();
+    loaders['home'] = true;
+  };
+
+  window.toggleGoal = async (id, completed) => {
+    await sbPatch('goals', id, { completed: !completed });
+    loaders['home'] = false;
+    await loadHome();
+    loaders['home'] = true;
   };
 
   // ── AGENTS ───────────────────────────────────────────────
