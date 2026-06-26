@@ -4,24 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Omar OS</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg:       #0a0a0a;
-      --bg2:      #0d0d0d;
-      --bg3:      #141414;
-      --border:   #1a1a1a;
-      --border2:  #222;
+      --bg:       #080808;
+      --bg2:      #0c0c0c;
+      --bg3:      #111111;
+      --bg4:      #161616;
+      --border:   #1c1c1c;
+      --border2:  #252525;
       --gold:     #c8a84b;
       --gold-dim: #8a7234;
-      --text:     #e8e6e0;
-      --muted:    #5a5a5a;
-      --muted2:   #3d3d3d;
-      --green:    #2ea44f;
-      --red:      #e05252;
+      --text:     #e4e2dc;
+      --muted:    #525252;
+      --muted2:   #363636;
+      --green:    #22c55e;
+      --red:      #ef4444;
       --blue:     #4a7cbb;
     }
 
@@ -39,337 +41,451 @@
     nav {
       display: flex;
       align-items: center;
-      height: 58px;
-      padding: 0 24px;
+      height: 52px;
+      padding: 0 20px;
       border-bottom: 1px solid var(--border);
       background: var(--bg2);
       flex-shrink: 0;
-      gap: 32px;
+      gap: 8px;
     }
     .nav-brand {
-      font-family: monospace;
-      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
       color: var(--muted);
-      letter-spacing: 0.05em;
+      letter-spacing: .08em;
       white-space: nowrap;
+      margin-right: 16px;
     }
     .nav-brand span { color: var(--gold); }
-    .nav-tabs { display: flex; gap: 4px; flex: 1; }
+    .nav-brand .nav-dot { color: var(--green); }
+    .nav-tabs { display: flex; gap: 2px; }
     .nav-tab {
-      padding: 6px 14px;
-      font-size: 12px;
-      font-weight: 500;
-      letter-spacing: 0.06em;
+      padding: 5px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: .08em;
       color: var(--muted);
       cursor: pointer;
       border-radius: 4px;
       border: none;
       background: transparent;
       transition: color .15s, background .15s;
-      position: relative;
     }
     .nav-tab:hover { color: var(--text); background: var(--bg3); }
-    .nav-tab.active { color: var(--gold); }
-    .nav-tab.active::after {
-      content: '';
-      position: absolute;
-      bottom: -14px;
-      left: 0; right: 0;
-      height: 2px;
-      background: var(--gold);
+    .nav-tab.active {
+      color: var(--text);
+      background: var(--bg4);
+      border: 1px solid var(--border2);
     }
-    .nav-right { display: flex; align-items: center; gap: 16px; margin-left: auto; }
-    .tg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
-    .tg-label { font-size: 11px; color: var(--muted); letter-spacing: .06em; }
-    .nav-time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .nav-right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+    .tg-pill {
+      display: flex; align-items: center; gap: 5px;
+      padding: 3px 8px; border-radius: 20px;
+      border: 1px solid #1a2a1a; background: #0a140a;
+    }
+    .tg-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2.4s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .tg-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--green); letter-spacing: .1em; }
+    .nav-clock-wrap { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: .05em; text-align: right; }
+    .nav-clock-wrap .nav-time { color: var(--text); }
     .nav-avatar {
-      width: 30px; height: 30px; border-radius: 50%;
-      background: var(--bg3); border: 1px solid var(--border2);
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--bg4); border: 1px solid var(--border2);
       display: flex; align-items: center; justify-content: center;
-      font-family: monospace; font-size: 11px; color: var(--gold);
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--gold);
     }
+    .btn-signout {
+      padding: 4px 10px; background: transparent;
+      border: 1px solid var(--border2); color: var(--muted);
+      border-radius: 4px; font-size: 10px; cursor: pointer;
+      font-family: 'JetBrains Mono', monospace; letter-spacing: .05em;
+      transition: all .15s;
+    }
+    .btn-signout:hover { border-color: var(--red); color: var(--red); }
 
     /* ── LAYOUT ── */
     .app { display: flex; flex: 1; overflow: hidden; }
-
-    /* ── PAGES ── */
     .page { display: none; flex: 1; overflow: hidden; }
     .page.active { display: flex; }
 
+    /* ── OS CARD SYSTEM ── */
+    .os-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 14px 15px;
+      flex-shrink: 0;
+    }
+    .os-card-grow { flex: 1; min-height: 0; overflow-y: auto; }
+    .os-card-hdr {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .14em;
+      color: var(--muted2);
+      text-transform: uppercase;
+      margin-bottom: 13px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .os-num { color: #252525; }
+    .os-sub-lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .12em;
+      color: var(--muted2);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .os-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 17px; padding: 0 5px;
+      background: var(--bg4); border: 1px solid var(--border2);
+      border-radius: 3px; font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; color: var(--muted); letter-spacing: .05em;
+    }
+    .os-icon-btn {
+      width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+      background: transparent; border: 1px solid var(--border2); border-radius: 3px;
+      color: var(--muted); font-size: 13px; cursor: pointer; line-height: 1;
+      transition: all .15s;
+    }
+    .os-icon-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+    .os-eye-btn {
+      margin-left: auto; background: transparent; border: none;
+      color: var(--muted2); font-size: 13px; cursor: pointer;
+      transition: color .15s; padding: 0 2px;
+    }
+    .os-eye-btn:hover, .os-eye-btn.active { color: var(--gold); }
+    .os-micro-lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; letter-spacing: .12em; color: var(--muted);
+      text-transform: uppercase; margin-bottom: 3px;
+    }
+    .os-micro-val { font-size: 22px; font-weight: 500; line-height: 1.1; }
+    .os-divider { border: none; border-top: 1px solid var(--border); margin: 11px 0; }
+
+    /* ── HOME 3-COL GRID ── */
+    #page-home { padding: 10px; flex-direction: row !important; }
+    .home-os-grid {
+      display: grid;
+      grid-template-columns: 254px 1fr 238px;
+      gap: 8px;
+      flex: 1;
+      overflow: hidden;
+    }
+    .home-col {
+      display: flex; flex-direction: column; gap: 8px;
+      overflow-y: auto; min-height: 0;
+    }
+
+    /* ── OPERATOR CARD ── */
+    .online-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+      animation: blink 2.4s ease-in-out infinite;
+    }
+    .online-lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--green); letter-spacing: .1em; }
+    .op-name { font-size: 19px; font-weight: 300; margin-bottom: 2px; }
+    .op-name em { font-style: italic; color: var(--gold); font-weight: 300; }
+    .op-role { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .1em; }
+
+    /* ── SESSION CARD ── */
+    .os-session-card { flex-shrink: 0; }
+    .session-greeting { font-size: 26px; font-weight: 300; line-height: 1.2; margin-bottom: 18px; letter-spacing: -.01em; }
+    .session-greeting em { font-style: italic; color: var(--gold); }
+    .session-time-row { display: flex; align-items: flex-end; justify-content: space-between; }
+    .session-big-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 60px; font-weight: 300; letter-spacing: -.03em; line-height: 1; color: var(--text);
+    }
+    .session-time-aside { text-align: right; padding-bottom: 4px; }
+    .session-date { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: .08em; margin-bottom: 3px; }
+    .session-tz { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted2); letter-spacing: .1em; }
+
+    /* ── FINANCE PULSE (home) ── */
+    .home-nw-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 26px; font-weight: 400; color: var(--text); margin: 5px 0 2px;
+      letter-spacing: -.01em;
+    }
+    .home-nw-sub { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+    .home-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
+    .home-stat-cell .k { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 3px; }
+    .home-stat-cell .v { font-size: 16px; font-weight: 500; }
+
+    /* ── TODAY KEY TASKS (home) ── */
+    .key-task-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .key-task-row:last-child { border-bottom: none; }
+    .key-task-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .key-task-text { flex: 1; line-height: 1.3; }
+    .key-task-cat { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .05em; }
+
+    /* ── HOME GOALS ── */
+    .home-goal-row {
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 0; border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .home-goal-row:last-child { border-bottom: none; }
+    .home-goal-check {
+      width: 13px; height: 13px; border: 1.5px solid var(--muted2);
+      border-radius: 2px; flex-shrink: 0; transition: all .15s;
+    }
+    .home-goal-check.done { background: var(--green); border-color: var(--green); }
+    .home-goal-text { flex: 1; font-size: 12px; }
+    .home-goal-date { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); }
+    .home-add-goal {
+      display: flex; align-items: center; gap: 6px;
+      padding: 9px 0; color: var(--muted2); font-size: 11px; cursor: pointer;
+      border-bottom: 1px solid var(--border); transition: color .15s;
+    }
+    .home-add-goal:hover { color: var(--text); }
+
+    /* ── HOME FLEET ── */
+    .fleet-stat-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+    }
+    .fleet-stat-row:last-child { border-bottom: none; }
+    .fleet-stat-label { color: var(--muted); font-size: 11px; }
+    .fleet-stat-count { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 300; }
+
+    /* ── HOME RENTALS ── */
+    .rental-mini-row {
+      padding: 9px 0; border-bottom: 1px solid var(--border);
+    }
+    .rental-mini-row:last-child { border-bottom: none; }
+    .rental-mini-customer { font-size: 12px; font-weight: 500; margin-bottom: 2px; }
+    .rental-mini-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .04em; }
+
     /* ── FINANCE PAGE ── */
     #page-finance { flex-direction: row; }
-    .finance-main {
-      flex: 1; overflow-y: auto; padding: 28px 32px;
-      border-right: 1px solid var(--border);
+    .finance-main { flex: 1; overflow-y: auto; padding: 24px 28px; border-right: 1px solid var(--border); }
+    .finance-sidebar { width: 232px; overflow-y: auto; padding: 20px 18px; flex-shrink: 0; }
+
+    .fin-top-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
     }
-    .finance-sidebar { width: 240px; overflow-y: auto; padding: 24px 20px; flex-shrink: 0; }
+    .fin-currency-group, .fin-tf-group {
+      display: flex; background: var(--bg3);
+      border: 1px solid var(--border2); border-radius: 5px; padding: 2px; gap: 2px;
+    }
+    .fin-cur-btn, .fin-tf-btn {
+      padding: 4px 11px; background: transparent; border: none;
+      color: var(--muted); font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; cursor: pointer; border-radius: 3px;
+      letter-spacing: .05em; transition: all .15s;
+    }
+    .fin-cur-btn:hover, .fin-tf-btn:hover { color: var(--text); }
+    .fin-cur-btn.active, .fin-tf-btn.active {
+      background: var(--bg4); color: var(--text);
+      border: 1px solid var(--border2);
+    }
+    .fin-icon-btn {
+      padding: 5px 11px; background: var(--bg3); border: 1px solid var(--border2);
+      color: var(--muted); border-radius: 4px; font-size: 12px; cursor: pointer;
+      font-family: 'JetBrains Mono', monospace; transition: all .15s;
+    }
+    .fin-icon-btn:hover { color: var(--text); border-color: var(--muted2); }
+    .fin-icon-btn.active { color: var(--gold); border-color: var(--gold-dim); }
 
     .section-label {
-      font-size: 10px; letter-spacing: .12em; color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; letter-spacing: .14em; color: var(--muted);
       text-transform: uppercase; margin-bottom: 6px;
     }
-    .big-value { font-size: 40px; font-weight: 500; color: var(--text); line-height: 1.1; }
-    .delta-green { font-size: 12px; color: var(--green); }
-    .delta-red   { font-size: 12px; color: var(--red); }
+    .big-value { font-family: 'JetBrains Mono', monospace; font-size: 38px; font-weight: 300; color: var(--text); line-height: 1.1; letter-spacing: -.02em; }
+    .delta-green { font-size: 12px; color: var(--green); font-family: 'JetBrains Mono', monospace; }
+    .delta-red   { font-size: 12px; color: var(--red);   font-family: 'JetBrains Mono', monospace; }
 
-    .stat-cards { display: flex; gap: 12px; margin: 24px 0; }
+    .stat-cards { display: flex; gap: 10px; margin: 18px 0; }
     .stat-card {
-      flex: 1; padding: 14px 16px;
-      background: var(--bg2); border: 1px solid var(--border2);
-      border-radius: 6px;
+      flex: 1; padding: 13px 15px;
+      background: var(--bg2); border: 1px solid var(--border2); border-radius: 4px;
     }
-    .stat-card .label { font-size: 10px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }
+    .stat-card .label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px; }
     .stat-card .val   { font-size: 22px; font-weight: 500; }
     .stat-card .sub   { font-size: 11px; color: var(--muted); margin-top: 3px; }
 
-    .chart-wrap { height: 120px; margin: 8px 0 28px; }
+    /* performance chart */
+    .fin-chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .chart-wrap { margin-bottom: 26px; }
 
     table { width: 100%; border-collapse: collapse; }
     thead th {
-      font-size: 10px; color: var(--muted); letter-spacing: .1em;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; color: var(--muted); letter-spacing: .12em;
       text-transform: uppercase; text-align: left;
       padding: 0 0 10px; border-bottom: 1px solid var(--border);
     }
     thead th:last-child { text-align: right; }
     tbody tr { border-bottom: 1px solid var(--border); }
     tbody tr:last-child { border-bottom: none; }
-    tbody td { padding: 11px 0; font-size: 13px; }
+    tbody td { padding: 10px 0; font-size: 13px; }
     tbody td:last-child { text-align: right; }
-    .ticker-sym { font-weight: 600; color: var(--gold); font-size: 13px; }
-    .ticker-name { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .ticker-sym { font-family: 'JetBrains Mono', monospace; font-weight: 500; color: var(--gold); font-size: 12px; }
+    .ticker-name { font-size: 10px; color: var(--muted); margin-top: 2px; }
 
-    .alloc-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 20px 0 8px; gap: 2px; }
+    .alloc-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin: 18px 0 8px; gap: 2px; }
     .alloc-seg { height: 100%; border-radius: 2px; }
     .alloc-legend { display: flex; gap: 16px; }
-    .alloc-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .alloc-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 5px; }
     .alloc-item { font-size: 11px; color: var(--muted); }
 
     /* sidebar */
-    .sidebar-section { margin-bottom: 28px; }
+    .sidebar-section { margin-bottom: 24px; }
     .sidebar-kv { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
-    .sidebar-kv .k { font-size: 12px; color: var(--muted); }
+    .sidebar-kv .k { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); }
     .sidebar-kv .v { font-size: 13px; font-weight: 500; }
-    .sidebar-kv .sub { font-size: 10px; color: var(--muted); }
-    .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
-    .sidebar-total { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 8px; }
+    .sidebar-kv .sub { font-size: 9px; color: var(--muted); }
+    .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
 
     /* ── TASKS PAGE ── */
-    #page-tasks { flex-direction: column; padding: 28px 32px; overflow-y: auto; }
-    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-    .page-title { font-size: 28px; font-weight: 500; }
+    #page-tasks { flex-direction: column; padding: 24px 28px; overflow-y: auto; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .page-title { font-size: 26px; font-weight: 400; }
     .btn-add {
-      padding: 8px 16px; background: var(--gold); color: #000;
-      border: none; border-radius: 5px; font-size: 12px; font-weight: 600;
-      cursor: pointer; letter-spacing: .04em;
+      padding: 7px 14px; background: var(--gold); color: #000;
+      border: none; border-radius: 4px; font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; font-weight: 600; cursor: pointer; letter-spacing: .05em;
     }
     .btn-add:hover { background: #d4b05a; }
-    .filter-row { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .filter-row { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
     .filter-btn {
-      padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 500;
+      padding: 4px 11px; border-radius: 20px; font-size: 10px; font-weight: 500;
+      font-family: 'JetBrains Mono', monospace; letter-spacing: .06em;
       border: 1px solid var(--border2); background: transparent; color: var(--muted);
-      cursor: pointer; letter-spacing: .05em; transition: all .15s;
+      cursor: pointer; transition: all .15s;
     }
     .filter-btn.active, .filter-btn:hover { border-color: var(--gold); color: var(--gold); }
-    .tasks-grid { display: flex; flex-direction: column; gap: 8px; }
+    .tasks-grid { display: flex; flex-direction: column; gap: 6px; }
     .task-row {
-      display: flex; align-items: center; gap: 14px;
-      padding: 14px 16px; background: var(--bg2);
-      border: 1px solid var(--border); border-radius: 6px;
-      transition: border-color .15s;
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 4px; transition: border-color .15s;
     }
     .task-row:hover { border-color: var(--border2); }
-    .task-row.done { opacity: .45; }
+    .task-row.done { opacity: .4; }
     .task-check {
-      width: 18px; height: 18px; border-radius: 50%;
+      width: 17px; height: 17px; border-radius: 50%;
       border: 1.5px solid var(--border2); background: transparent;
       cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
       transition: all .15s;
     }
     .task-check.checked { background: var(--green); border-color: var(--green); }
-    .task-check.checked::after { content: '✓'; color: #fff; font-size: 10px; }
+    .task-check.checked::after { content: '✓'; color: #fff; font-size: 9px; }
     .task-text { flex: 1; font-size: 13px; }
-    .task-meta { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .task-meta { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
     .badge {
-      padding: 3px 8px; border-radius: 3px; font-size: 10px;
-      font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+      padding: 2px 7px; border-radius: 3px; font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500; letter-spacing: .05em; text-transform: uppercase;
     }
-    .badge-high     { background: #2a0e0e; color: #e05252; border: 1px solid #4a1a1a; }
+    .badge-high     { background: #1f0808; color: #ef4444; border: 1px solid #3a1010; }
     .badge-medium   { background: #1a1500; color: #c8a84b; border: 1px solid #3a2e00; }
-    .badge-low      { background: #0a1a0a; color: #2ea44f; border: 1px solid #1a3a1a; }
-    .badge-personal { background: #0b1320; color: #4a7cbb; border: 1px solid #1a3060; }
-    .badge-work     { background: #0d1a10; color: #2ea44f; border: 1px solid #1a3a20; }
+    .badge-low      { background: #081408; color: #22c55e; border: 1px solid #143014; }
+    .badge-personal { background: #0a1220; color: #4a7cbb; border: 1px solid #162040; }
+    .badge-work     { background: #0a1410; color: #22c55e; border: 1px solid #143020; }
     .badge-benzo    { background: #1a1000; color: #c8a84b; border: 1px solid #3a2500; }
-    .task-due { font-size: 11px; color: var(--muted); }
+    .task-due { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); }
 
     /* ── BENZO PAGE ── */
-    #page-benzo { flex-direction: column; padding: 28px 32px; overflow-y: auto; }
-    .benzo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
-    .fleet-card {
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 8px; padding: 18px 20px;
-    }
-    .fleet-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
-    .fleet-name { font-size: 15px; font-weight: 500; }
-    .fleet-sub  { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    #page-benzo { flex-direction: column; padding: 24px 28px; overflow-y: auto; }
+    .benzo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; margin-bottom: 28px; }
+    .fleet-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: 16px 18px; }
+    .fleet-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .fleet-name { font-size: 14px; font-weight: 500; }
+    .fleet-sub  { font-size: 10px; color: var(--muted); margin-top: 2px; }
     .status-pill {
-      padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 600;
-      letter-spacing: .06em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 20px; font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase;
     }
-    .status-available   { background: #0a1a0a; color: #2ea44f; border: 1px solid #1a3a1a; }
-    .status-rented      { background: #0b1320; color: #4a7cbb; border: 1px solid #1a3060; }
-    .status-maintenance { background: #1a1000; color: #c8a84b; border: 1px solid #3a2500; }
-    .splits-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-    .split-item { font-size: 11px; color: var(--muted); }
+    .status-available   { background: #0a1a0a; color: #22c55e;  border: 1px solid #143014; }
+    .status-rented      { background: #0a1220; color: #4a7cbb;  border: 1px solid #162040; }
+    .status-maintenance { background: #1a1000; color: #c8a84b;  border: 1px solid #3a2500; }
+    .splits-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .split-item { font-size: 10px; color: var(--muted); }
     .split-item span { color: var(--text); font-weight: 500; }
-
     .rentals-table-wrap { overflow-x: auto; }
 
     /* ── AGENTS PAGE ── */
     #page-agents { flex-direction: row; overflow: hidden; }
-    .agents-list { width: 220px; border-right: 1px solid var(--border); padding: 20px 0; overflow-y: auto; flex-shrink: 0; }
-    .agent-item {
-      padding: 12px 20px; cursor: pointer; border-left: 2px solid transparent;
-      transition: all .15s;
-    }
+    .agents-list { width: 210px; border-right: 1px solid var(--border); padding: 16px 0; overflow-y: auto; flex-shrink: 0; }
+    .agent-item { padding: 11px 18px; cursor: pointer; border-left: 2px solid transparent; transition: all .15s; }
     .agent-item:hover { background: var(--bg3); }
     .agent-item.active { border-left-color: var(--gold); background: var(--bg3); }
     .agent-name { font-size: 13px; font-weight: 500; }
-    .agent-last { font-size: 10px; color: var(--muted); margin-top: 3px; }
+    .agent-last { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 3px; }
     .agent-chat { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .chat-header { padding: 16px 24px; border-bottom: 1px solid var(--border); }
-    .chat-title { font-size: 15px; font-weight: 500; }
-    .chat-messages { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
-    .msg { max-width: 72%; }
+    .chat-header { padding: 14px 22px; border-bottom: 1px solid var(--border); }
+    .chat-title { font-size: 14px; font-weight: 500; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 18px 22px; display: flex; flex-direction: column; gap: 12px; }
+    .msg { max-width: 70%; }
     .msg.user { align-self: flex-end; }
     .msg.assistant { align-self: flex-start; }
-    .msg-bubble {
-      padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5;
-    }
-    .msg.user .msg-bubble { background: var(--gold); color: #000; border-radius: 10px 10px 2px 10px; }
-    .msg.assistant .msg-bubble { background: var(--bg3); border: 1px solid var(--border2); border-radius: 10px 10px 10px 2px; }
-    .msg-role { font-size: 10px; color: var(--muted); margin-bottom: 4px; letter-spacing: .05em; text-transform: uppercase; }
-    .chat-input-row {
-      padding: 16px 24px; border-top: 1px solid var(--border);
-      display: flex; gap: 10px;
-    }
-    .chat-input {
-      flex: 1; background: var(--bg3); border: 1px solid var(--border2);
-      color: var(--text); padding: 10px 14px; border-radius: 6px; font-size: 13px;
-      outline: none;
-    }
+    .msg-bubble { padding: 9px 13px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+    .msg.user .msg-bubble { background: var(--gold); color: #000; border-radius: 8px 8px 2px 8px; }
+    .msg.assistant .msg-bubble { background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px 8px 8px 2px; }
+    .msg-role { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); margin-bottom: 3px; letter-spacing: .06em; text-transform: uppercase; }
+    .chat-input-row { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+    .chat-input { flex: 1; background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 9px 13px; border-radius: 5px; font-size: 13px; outline: none; }
     .chat-input:focus { border-color: var(--gold-dim); }
-    .btn-send {
-      padding: 10px 18px; background: var(--gold); color: #000;
-      border: none; border-radius: 6px; font-size: 12px; font-weight: 600;
-      cursor: pointer;
-    }
-
-    /* ── HOME PAGE ── */
-    #page-home { flex-direction: column; padding: 28px 32px; overflow-y: auto; }
-    .home-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
-    .home-card {
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 8px; padding: 18px 20px;
-    }
-    .home-card-label { font-size: 10px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; }
-    .home-card-val { font-size: 28px; font-weight: 500; }
-    .home-card-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
-    .home-card-link { cursor: pointer; transition: border-color .15s, transform .1s; }
-    .home-card-link:hover { border-color: var(--gold-dim); transform: translateY(-1px); }
-    .goals-list { display: flex; flex-direction: column; gap: 8px; }
-    .goal-row {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 16px; background: var(--bg2);
-      border: 1px solid var(--border); border-radius: 6px;
-    }
-    .goal-check { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid var(--border2); flex-shrink: 0; }
-    .goal-check.done { background: var(--green); border-color: var(--green); }
-    .goal-title { flex: 1; font-size: 13px; }
-    .goal-cat { font-size: 10px; color: var(--muted); padding: 2px 7px; border: 1px solid var(--border2); border-radius: 3px; }
-
-    /* scrollbar */
-    ::-webkit-scrollbar { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-    /* loading state */
-    .loading { color: var(--muted); font-size: 13px; padding: 20px 0; }
-    .empty   { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
+    .btn-send { padding: 9px 16px; background: var(--gold); color: #000; border: none; border-radius: 5px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: 'JetBrains Mono', monospace; }
 
     /* ── AUTH SCREEN ── */
     #auth-screen {
       position: fixed; inset: 0; background: var(--bg);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 9999;
+      display: flex; align-items: center; justify-content: center; z-index: 9999;
     }
     #auth-screen.hidden { display: none; }
     .auth-box {
-      width: 360px; padding: 40px 36px;
-      background: var(--bg2); border: 1px solid var(--border2);
-      border-radius: 12px;
+      width: 340px; padding: 36px 32px;
+      background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px;
     }
-    .auth-brand {
-      font-family: monospace; font-size: 14px; color: var(--muted);
-      letter-spacing: .1em; margin-bottom: 6px;
-    }
+    .auth-brand { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: .1em; margin-bottom: 5px; }
     .auth-brand span { color: var(--gold); }
-    .auth-title { font-size: 22px; font-weight: 500; margin-bottom: 28px; }
-    .auth-group { margin-bottom: 16px; }
-    .auth-label {
-      font-size: 11px; color: var(--muted); letter-spacing: .08em;
-      text-transform: uppercase; display: block; margin-bottom: 6px;
-    }
-    .auth-input {
-      width: 100%; background: var(--bg3); border: 1px solid var(--border2);
-      color: var(--text); padding: 11px 14px; border-radius: 6px;
-      font-size: 14px; outline: none; transition: border-color .15s;
-    }
+    .auth-title { font-size: 20px; font-weight: 400; margin-bottom: 24px; }
+    .auth-group { margin-bottom: 14px; }
+    .auth-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+    .auth-input { width: 100%; background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 10px 13px; border-radius: 4px; font-size: 13px; outline: none; transition: border-color .15s; }
     .auth-input:focus { border-color: var(--gold-dim); }
-    .auth-btn {
-      width: 100%; padding: 12px; background: var(--gold); color: #000;
-      border: none; border-radius: 6px; font-size: 14px; font-weight: 700;
-      cursor: pointer; margin-top: 8px; letter-spacing: .04em;
-      transition: background .15s;
-    }
+    .auth-btn { width: 100%; padding: 11px; background: var(--gold); color: #000; border: none; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 8px; font-family: 'JetBrains Mono', monospace; letter-spacing: .05em; transition: background .15s; }
     .auth-btn:hover { background: #d4b05a; }
-    .auth-error {
-      color: var(--red); font-size: 12px; margin-top: 12px;
-      min-height: 18px; text-align: center;
-    }
+    .auth-error { color: var(--red); font-size: 11px; margin-top: 10px; min-height: 16px; text-align: center; font-family: 'JetBrains Mono', monospace; }
     .auth-loading { opacity: .6; pointer-events: none; }
 
-    /* sign-out button in nav */
-    .btn-signout {
-      padding: 5px 12px; background: transparent;
-      border: 1px solid var(--border2); color: var(--muted);
-      border-radius: 4px; font-size: 11px; cursor: pointer;
-      letter-spacing: .04em; transition: all .15s;
-    }
-    .btn-signout:hover { border-color: var(--red); color: var(--red); }
-
-    /* modal */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.7); z-index: 1000;
-      align-items: center; justify-content: center;
-    }
+    /* ── MODAL ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 1000; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
-    .modal {
-      background: var(--bg2); border: 1px solid var(--border2);
-      border-radius: 10px; padding: 28px; width: 420px; max-width: 95vw;
-    }
-    .modal h3 { font-size: 16px; margin-bottom: 20px; }
-    .form-group { margin-bottom: 14px; }
-    .form-label { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; display: block; }
-    .form-input, .form-select {
-      width: 100%; background: var(--bg3); border: 1px solid var(--border2);
-      color: var(--text); padding: 9px 12px; border-radius: 5px; font-size: 13px; outline: none;
-    }
+    .modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; padding: 24px; width: 400px; max-width: 95vw; }
+    .modal h3 { font-size: 15px; margin-bottom: 18px; }
+    .form-group { margin-bottom: 12px; }
+    .form-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 5px; display: block; }
+    .form-input, .form-select { width: 100%; background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 8px 11px; border-radius: 4px; font-size: 13px; outline: none; }
     .form-input:focus, .form-select:focus { border-color: var(--gold-dim); }
     .form-select option { background: var(--bg3); }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-    .btn-cancel { padding: 8px 16px; background: transparent; border: 1px solid var(--border2); color: var(--muted); border-radius: 5px; cursor: pointer; font-size: 12px; }
-    .btn-save   { padding: 8px 16px; background: var(--gold); color: #000; border: none; border-radius: 5px; font-weight: 600; cursor: pointer; font-size: 12px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    .btn-cancel { padding: 7px 14px; background: transparent; border: 1px solid var(--border2); color: var(--muted); border-radius: 4px; cursor: pointer; font-size: 11px; }
+    .btn-save   { padding: 7px 14px; background: var(--gold); color: #000; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+
+    /* ── UTILS ── */
+    ::-webkit-scrollbar { width: 3px; height: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    .loading { color: var(--muted); font-size: 11px; padding: 16px 0; font-family: 'JetBrains Mono', monospace; }
+    .empty   { color: var(--muted); font-size: 11px; padding: 14px 0; text-align: center; font-family: 'JetBrains Mono', monospace; }
+    .goals-list { display: flex; flex-direction: column; gap: 6px; }
+    .goal-row { display: flex; align-items: center; gap: 10px; padding: 11px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; }
+    .goal-check { width: 14px; height: 14px; border-radius: 2px; border: 1.5px solid var(--border2); flex-shrink: 0; }
+    .goal-check.done { background: var(--green); border-color: var(--green); }
+    .goal-title { flex: 1; font-size: 13px; }
+    .goal-cat { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); padding: 2px 6px; border: 1px solid var(--border2); border-radius: 2px; }
   </style>
 </head>
 <body>
@@ -395,7 +511,7 @@
 
 <!-- TOP NAV -->
 <nav>
-  <div class="nav-brand">OMAR OS // <span>V1</span></div>
+  <div class="nav-brand"><span class="nav-dot">•</span> OMAR OS // <span>V1</span></div>
   <div class="nav-tabs">
     <button class="nav-tab active" data-tab="home">HOME</button>
     <button class="nav-tab" data-tab="finance">FINANCE</button>
@@ -404,10 +520,14 @@
     <button class="nav-tab" data-tab="benzo">BENZO</button>
   </div>
   <div class="nav-right">
-    <div class="tg-dot"></div>
-    <span class="tg-label">TG BOT</span>
-    <span class="nav-time" id="nav-clock">--:--</span>
-    <span class="nav-time" id="nav-date"></span>
+    <div class="tg-pill">
+      <div class="tg-dot"></div>
+      <span class="tg-label">TG LIVE</span>
+    </div>
+    <div class="nav-clock-wrap">
+      <div class="nav-time" id="nav-clock">--:--</div>
+      <div id="nav-date" style="font-size:9px;letter-spacing:.05em"></div>
+    </div>
     <div class="nav-avatar">OB</div>
     <button class="btn-signout" onclick="signOut()">Sign out</button>
   </div>
@@ -415,173 +535,301 @@
 
 <div class="app">
 
-  <!-- ══════════════════════════════════════ HOME ══ -->
-  <div class="page active" id="page-home">
-    <div class="page-header">
-      <div class="page-title" id="home-greeting"></div>
-    </div>
-    <div class="home-grid" id="home-stats">
-      <div class="home-card home-card-link" onclick="switchTab('tasks')"><div class="home-card-label">Open Tasks ↗</div><div class="home-card-val" id="hs-tasks">—</div><div class="home-card-sub">due today or overdue</div></div>
-      <div class="home-card home-card-link" onclick="switchTab('benzo')"><div class="home-card-label">Active Rentals ↗</div><div class="home-card-val" id="hs-rentals">—</div><div class="home-card-sub">vehicles out right now</div></div>
-      <div class="home-card home-card-link" onclick="switchTab('finance')"><div class="home-card-label">Portfolio Holdings ↗</div><div class="home-card-val" id="hs-holdings">—</div><div class="home-card-sub">positions tracked</div></div>
-      <div class="home-card home-card-link" onclick="switchTab('benzo')"><div class="home-card-label">Fleet Size ↗</div><div class="home-card-val" id="hs-fleet">—</div><div class="home-card-sub">total vehicles</div></div>
-      <div class="home-card home-card-link" onclick="switchTab('tasks')"><div class="home-card-label">Goals This Week ↗</div><div class="home-card-val" id="hs-goals">—</div><div class="home-card-sub">in progress</div></div>
-      <div class="home-card home-card-link" onclick="switchTab('agents')"><div class="home-card-label">Voice Notes ↗</div><div class="home-card-val" id="hs-notes">—</div><div class="home-card-sub">unprocessed</div></div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="section-label" style="margin-bottom:0">ACTIVE GOALS</div>
-      <button class="btn-add" style="font-size:11px;padding:5px 12px" onclick="openAddGoal()">+ Add Goal</button>
-    </div>
-    <div class="goals-list" id="home-goals"></div>
-  </div>
+<!-- ══════════════════════════════════════════════════════ HOME ══ -->
+<div class="page active" id="page-home">
+  <div class="home-os-grid">
 
-  <!-- ══════════════════════════════════════ FINANCE ══ -->
-  <div class="page" id="page-finance">
-    <div class="finance-main">
-      <div class="section-label">PORTFOLIO OVERVIEW · LIVE</div>
-      <div class="big-value" id="fin-total">—</div>
-      <div class="delta-green" id="fin-delta" style="margin-top:4px"></div>
+    <!-- ── LEFT COL ── -->
+    <div class="home-col">
 
-      <div class="stat-cards">
-        <div class="stat-card">
-          <div class="label">PORTFOLIO VALUE</div>
-          <div class="val" id="sc-port">—</div>
-          <div class="sub" id="sc-port-sub"></div>
+      <!-- 01 OPERATOR -->
+      <div class="os-card">
+        <div class="os-card-hdr">
+          <span class="os-num">01 //</span> OPERATOR
+          <span style="margin-left:auto;display:flex;align-items:center;gap:5px">
+            <span class="online-dot"></span>
+            <span class="online-lbl">ONLINE</span>
+          </span>
         </div>
-        <div class="stat-card">
-          <div class="label">WATCHLIST ALERTS</div>
-          <div class="val" id="sc-alerts">—</div>
-          <div class="sub">active alerts</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">POSITIONS</div>
-          <div class="val" id="sc-pos">—</div>
-          <div class="sub">across stocks, crypto & ETFs</div>
-        </div>
-      </div>
-
-      <div class="chart-wrap">
-        <canvas id="portfolio-chart"></canvas>
-      </div>
-
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div class="section-label" style="margin-bottom:0">HOLDINGS · LIVE</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span id="prices-status" style="font-size:10px;color:var(--muted)">Fetching prices…</span>
-          <button onclick="refreshFinance()" style="padding:4px 10px;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:4px;font-size:10px;cursor:pointer;letter-spacing:.05em">↺ REFRESH</button>
-        </div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>TICKER</th>
-            <th>SHARES</th>
-            <th>AVG COST</th>
-            <th>LIVE PRICE</th>
-            <th>VALUE</th>
-            <th style="text-align:right">GAIN / LOSS</th>
-          </tr>
-        </thead>
-        <tbody id="holdings-body">
-          <tr><td colspan="6" class="loading">Loading holdings…</td></tr>
-        </tbody>
-      </table>
-
-      <div class="section-label" style="margin:24px 0 10px">ALLOCATION</div>
-      <div class="alloc-bar" id="alloc-bar"></div>
-      <div class="alloc-legend" id="alloc-legend"></div>
-    </div>
-
-    <div class="finance-sidebar">
-      <div class="sidebar-section">
-        <div class="section-label" style="margin-bottom:14px">06 // ACCOUNTS</div>
-        <div class="sidebar-kv">
-          <div>
-            <div class="k">TOTAL NET WORTH</div>
+        <div class="op-name">Omar <em>Khlaiwi</em></div>
+        <div class="op-role" style="margin-bottom:12px">FOUNDER · DUBAI</div>
+        <hr class="os-divider" />
+        <div class="home-stat-grid">
+          <div class="home-stat-cell">
+            <div class="k">OPEN TASKS</div>
+            <div class="v" id="hs-tasks" style="cursor:pointer" onclick="switchTab('tasks')">—</div>
+          </div>
+          <div class="home-stat-cell">
+            <div class="k">FLEET SIZE</div>
+            <div class="v" id="hs-fleet" style="cursor:pointer" onclick="switchTab('benzo')">—</div>
+          </div>
+          <div class="home-stat-cell" style="margin-top:8px">
+            <div class="k">ACTIVE RENTALS</div>
+            <div class="v" id="hs-rentals" style="cursor:pointer" onclick="switchTab('benzo')">—</div>
+          </div>
+          <div class="home-stat-cell" style="margin-top:8px">
+            <div class="k">WEEKLY GOALS</div>
+            <div class="v" id="hs-goals">—</div>
           </div>
         </div>
-        <div class="big-value" style="font-size:28px" id="sb-networth">—</div>
-        <div class="delta-green" id="sb-nw-delta" style="font-size:11px;margin-top:3px"></div>
       </div>
 
-      <hr class="sidebar-divider" />
-
-      <div class="sidebar-section">
-        <div class="section-label" style="margin-bottom:12px">07 // WATCHLIST</div>
-        <div id="watchlist-items"></div>
+      <!-- 02 FINANCE PULSE -->
+      <div class="os-card">
+        <div class="os-card-hdr">
+          <span class="os-num">02 //</span> FINANCE PULSE
+          <button class="os-eye-btn" id="home-eye-btn" onclick="toggleHomePrivacy()" title="Hide amounts">◉</button>
+        </div>
+        <div class="os-micro-lbl">INVESTED CAPITAL</div>
+        <div class="home-nw-val" id="home-nw">—</div>
+        <div class="home-nw-sub" id="home-nw-sub"></div>
+        <canvas id="home-sparkline" height="48"></canvas>
+        <div class="home-stat-grid" style="margin-top:10px">
+          <div class="home-stat-cell">
+            <div class="k">POSITIONS</div>
+            <div class="v" id="hs-holdings" style="cursor:pointer" onclick="switchTab('finance')">—</div>
+          </div>
+          <div class="home-stat-cell">
+            <div class="k">UNREAD NOTES</div>
+            <div class="v" id="hs-notes">—</div>
+          </div>
+        </div>
       </div>
+
+      <!-- 03 TODAY KEY TASKS -->
+      <div class="os-card os-card-grow">
+        <div class="os-card-hdr">
+          <span class="os-num">03 //</span> TODAY · KEY
+          <span id="home-task-badge" class="os-badge" style="margin-left:6px">0</span>
+          <button class="os-icon-btn" style="margin-left:auto" onclick="switchTab('tasks')" title="All tasks">↗</button>
+        </div>
+        <div id="home-key-tasks"><div class="loading">Loading…</div></div>
+      </div>
+
+    </div><!-- /left col -->
+
+    <!-- ── CENTER COL ── -->
+    <div class="home-col">
+
+      <!-- 04 SESSION -->
+      <div class="os-card os-session-card">
+        <div class="os-card-hdr"><span class="os-num">04 //</span> SESSION</div>
+        <div class="session-greeting" id="home-greeting">Good morning, <em>Omar.</em></div>
+        <div class="session-time-row">
+          <div class="session-big-time" id="session-clock">--:--</div>
+          <div class="session-time-aside">
+            <div class="session-date" id="session-date"></div>
+            <div class="session-tz">LOCAL TIME</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 05 GOALS -->
+      <div class="os-card os-card-grow">
+        <div class="os-card-hdr" style="justify-content:space-between">
+          <span><span class="os-num">05 //</span> GOALS</span>
+          <button class="os-icon-btn" onclick="openAddGoal()">+</button>
+        </div>
+
+        <div class="os-sub-lbl">THIS WEEK</div>
+        <div id="home-goals-week"><div class="loading">Loading…</div></div>
+
+        <div class="os-sub-lbl" style="margin-top:16px">THIS MONTH</div>
+        <div id="home-goals-month"></div>
+      </div>
+
+    </div><!-- /center col -->
+
+    <!-- ── RIGHT COL ── -->
+    <div class="home-col">
+
+      <!-- 06 FLEET -->
+      <div class="os-card">
+        <div class="os-card-hdr">
+          <span class="os-num">06 //</span> FLEET
+          <button class="os-icon-btn" style="margin-left:auto" onclick="switchTab('benzo')" title="Benzo tab">↗</button>
+        </div>
+        <div id="home-fleet-status"><div class="loading">Loading…</div></div>
+      </div>
+
+      <!-- 07 ACTIVE RENTALS -->
+      <div class="os-card">
+        <div class="os-card-hdr">
+          <span class="os-num">07 //</span> RENTALS
+          <span id="home-rentals-badge" class="os-badge" style="margin-left:6px">0</span>
+        </div>
+        <div id="home-active-rentals"><div class="loading">Loading…</div></div>
+      </div>
+
+      <!-- 08 VOICE NOTES -->
+      <div class="os-card os-card-grow">
+        <div class="os-card-hdr"><span class="os-num">08 //</span> VOICE NOTES</div>
+        <div id="home-voice-notes"><div class="loading">Loading…</div></div>
+      </div>
+
+    </div><!-- /right col -->
+
+  </div><!-- /home-os-grid -->
+</div><!-- /page-home -->
+
+<!-- ══════════════════════════════════════════════════════ FINANCE ══ -->
+<div class="page" id="page-finance">
+  <div class="finance-main">
+
+    <!-- Controls row -->
+    <div class="fin-top-row">
+      <div class="fin-currency-group">
+        <button class="fin-cur-btn active" data-cur="USD" onclick="setCurrency('USD')">USD</button>
+        <button class="fin-cur-btn" data-cur="CAD" onclick="setCurrency('CAD')">CAD</button>
+        <button class="fin-cur-btn" data-cur="AED" onclick="setCurrency('AED')">AED</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
+        <button class="fin-icon-btn" id="fin-priv-btn" onclick="togglePrivacy()" title="Hide amounts">◉ HIDE</button>
+        <button class="fin-icon-btn" onclick="refreshFinance()">↺ REFRESH</button>
+        <span id="prices-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.06em">Fetching prices…</span>
+      </div>
+    </div>
+
+    <div class="section-label">PORTFOLIO OVERVIEW · LIVE</div>
+    <div class="big-value" id="fin-total">—</div>
+    <div id="fin-delta" style="margin-top:4px;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
+
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="label">PORTFOLIO VALUE</div>
+        <div class="val" id="sc-port">—</div>
+        <div class="sub" id="sc-port-sub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">WATCHLIST ALERTS</div>
+        <div class="val" id="sc-alerts">—</div>
+        <div class="sub">active alerts</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">POSITIONS</div>
+        <div class="val" id="sc-pos">—</div>
+        <div class="sub">stocks, crypto &amp; ETFs</div>
+      </div>
+    </div>
+
+    <!-- Performance chart -->
+    <div class="fin-chart-header">
+      <div class="section-label" style="margin-bottom:0">PERFORMANCE</div>
+      <div class="fin-tf-group">
+        <button class="fin-tf-btn" data-tf="1W" onclick="setTimeframe('1W')">1W</button>
+        <button class="fin-tf-btn active" data-tf="1M" onclick="setTimeframe('1M')">1M</button>
+        <button class="fin-tf-btn" data-tf="1Y" onclick="setTimeframe('1Y')">1Y</button>
+        <button class="fin-tf-btn" data-tf="5Y" onclick="setTimeframe('5Y')">5Y</button>
+        <button class="fin-tf-btn" data-tf="ALL" onclick="setTimeframe('ALL')">ALL</button>
+      </div>
+    </div>
+    <div class="chart-wrap" style="height:210px;margin:8px 0 22px">
+      <canvas id="portfolio-chart"></canvas>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="section-label" style="margin-bottom:0">HOLDINGS · LIVE</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>TICKER</th>
+          <th>SHARES</th>
+          <th>AVG COST</th>
+          <th>LIVE PRICE</th>
+          <th>VALUE</th>
+          <th style="text-align:right">GAIN / LOSS</th>
+        </tr>
+      </thead>
+      <tbody id="holdings-body">
+        <tr><td colspan="6" class="loading">Loading holdings…</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-label" style="margin:20px 0 8px">ALLOCATION</div>
+    <div class="alloc-bar" id="alloc-bar"></div>
+    <div class="alloc-legend" id="alloc-legend"></div>
+
+  </div><!-- /finance-main -->
+
+  <div class="finance-sidebar">
+    <div class="sidebar-section">
+      <div class="section-label" style="margin-bottom:12px">NET WORTH</div>
+      <div class="big-value" style="font-size:24px;font-family:'JetBrains Mono',monospace" id="sb-networth">—</div>
+      <div id="sb-nw-delta" style="font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:3px"></div>
+    </div>
+    <hr class="sidebar-divider" />
+    <div class="sidebar-section">
+      <div class="section-label" style="margin-bottom:12px">WATCHLIST</div>
+      <div id="watchlist-items"></div>
     </div>
   </div>
+</div>
 
-  <!-- ══════════════════════════════════════ TASKS ══ -->
-  <div class="page" id="page-tasks">
-    <div class="page-header">
-      <div class="page-title">Tasks</div>
-      <button class="btn-add" onclick="openAddTask()">+ Add Task</button>
+<!-- ══════════════════════════════════════════════════════ TASKS ══ -->
+<div class="page" id="page-tasks">
+  <div class="page-header">
+    <div class="page-title">Tasks</div>
+    <button class="btn-add" onclick="openAddTask()">+ Add Task</button>
+  </div>
+  <div class="filter-row" style="justify-content:space-between;align-items:center">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="filter-btn active" data-filter="all">ALL</button>
+      <button class="filter-btn" data-filter="Work">WORK</button>
+      <button class="filter-btn" data-filter="Personal">PERSONAL</button>
+      <button class="filter-btn" data-filter="Benzo">BENZO</button>
     </div>
-    <div class="filter-row" style="justify-content:space-between;align-items:center">
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="filter-btn active" data-filter="all">ALL</button>
-        <button class="filter-btn" data-filter="Work">WORK</button>
-        <button class="filter-btn" data-filter="Personal">PERSONAL</button>
-        <button class="filter-btn" data-filter="Benzo">BENZO</button>
-      </div>
-      <button class="filter-btn" id="toggle-done-btn" onclick="toggleShowDone()" style="display:flex;align-items:center;gap:6px">
-        <span id="toggle-done-icon">▸</span> Show Completed
-      </button>
+    <button class="filter-btn" id="toggle-done-btn" onclick="toggleShowDone()" style="display:flex;align-items:center;gap:5px">
+      <span id="toggle-done-icon">▸</span> Show Completed
+    </button>
+  </div>
+  <div class="tasks-grid" id="tasks-list">
+    <div class="loading">Loading tasks…</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ AGENTS ══ -->
+<div class="page" id="page-agents">
+  <div class="agents-list" id="agents-list"></div>
+  <div class="agent-chat">
+    <div class="chat-header">
+      <div class="chat-title" id="chat-agent-name">Select an agent</div>
+      <div class="agent-last" id="chat-agent-last"></div>
     </div>
-    <div class="tasks-grid" id="tasks-list">
-      <div class="loading">Loading tasks…</div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="empty">Select an agent to view conversation history.</div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" placeholder="Message this agent…" onkeydown="if(event.key==='Enter') sendAgentMsg()" />
+      <button class="btn-send" onclick="sendAgentMsg()">Send</button>
     </div>
   </div>
+</div>
 
-  <!-- ══════════════════════════════════════ AGENTS ══ -->
-  <div class="page" id="page-agents">
-    <div class="agents-list" id="agents-list"></div>
-    <div class="agent-chat">
-      <div class="chat-header">
-        <div class="chat-title" id="chat-agent-name">Select an agent</div>
-        <div class="agent-last" id="chat-agent-last"></div>
-      </div>
-      <div class="chat-messages" id="chat-messages">
-        <div class="empty">Select an agent to view conversation history.</div>
-      </div>
-      <div class="chat-input-row">
-        <input class="chat-input" id="chat-input" placeholder="Message this agent…" onkeydown="if(event.key==='Enter') sendAgentMsg()" />
-        <button class="btn-send" onclick="sendAgentMsg()">Send</button>
-      </div>
-    </div>
+<!-- ══════════════════════════════════════════════════════ BENZO ══ -->
+<div class="page" id="page-benzo">
+  <div class="page-header">
+    <div class="page-title">Benzo Fleet</div>
   </div>
-
-  <!-- ══════════════════════════════════════ BENZO ══ -->
-  <div class="page" id="page-benzo">
-    <div class="page-header">
-      <div class="page-title">Benzo Fleet</div>
-    </div>
-    <div class="section-label" style="margin-bottom:14px">VEHICLES</div>
-    <div class="benzo-grid" id="fleet-grid">
-      <div class="loading">Loading fleet…</div>
-    </div>
-    <div class="section-label" style="margin-bottom:14px">RENTALS</div>
-    <div class="rentals-table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>CUSTOMER</th>
-            <th>VEHICLE</th>
-            <th>START</th>
-            <th>END</th>
-            <th>DAILY RATE</th>
-            <th>REVENUE</th>
-            <th>STATUS</th>
-          </tr>
-        </thead>
-        <tbody id="rentals-body">
-          <tr><td colspan="7" class="loading">Loading rentals…</td></tr>
-        </tbody>
-      </table>
-    </div>
+  <div class="section-label" style="margin-bottom:12px">VEHICLES</div>
+  <div class="benzo-grid" id="fleet-grid">
+    <div class="loading">Loading fleet…</div>
   </div>
+  <div class="section-label" style="margin-bottom:12px">RENTALS</div>
+  <div class="rentals-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>CUSTOMER</th><th>VEHICLE</th><th>START</th><th>END</th>
+          <th>DAILY RATE</th><th>REVENUE</th><th>STATUS</th>
+        </tr>
+      </thead>
+      <tbody id="rentals-body">
+        <tr><td colspan="7" class="loading">Loading rentals…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 </div><!-- /app -->
 
@@ -643,17 +891,59 @@
 </div>
 
 <script type="module">
-  // ── SUPABASE CONFIG ──────────────────────────────────────
+  // ── SUPABASE CONFIG ─────────────────────────────────────
   const SUPABASE_URL  = 'https://mafpxfswilljtbopxffq.supabase.co';
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hZnB4ZnN3aWxsanRib3B4ZmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTgzNzgsImV4cCI6MjA5Nzk3NDM3OH0.OMdQUbBR_r0SveLmX2bJcDYDfkhes4cQKjB2zYYCfbA';
 
-  // ── SUPABASE AUTH CLIENT ─────────────────────────────────
   const { createClient } = supabase;
   const sbClient = createClient(SUPABASE_URL, SUPABASE_ANON);
+  let accessToken = SUPABASE_ANON;
 
-  let accessToken = SUPABASE_ANON; // default to anon, overwritten after login
+  // ── CURRENCY + PRIVACY STATE ────────────────────────────
+  const FX     = { USD: 1, CAD: 1.37, AED: 3.67 };
+  const FX_SYM = { USD: '$', CAD: 'C$', AED: 'AED ' };
+  let activeCurrency  = 'USD';
+  let privacyMode     = false;
+  let homePrivacyMode = false;
+  let activeTimeframe = '1M';
+  let finData         = null;  // cached finance data
+  let portfolioChart  = null;
+  let homeSparkChart  = null;
 
-  // ── AUTH FUNCTIONS ───────────────────────────────────────
+  function fmtMoney(usdVal, priv) {
+    if (priv !== undefined ? priv : privacyMode) return '••••••';
+    const val = usdVal * (FX[activeCurrency] || 1);
+    const sym = FX_SYM[activeCurrency] || '$';
+    return sym + fmt(val);
+  }
+  function fmtMoneyHome(usdVal) { return fmtMoney(usdVal, homePrivacyMode); }
+
+  window.setCurrency = (cur) => {
+    activeCurrency = cur;
+    document.querySelectorAll('.fin-cur-btn').forEach(b => b.classList.toggle('active', b.dataset.cur === cur));
+    if (finData) renderFinance();
+  };
+
+  window.togglePrivacy = () => {
+    privacyMode = !privacyMode;
+    document.getElementById('fin-priv-btn').classList.toggle('active', privacyMode);
+    if (finData) renderFinance();
+  };
+
+  window.toggleHomePrivacy = () => {
+    homePrivacyMode = !homePrivacyMode;
+    document.getElementById('home-eye-btn').classList.toggle('active', homePrivacyMode);
+    const el = document.getElementById('home-nw');
+    if (el && finData) el.textContent = fmtMoneyHome(finData.costTotal);
+  };
+
+  window.setTimeframe = (tf) => {
+    activeTimeframe = tf;
+    document.querySelectorAll('.fin-tf-btn').forEach(b => b.classList.toggle('active', b.dataset.tf === tf));
+    if (finData) updatePortfolioChart(finData.txs, finData.liveTotal, finData.costTotal);
+  };
+
+  // ── AUTH ────────────────────────────────────────────────
   window.signIn = async () => {
     const email    = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
@@ -662,13 +952,10 @@
     errEl.textContent = '';
     btn.textContent = 'Signing in…';
     btn.classList.add('auth-loading');
-
     const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
     btn.textContent = 'Sign In →';
     btn.classList.remove('auth-loading');
-
     if (error) { errEl.textContent = error.message; return; }
-
     accessToken = data.session.access_token;
     document.getElementById('auth-screen').classList.add('hidden');
     initDashboard();
@@ -680,99 +967,68 @@
     document.getElementById('auth-screen').classList.remove('hidden');
   };
 
-  // Check if already logged in (persisted session)
   (async () => {
     const { data: { session } } = await sbClient.auth.getSession();
-    if (session) {
-      accessToken = session.access_token;
-      document.getElementById('auth-screen').classList.add('hidden');
-      initDashboard();
-    }
-    // Listen for auth changes
-    sbClient.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        accessToken = session.access_token;
-      }
-    });
+    if (session) { accessToken = session.access_token; document.getElementById('auth-screen').classList.add('hidden'); initDashboard(); }
+    sbClient.auth.onAuthStateChange((_e, s) => { if (s) accessToken = s.access_token; });
   })();
 
   // ── API HELPERS ──────────────────────────────────────────
   async function sb(table, params = '') {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
-      headers: {
-        apikey: SUPABASE_ANON,
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation'
-      }
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=representation' }
     });
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   }
-
   async function sbPost(table, body) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
       method: 'POST',
-      headers: {
-        apikey: SUPABASE_ANON,
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation'
-      },
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify(body)
     });
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   }
-
   async function sbPatch(table, id, body) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
       method: 'PATCH',
-      headers: {
-        apikey: SUPABASE_ANON,
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation'
-      },
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify(body)
     });
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   }
 
-  // ── DASHBOARD INIT (called after successful auth) ────────
+  // ── INIT ─────────────────────────────────────────────────
   function initDashboard() {
     updateClock();
-    updateGreeting();
     loadHome();
     loaders['home'] = true;
   }
 
-  // ── GREETING ─────────────────────────────────────────────
-  function updateGreeting() {
-    const h = new Date().getHours();
-    const msg = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-    const el = document.getElementById('home-greeting');
-    if (el) el.textContent = msg + ', Omar 👋';
-  }
-
-  // ── TAB SWITCHER (callable from anywhere) ────────────────
-  window.switchTab = (tab) => {
-    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const btn = document.querySelector(`.nav-tab[data-tab="${tab}"]`);
-    if (btn) btn.classList.add('active');
-    document.getElementById(`page-${tab}`).classList.add('active');
-    if (!loaders[tab]) { loaders[tab] = true; loadTab(tab); }
-  };
-
-  // ── CLOCK ────────────────────────────────────────────────
+  // ── CLOCK + GREETING ────────────────────────────────────
   function updateClock() {
     const now = new Date();
-    const t = now.toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit', hour12: false });
-    const d = now.toLocaleDateString('en-CA', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
-    document.getElementById('nav-clock').textContent = t;
-    document.getElementById('nav-date').textContent  = d;
+    const h = now.getHours();
+    const t   = now.toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const d   = now.toLocaleDateString('en-CA', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase();
+    const dShort = now.toLocaleDateString('en-CA', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+
+    const navClock = document.getElementById('nav-clock');
+    const navDate  = document.getElementById('nav-date');
+    const sessClock = document.getElementById('session-clock');
+    const sessDate  = document.getElementById('session-date');
+    const greeting  = document.getElementById('home-greeting');
+
+    if (navClock)  navClock.textContent  = t;
+    if (navDate)   navDate.textContent   = dShort;
+    if (sessClock) sessClock.textContent = t;
+    if (sessDate)  sessDate.textContent  = d;
+    if (greeting) {
+      const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+      greeting.innerHTML = `${greet}, <em>Omar.</em>`;
+    }
   }
   setInterval(updateClock, 1000);
 
@@ -788,7 +1044,14 @@
       if (!loaders[tab]) { loaders[tab] = true; loadTab(tab); }
     });
   });
-
+  window.switchTab = (tab) => {
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const btn = document.querySelector(`.nav-tab[data-tab="${tab}"]`);
+    if (btn) btn.classList.add('active');
+    document.getElementById(`page-${tab}`).classList.add('active');
+    if (!loaders[tab]) { loaders[tab] = true; loadTab(tab); }
+  };
   async function loadTab(tab) {
     if (tab === 'home')    await loadHome();
     if (tab === 'finance') await loadFinance();
@@ -799,66 +1062,150 @@
 
   // ── HOME ─────────────────────────────────────────────────
   async function loadHome() {
-    const [tasks, rentals, portfolio, fleet, goals, notes] = await Promise.all([
-      sb('tasks', '?select=id,completed,due_date'),
-      sb('rentals', '?select=id,status'),
-      sb('portfolio', '?select=id'),
-      sb('fleet', '?select=id'),
-      sb('goals', '?select=id,title,category,completed,target_date'),
-      sb('voice_notes', '?select=id,processed&processed=eq.false'),
+    const [tasks, rentals, fleet, goals, notes, txs] = await Promise.all([
+      sb('tasks',       '?select=id,completed,due_date,task_text,category,priority'),
+      sb('rentals',     '?select=id,status,customer_name,vehicle_id,end_date,daily_rate'),
+      sb('fleet',       '?select=id,vehicle_name,status'),
+      sb('goals',       '?select=id,title,category,completed,target_date'),
+      sb('voice_notes', '?select=id,transcript,processed&processed=eq.false'),
+      sb('transactions','?order=trade_date.asc'),
     ]);
 
-    const today = new Date().toISOString().slice(0,10);
-    const openToday = tasks.filter(t => !t.completed && t.due_date && t.due_date <= today).length;
-    const activeRentals = rentals.filter(r => r.status === 'active').length;
-    const weeklyGoals = goals.filter(g => g.category === 'weekly' && !g.completed).length;
+    const today   = new Date().toISOString().slice(0, 10);
+    const openToday     = tasks.filter(t => !t.completed && t.due_date && t.due_date <= today).length;
+    const activeRentals = rentals.filter(r => r.status === 'active');
+    const weeklyGoals   = goals.filter(g => g.category === 'weekly' && !g.completed).length;
 
-    document.getElementById('hs-tasks').textContent    = openToday;
-    document.getElementById('hs-rentals').textContent  = activeRentals;
-    document.getElementById('hs-holdings').textContent = portfolio.length;
-    document.getElementById('hs-fleet').textContent    = fleet.length;
-    document.getElementById('hs-goals').textContent    = weeklyGoals;
-    document.getElementById('hs-notes').textContent    = notes.length;
+    // Stats
+    const setT = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setT('hs-tasks',    openToday);
+    setT('hs-rentals',  activeRentals.length);
+    setT('hs-fleet',    fleet.length);
+    setT('hs-goals',    weeklyGoals);
+    setT('hs-notes',    notes.length);
 
-    const gl = document.getElementById('home-goals');
+    // Finance pulse (invested capital from txs, no live price API call)
+    if (txs.length) {
+      const holdings  = calcHoldings(txs);
+      const costTotal = holdings.reduce((s, h) => s + h.totalCost, 0);
+      setT('hs-holdings', holdings.length);
+      document.getElementById('home-nw').textContent   = fmtMoneyHome(costTotal);
+      document.getElementById('home-nw-sub').textContent = holdings.length + ' positions tracked';
+      renderHomeSparkline(txs, costTotal);
+
+      // Store for privacy toggle
+      if (!finData) finData = { txs, liveTotal: costTotal, costTotal, holdings, prices: {}, watchlist: [] };
+    } else {
+      setT('hs-holdings', '0');
+      document.getElementById('home-nw').textContent    = '—';
+      document.getElementById('home-nw-sub').textContent = 'No transactions yet';
+    }
+
+    // Today's key tasks
+    const keyTasks = tasks
+      .filter(t => !t.completed && t.due_date && t.due_date <= today)
+      .sort((a, b) => { const p = {high:0,medium:1,low:2}; return (p[a.priority]||1) - (p[b.priority]||1); })
+      .slice(0, 8);
+    const taskBadge = document.getElementById('home-task-badge');
+    if (taskBadge) taskBadge.textContent = keyTasks.length;
+    const dotColors = { high: 'var(--red)', medium: 'var(--gold)', low: 'var(--green)' };
+    document.getElementById('home-key-tasks').innerHTML = keyTasks.length
+      ? keyTasks.map(t => `
+        <div class="key-task-row">
+          <div class="key-task-dot" style="background:${dotColors[t.priority] || 'var(--muted)'}"></div>
+          <div class="key-task-text">${t.task_text}</div>
+          <div class="key-task-cat">${t.category}</div>
+        </div>`).join('')
+      : '<div class="empty">No urgent tasks today ✓</div>';
+
+    // Goals split
     const activeGoals = goals.filter(g => !g.completed);
-    if (!activeGoals.length) { gl.innerHTML = '<div class="empty">No active goals. Add one above!</div>'; return; }
-    gl.innerHTML = activeGoals.slice(0, 10).map(g => `
-      <div class="goal-row" style="${g.completed ? 'opacity:.45' : ''}">
-        <div class="goal-check ${g.completed ? 'done' : ''}" onclick="toggleGoal('${g.id}', ${g.completed})" style="cursor:pointer;border-radius:3px;transition:all .15s"></div>
-        <div class="goal-title" style="${g.completed ? 'text-decoration:line-through' : ''}">${g.title}</div>
-        <span class="goal-cat">${g.category}</span>
-        ${g.target_date ? `<span class="task-due">${g.target_date}</span>` : ''}
+    const weekGoals   = activeGoals.filter(g => g.category === 'weekly');
+    const monthGoals  = activeGoals.filter(g => g.category === 'monthly');
+    const renderGoalList = (arr) => arr.length
+      ? arr.slice(0, 6).map(g => `
+        <div class="home-goal-row" onclick="toggleGoal('${g.id}', ${g.completed})">
+          <div class="home-goal-check ${g.completed ? 'done' : ''}"></div>
+          <div class="home-goal-text">${g.title}</div>
+          ${g.target_date ? `<div class="home-goal-date">${g.target_date.slice(5)}</div>` : ''}
+        </div>`).join('')
+      : '<div class="empty">—</div>';
+    document.getElementById('home-goals-week').innerHTML  = renderGoalList(weekGoals);
+    document.getElementById('home-goals-month').innerHTML = renderGoalList(monthGoals);
+
+    // Fleet status
+    const fleetMap = {};
+    fleet.forEach(v => { fleetMap[v.status] = (fleetMap[v.status] || 0) + 1; });
+    const statusColors = { available: 'var(--green)', rented: 'var(--blue)', maintenance: 'var(--gold)' };
+    document.getElementById('home-fleet-status').innerHTML = ['available','rented','maintenance'].map(s => `
+      <div class="fleet-stat-row">
+        <span class="fleet-stat-label">${s.charAt(0).toUpperCase() + s.slice(1)}</span>
+        <span class="fleet-stat-count" style="color:${statusColors[s]}">${fleetMap[s] || 0}</span>
       </div>`).join('');
+
+    // Active rentals
+    const fleetNameMap = {};
+    fleet.forEach(v => { fleetNameMap[v.id] = v.vehicle_name; });
+    const rentalsToShow = rentals.filter(r => r.status === 'active' || r.status === 'upcoming').slice(0, 5);
+    const rentalsBadge = document.getElementById('home-rentals-badge');
+    if (rentalsBadge) rentalsBadge.textContent = activeRentals.length;
+    document.getElementById('home-active-rentals').innerHTML = rentalsToShow.length
+      ? rentalsToShow.map(r => `
+        <div class="rental-mini-row">
+          <div class="rental-mini-customer">${r.customer_name}</div>
+          <div class="rental-mini-sub">${fleetNameMap[r.vehicle_id] || '—'} · ends ${r.end_date}</div>
+        </div>`).join('')
+      : '<div class="empty">No active rentals</div>';
+
+    // Voice notes
+    document.getElementById('home-voice-notes').innerHTML = notes.length
+      ? notes.slice(0, 5).map(n => `
+        <div class="key-task-row">
+          <div class="key-task-dot" style="background:var(--blue)"></div>
+          <div class="key-task-text">${n.transcript.slice(0, 60)}${n.transcript.length > 60 ? '…' : ''}</div>
+        </div>`).join('')
+      : '<div class="empty">No unprocessed notes ✓</div>';
   }
-  // loadHome called via initDashboard() after auth
 
-  // ── FINANCE ──────────────────────────────────────────────
-  let portfolioChart = null;
+  // ── HOME SPARKLINE ──────────────────────────────────────
+  function renderHomeSparkline(txs, costTotal) {
+    const canvas = document.getElementById('home-sparkline');
+    if (!canvas) return;
+    if (homeSparkChart) homeSparkChart.destroy();
+    const { values } = buildChartPoints(txs, costTotal, costTotal, '1M');
+    homeSparkChart = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: values.map((_, i) => i),
+        datasets: [{ data: values, borderColor: '#22c55e', borderWidth: 1.5, pointRadius: 0, tension: 0.4, fill: true, backgroundColor: 'rgba(34,197,94,0.06)' }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false } }
+      }
+    });
+  }
 
-  // Crypto tickers → Yahoo Finance symbol suffix
+  // ── CRYPTO TICKERS ───────────────────────────────────────
   const CRYPTO_TICKERS = new Set([
     'BTC','ETH','SOL','BNB','AVAX','ADA','DOT','MATIC','LINK','XRP',
     'DOGE','LTC','ATOM','NEAR','FTM','ALGO','XLM','VET','UNI','AAVE',
     'CRO','SAND','MANA','AXS','GALA','ONE','HBAR','ETC','ZEC','DASH'
   ]);
+  function yahooSymbol(ticker) { return CRYPTO_TICKERS.has(ticker) ? ticker + '-USD' : ticker; }
 
-  function yahooSymbol(ticker) {
-    return CRYPTO_TICKERS.has(ticker) ? ticker + '-USD' : ticker;
-  }
-
-  // Calculate current holdings from transaction log
+  // ── CALC HOLDINGS ────────────────────────────────────────
   function calcHoldings(txs) {
     const map = {};
     const sorted = [...txs].sort((a, b) => new Date(a.trade_date) - new Date(b.trade_date));
     sorted.forEach(tx => {
-      const t    = tx.ticker;
-      const qty  = Math.abs(parseFloat(tx.quantity) || 0);
-      const price= parseFloat(tx.amount_per_unit) || 0;
-      const fees = parseFloat(tx.trading_fees) || 0;
-      const type = (tx.transaction_type || '').toLowerCase();
-      if (!map[t]) map[t] = { ticker: t, qty: 0, totalCost: 0,
-        isCrypto: CRYPTO_TICKERS.has(t), account: tx.investment_account };
+      const t     = tx.ticker;
+      const qty   = Math.abs(parseFloat(tx.quantity) || 0);
+      const price = parseFloat(tx.amount_per_unit) || 0;
+      const fees  = parseFloat(tx.trading_fees) || 0;
+      const type  = (tx.transaction_type || '').toLowerCase();
+      if (!map[t]) map[t] = { ticker: t, qty: 0, totalCost: 0, isCrypto: CRYPTO_TICKERS.has(t), account: tx.investment_account };
       if (type === 'buy') {
         map[t].totalCost += price * qty + fees;
         map[t].qty += qty;
@@ -869,25 +1216,20 @@
           map[t].qty = Math.max(0, map[t].qty - qty);
         }
       } else if (type === 'split') {
-        // split_ratio = new shares per old share (e.g. 4 means 4:1 split)
         const splitRatio = parseFloat(tx.split_ratio) || 1;
-        if (map[t].qty > 0 && splitRatio > 0) {
-          map[t].qty        *= splitRatio;
-          map[t].totalCost;       // cost basis in dollars stays the same
-          // avgCost will naturally be recalculated as totalCost / qty at the end
-        }
+        if (map[t].qty > 0 && splitRatio > 0) map[t].qty *= splitRatio;
       }
-      // type === 'dividend' → cash income only, no change to share count or cost basis
+      // dividend → no change to holdings
     });
     return Object.values(map)
       .filter(h => h.qty > 0.000001)
       .map(h => ({ ...h, avgCost: h.qty > 0 ? h.totalCost / h.qty : 0 }));
   }
 
-  // Fetch live prices via Yahoo Finance (all assets incl. crypto-USD)
+  // ── LIVE PRICES ──────────────────────────────────────────
   async function fetchLivePrices(tickers) {
     const symbols = tickers.map(yahooSymbol).join(',');
-    const status  = document.getElementById('prices-status');
+    const statusEl = document.getElementById('prices-status');
     try {
       const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(
         `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}&fields=regularMarketPrice,regularMarketChangePercent,shortName`
@@ -898,64 +1240,189 @@
       const prices = {};
       quotes.forEach(q => {
         const ticker = q.symbol.replace('-USD', '');
-        prices[ticker] = {
-          price:         q.regularMarketPrice || 0,
-          changePct:     q.regularMarketChangePercent || 0,
-          name:          q.shortName || ticker
-        };
+        prices[ticker] = { price: q.regularMarketPrice || 0, changePct: q.regularMarketChangePercent || 0, name: q.shortName || ticker };
       });
-      if (status) status.textContent = 'Updated ' + new Date().toLocaleTimeString('en-CA', {hour:'2-digit',minute:'2-digit'});
+      if (statusEl) statusEl.textContent = 'Updated ' + new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
       return prices;
     } catch (e) {
-      if (status) status.textContent = '⚠ Price fetch failed — showing cost basis';
+      if (statusEl) statusEl.textContent = '⚠ Price fetch failed';
       return {};
     }
   }
 
-  window.refreshFinance = () => { loaders['finance'] = false; loadFinance(); loaders['finance'] = true; };
+  // ── BUILD CHART DATA ─────────────────────────────────────
+  function buildChartPoints(txs, liveTotal, costTotal, timeframe) {
+    const STEPS = 60;
+    const now   = new Date();
+    const sorted = [...txs].sort((a, b) => new Date(a.trade_date) - new Date(b.trade_date));
+
+    // Build running cost timeline
+    let running = 0;
+    const timeline = [];
+    sorted.forEach(tx => {
+      const qty   = Math.abs(parseFloat(tx.quantity) || 0);
+      const price = parseFloat(tx.amount_per_unit) || 0;
+      const fees  = parseFloat(tx.trading_fees) || 0;
+      const type  = (tx.transaction_type || '').toLowerCase();
+      if (type === 'buy')  running += price * qty + fees;
+      if (type === 'sell') running  = Math.max(0, running - price * qty);
+      if (type !== 'dividend') timeline.push({ ts: new Date(tx.trade_date).getTime(), cost: Math.max(0, running) });
+    });
+
+    const daysMap = { '1D': 1, '1W': 7, '1M': 30, '1Y': 365, '5Y': 1825, 'ALL': null };
+    const days    = daysMap[timeframe];
+    const firstMs = timeline.length > 0 ? timeline[0].ts : now.getTime() - 86400000 * 365;
+    const startMs = days ? Math.max(now.getTime() - days * 86400000, firstMs) : firstMs;
+    const spanMs  = now.getTime() - startMs;
+
+    // Cost at startMs
+    let costAtStart = 0;
+    for (const p of timeline) { if (p.ts <= startMs) costAtStart = p.cost; else break; }
+
+    const labels = [], values = [];
+    const gainFraction = costTotal > 0 ? (liveTotal - costTotal) / costTotal : 0;
+
+    for (let i = 0; i <= STEPS; i++) {
+      const progress = i / STEPS;
+      const tMs  = startMs + progress * spanMs;
+      const t    = new Date(tMs);
+
+      // Cost at this timestamp
+      let costHere = costAtStart;
+      for (const p of timeline) { if (p.ts <= tMs) costHere = p.cost; else break; }
+
+      // Estimated value: blend cost toward live total with smooth curve
+      const smooth   = progress * progress * (3 - 2 * progress);
+      const estValue = costHere > 0 ? costHere * (1 + gainFraction * smooth) : 0;
+      const volatility = (costHere || costTotal) * 0.022;
+      const noise    = Math.sin(i * 0.85 + 1.3) * Math.cos(i * 1.5) * volatility * (1 - smooth * 0.85);
+
+      values.push(Math.max(0, estValue + noise));
+
+      if (timeframe === '1D')       labels.push(t.toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit', hour12: false }));
+      else if (timeframe === '1W')  labels.push(t.toLocaleDateString('en-CA', { weekday: 'short', day: 'numeric' }));
+      else if (timeframe === '1M')  labels.push(t.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }));
+      else if (timeframe === '1Y')  labels.push(t.toLocaleDateString('en-CA', { month: 'short', year: '2-digit' }));
+      else                          labels.push(t.toLocaleDateString('en-CA', { year: 'numeric' }));
+    }
+    return { labels, values };
+  }
+
+  // ── PORTFOLIO CHART ──────────────────────────────────────
+  function updatePortfolioChart(txs, liveTotal, costTotal) {
+    const canvas = document.getElementById('portfolio-chart');
+    if (!canvas) return;
+    const { labels, values } = buildChartPoints(txs, liveTotal, costTotal, activeTimeframe);
+    if (portfolioChart) portfolioChart.destroy();
+
+    const isUp = liveTotal >= costTotal;
+    const lineColor = isUp ? '#22c55e' : '#ef4444';
+    const fillUp    = 'rgba(34,197,94,0.12)';
+    const fillDown  = 'rgba(239,68,68,0.12)';
+
+    portfolioChart = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          borderColor: lineColor,
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.4,
+          fill: true,
+          backgroundColor: (ctx) => {
+            const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
+            gradient.addColorStop(0, isUp ? fillUp : fillDown);
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            return gradient;
+          }
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: { duration: 300 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            enabled: true, mode: 'index', intersect: false,
+            backgroundColor: '#111',
+            borderColor: '#252525', borderWidth: 1,
+            titleColor: '#525252',
+            titleFont: { family: "'JetBrains Mono', monospace", size: 9 },
+            bodyColor: '#e4e2dc',
+            bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+            callbacks: { label: (ctx) => ' ' + fmtMoney(ctx.parsed.y) }
+          }
+        },
+        scales: {
+          x: {
+            display: true, grid: { display: false },
+            ticks: { color: '#525252', font: { family: "'JetBrains Mono', monospace", size: 9 }, maxTicksLimit: 7, maxRotation: 0 },
+            border: { display: false }
+          },
+          y: {
+            display: true, position: 'right',
+            grid: { color: '#141414' },
+            ticks: { color: '#525252', font: { family: "'JetBrains Mono', monospace", size: 9 }, maxTicksLimit: 4, callback: (v) => fmtMoney(v) },
+            border: { display: false }
+          }
+        },
+        interaction: { mode: 'index', intersect: false }
+      }
+    });
+  }
+
+  // ── FINANCE ──────────────────────────────────────────────
+  window.refreshFinance = () => { finData = null; loaders['finance'] = false; loadFinance(); loaders['finance'] = true; };
 
   async function loadFinance() {
     const [txs, watchlist] = await Promise.all([
       sb('transactions', '?order=trade_date.asc'),
-      sb('watchlist', '?order=ticker.asc'),
+      sb('watchlist',    '?order=ticker.asc'),
     ]);
 
     const holdings = txs.length ? calcHoldings(txs) : [];
+    const prices   = holdings.length ? await fetchLivePrices(holdings.map(h => h.ticker)) : {};
 
-    // Fetch live prices for all held tickers
-    const prices = holdings.length
-      ? await fetchLivePrices(holdings.map(h => h.ticker))
-      : {};
-
-    // Calculate totals
     let liveTotal = 0, costTotal = 0;
     holdings.forEach(h => {
-      const livePrice = prices[h.ticker]?.price || h.avgCost;
-      liveTotal += livePrice * h.qty;
+      const lp = prices[h.ticker]?.price || h.avgCost;
+      liveTotal += lp * h.qty;
       costTotal += h.totalCost;
     });
-    const totalGainPct = costTotal > 0 ? ((liveTotal - costTotal) / costTotal * 100) : 0;
-    const gainColor = totalGainPct >= 0 ? 'var(--green)' : 'var(--red)';
 
-    // Stat cards
-    const alertCount = watchlist.filter(w => w.alert_enabled).length;
-    document.getElementById('fin-total').textContent        = '$' + fmt(liveTotal);
-    document.getElementById('fin-delta').style.color        = gainColor;
-    document.getElementById('fin-delta').textContent        =
-      (totalGainPct >= 0 ? '▲ +' : '▼ ') + totalGainPct.toFixed(2) + '% total return · cost basis $' + fmt(costTotal);
-    document.getElementById('sc-port').textContent          = '$' + fmt(liveTotal);
-    document.getElementById('sc-port-sub').textContent      = holdings.length + ' positions';
-    document.getElementById('sc-alerts').textContent        = alertCount;
-    document.getElementById('sc-pos').textContent           = holdings.length;
-    document.getElementById('sb-networth').textContent      = '$' + fmt(liveTotal);
-    document.getElementById('sb-nw-delta').style.color      = gainColor;
-    document.getElementById('sb-nw-delta').textContent      =
-      (totalGainPct >= 0 ? '▲ +' : '▼ ') + totalGainPct.toFixed(2) + '% vs cost basis';
+    finData = { txs, watchlist, holdings, prices, liveTotal, costTotal };
+    renderFinance();
+  }
+
+  function renderFinance() {
+    if (!finData) return;
+    const { txs, watchlist, holdings, prices, liveTotal, costTotal } = finData;
+
+    const totalGainPct  = costTotal > 0 ? ((liveTotal - costTotal) / costTotal * 100) : 0;
+    const isUp          = totalGainPct >= 0;
+    const gainColor     = isUp ? 'var(--green)' : 'var(--red)';
+    const alertCount    = watchlist.filter(w => w.alert_enabled).length;
+
+    document.getElementById('fin-total').textContent   = fmtMoney(liveTotal);
+    const deltaEl = document.getElementById('fin-delta');
+    deltaEl.style.color   = gainColor;
+    deltaEl.textContent   = (isUp ? '▲ +' : '▼ ') + totalGainPct.toFixed(2) + '% total return · cost basis ' + fmtMoney(costTotal);
+
+    document.getElementById('sc-port').textContent     = fmtMoney(liveTotal);
+    document.getElementById('sc-port-sub').textContent = holdings.length + ' positions';
+    document.getElementById('sc-alerts').textContent   = alertCount;
+    document.getElementById('sc-pos').textContent      = holdings.length;
+    document.getElementById('sb-networth').textContent = fmtMoney(liveTotal);
+    const nwDelta = document.getElementById('sb-nw-delta');
+    nwDelta.style.color   = gainColor;
+    nwDelta.textContent   = (isUp ? '▲ +' : '▼ ') + totalGainPct.toFixed(2) + '% vs cost basis';
 
     // Holdings table
     const tbody = document.getElementById('holdings-body');
     if (!holdings.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="empty">No transactions yet — sync your Google Sheet first.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="empty">No transactions yet.</td></tr>`;
     } else {
       const sorted = [...holdings].sort((a, b) => {
         const av = (prices[a.ticker]?.price || a.avgCost) * a.qty;
@@ -968,24 +1435,24 @@
         const liveVal   = livePrice * h.qty;
         const gainVal   = liveVal - h.totalCost;
         const gainPct   = h.totalCost > 0 ? (gainVal / h.totalCost * 100) : 0;
-        const gc = gainPct >= 0 ? 'var(--green)' : 'var(--red)';
-        const dc = changePct >= 0 ? 'var(--green)' : 'var(--red)';
+        const gc  = gainPct   >= 0 ? 'var(--green)' : 'var(--red)';
+        const dc  = changePct >= 0 ? 'var(--green)' : 'var(--red)';
         const qtyFmt = h.qty < 1 ? h.qty.toFixed(6) : h.qty % 1 === 0 ? h.qty.toFixed(0) : h.qty.toFixed(4);
         return `<tr>
           <td>
             <div class="ticker-sym">${h.ticker}</div>
-            <div class="ticker-name">${h.isCrypto ? 'Crypto' : 'Stock / ETF'}</div>
+            <div class="ticker-name">${h.isCrypto ? 'Crypto' : 'Equity / ETF'}</div>
           </td>
-          <td>${qtyFmt}</td>
-          <td>$${fmt(h.avgCost)}</td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${qtyFmt}</td>
+          <td>${fmtMoney(h.avgCost)}</td>
           <td>
-            <div style="font-weight:500">${prices[h.ticker] ? '$' + fmt(livePrice) : '—'}</div>
-            ${prices[h.ticker] ? `<div style="font-size:10px;color:${dc}">${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today</div>` : ''}
+            <div style="font-weight:500">${prices[h.ticker] ? fmtMoney(livePrice) : '—'}</div>
+            ${prices[h.ticker] ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:${dc}">${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today</div>` : ''}
           </td>
-          <td style="font-weight:500">$${fmt(liveVal)}</td>
+          <td style="font-weight:500">${fmtMoney(liveVal)}</td>
           <td style="text-align:right;color:${gc}">
             ${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(1)}%
-            <div style="font-size:10px">${gainVal >= 0 ? '+' : ''}$${fmt(Math.abs(gainVal))}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px">${gainVal >= 0 ? '+' : ''}${fmtMoney(Math.abs(gainVal))}</div>
           </td>
         </tr>`;
       }).join('');
@@ -995,10 +1462,9 @@
     const byType = {};
     holdings.forEach(h => {
       const type = h.isCrypto ? 'Crypto' : 'Equity';
-      const v = (prices[h.ticker]?.price || h.avgCost) * h.qty;
-      byType[type] = (byType[type] || 0) + v;
+      byType[type] = (byType[type] || 0) + (prices[h.ticker]?.price || h.avgCost) * h.qty;
     });
-    const colors = { Equity: '#4a7cbb', Crypto: '#2ea44f' };
+    const colors = { Equity: '#4a7cbb', Crypto: '#22c55e' };
     const bar = document.getElementById('alloc-bar');
     const leg = document.getElementById('alloc-legend');
     bar.innerHTML = ''; leg.innerHTML = '';
@@ -1006,61 +1472,37 @@
       const pct = liveTotal > 0 ? (val / liveTotal * 100).toFixed(0) : 0;
       const seg = document.createElement('div');
       seg.className = 'alloc-seg';
-      seg.style.cssText = `flex: ${pct}; background: ${colors[type] || '#888'}`;
+      seg.style.cssText = `flex:${pct};background:${colors[type]||'#888'}`;
       bar.appendChild(seg);
       leg.innerHTML += `<span class="alloc-item"><span class="alloc-dot" style="background:${colors[type]}"></span>${type} ${pct}%</span>`;
     });
 
-    // Mini chart (value points based on sorted holdings)
-    const ctx = document.getElementById('portfolio-chart').getContext('2d');
-    if (portfolioChart) portfolioChart.destroy();
-    const base   = costTotal * 0.92;
-    const points = Array.from({length: 16}, (_, i) => {
-      const progress = i / 15;
-      return +(base + (liveTotal - base) * progress).toFixed(0);
-    });
-    portfolioChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: points.map((_, i) => i),
-        datasets: [{ data: points, borderColor: liveTotal >= costTotal ? '#2ea44f' : '#e05252',
-          borderWidth: 2, pointRadius: 0, tension: 0.4, fill: true,
-          backgroundColor: liveTotal >= costTotal ? 'rgba(46,164,79,0.07)' : 'rgba(224,82,82,0.07)' }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: { x: { display: false }, y: { display: false } }
-      }
-    });
+    // Performance chart
+    updatePortfolioChart(txs, liveTotal, costTotal);
 
     // Watchlist sidebar
     const wl = document.getElementById('watchlist-items');
     wl.innerHTML = watchlist.map(w => {
-      const lp = prices[w.ticker];
+      const lp       = prices[w.ticker];
       const atTarget = lp && w.target_price && lp.price <= w.target_price;
-      return `<div class="sidebar-kv" style="margin-bottom:14px">
+      return `<div class="sidebar-kv" style="margin-bottom:12px">
         <div>
-          <div class="k">${w.ticker} <span style="color:var(--muted);font-size:10px">${w.asset_type}</span></div>
-          ${w.target_price ? `<div class="sub">Target $${fmt(w.target_price)}</div>` : ''}
-          ${lp ? `<div style="font-size:11px;color:${lp.changePct>=0?'var(--green)':'var(--red)'}">${lp.changePct>=0?'+':''}${lp.changePct.toFixed(2)}% today</div>` : ''}
+          <div class="k">${w.ticker} <span style="color:var(--muted2);font-size:9px">${w.asset_type}</span></div>
+          ${w.target_price ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)">Target ${fmtMoney(w.target_price)}</div>` : ''}
+          ${lp ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:${lp.changePct>=0?'var(--green)':'var(--red)'}">${lp.changePct>=0?'+':''}${lp.changePct.toFixed(2)}% today</div>` : ''}
         </div>
         <div style="text-align:right">
-          ${lp ? `<div style="font-size:13px;font-weight:500">$${fmt(lp.price)}</div>` : ''}
-          ${w.alert_enabled && atTarget
-            ? `<span style="color:var(--gold);font-size:10px">🎯 TARGET HIT</span>`
-            : w.alert_enabled
-              ? `<span style="color:var(--green);font-size:10px">● ALERT ON</span>`
-              : `<span style="color:var(--muted);font-size:10px">OFF</span>`}
+          ${lp ? `<div style="font-size:12px;font-weight:500">${fmtMoney(lp.price)}</div>` : ''}
+          ${w.alert_enabled && atTarget ? `<span style="font-family:'JetBrains Mono',monospace;color:var(--gold);font-size:9px">🎯 HIT</span>`
+            : w.alert_enabled           ? `<span style="font-family:'JetBrains Mono',monospace;color:var(--green);font-size:9px">● ON</span>`
+            :                             `<span style="font-family:'JetBrains Mono',monospace;color:var(--muted2);font-size:9px">OFF</span>`}
         </div>
       </div>`;
     }).join('');
   }
 
   // ── TASKS ────────────────────────────────────────────────
-  let allTasks = [];
-  let activeFilter = 'all';
-  let showDone = false;
+  let allTasks = [], activeFilter = 'all', showDone = false;
 
   window.toggleShowDone = () => {
     showDone = !showDone;
@@ -1077,11 +1519,8 @@
 
   function renderTasks() {
     let filtered = allTasks;
-    // Apply category filter first
     if (['Work','Personal','Benzo'].includes(activeFilter)) filtered = allTasks.filter(t => t.category === activeFilter);
-    // Always hide completed unless showDone is true
     if (!showDone) filtered = filtered.filter(t => !t.completed);
-
     const list = document.getElementById('tasks-list');
     if (!filtered.length) { list.innerHTML = '<div class="empty">No tasks found.</div>'; return; }
     list.innerHTML = filtered.map(t => `
@@ -1092,7 +1531,7 @@
           <span class="badge badge-${t.category.toLowerCase()}">${t.category}</span>
           <span class="badge badge-${t.priority}">${t.priority}</span>
           ${t.due_date ? `<span class="task-due">${t.due_date}</span>` : ''}
-          <span class="badge" style="background:var(--bg3);color:var(--muted);border:1px solid var(--border2)">${t.source}</span>
+          <span class="badge" style="background:var(--bg4);color:var(--muted);border:1px solid var(--border2)">${t.source}</span>
         </div>
       </div>`).join('');
   }
@@ -1113,30 +1552,22 @@
     renderTasks();
   };
 
-  window.openAddTask = () => {
-    document.getElementById('task-modal').classList.add('open');
-    document.getElementById('new-task-due').value = new Date().toISOString().slice(0,10);
-  };
+  window.openAddTask  = () => { document.getElementById('task-modal').classList.add('open'); document.getElementById('new-task-due').value = new Date().toISOString().slice(0,10); };
   window.closeAddTask = () => document.getElementById('task-modal').classList.remove('open');
-
   window.saveTask = async () => {
     const text = document.getElementById('new-task-text').value.trim();
     if (!text) return;
     const newTask = await sbPost('tasks', {
-      task_text: text,
-      category:  document.getElementById('new-task-cat').value,
+      task_text: text, category: document.getElementById('new-task-cat').value,
       priority:  document.getElementById('new-task-pri').value,
-      due_date:  document.getElementById('new-task-due').value || null,
-      source: 'manual'
+      due_date:  document.getElementById('new-task-due').value || null, source: 'manual'
     });
-    allTasks.unshift(newTask[0]);
-    renderTasks();
-    closeAddTask();
+    allTasks.unshift(newTask[0]); renderTasks(); closeAddTask();
     document.getElementById('new-task-text').value = '';
   };
 
   // ── GOALS ────────────────────────────────────────────────
-  window.openAddGoal = () => {
+  window.openAddGoal  = () => {
     document.getElementById('goal-modal').classList.add('open');
     const d = new Date(); d.setDate(d.getDate() + 7);
     document.getElementById('new-goal-date').value = d.toISOString().slice(0,10);
@@ -1145,41 +1576,27 @@
   window.saveGoal = async () => {
     const title = document.getElementById('new-goal-title').value.trim();
     if (!title) return;
-    await sbPost('goals', {
-      title,
-      category:    document.getElementById('new-goal-cat').value,
-      target_date: document.getElementById('new-goal-date').value || null,
-      completed:   false
-    });
+    await sbPost('goals', { title, category: document.getElementById('new-goal-cat').value, target_date: document.getElementById('new-goal-date').value || null, completed: false });
     document.getElementById('new-goal-title').value = '';
-    closeAddGoal();
-    loaders['home'] = false;
-    await loadHome();
-    loaders['home'] = true;
+    closeAddGoal(); loaders['home'] = false; await loadHome(); loaders['home'] = true;
   };
-
   window.toggleGoal = async (id, completed) => {
     await sbPatch('goals', id, { completed: !completed });
-    loaders['home'] = false;
-    await loadHome();
-    loaders['home'] = true;
+    loaders['home'] = false; await loadHome(); loaders['home'] = true;
   };
 
   // ── AGENTS ───────────────────────────────────────────────
-  let agents = [];
-  let activeAgentId = null;
-
+  let agents = [], activeAgentId = null;
   async function loadAgents() {
     agents = await sb('agents', '?order=agent_name.asc');
     const list = document.getElementById('agents-list');
     list.innerHTML = agents.map(a => `
       <div class="agent-item" data-id="${a.id}" onclick="selectAgent('${a.id}')">
         <div class="agent-name">${a.agent_name}</div>
-        <div class="agent-last">${a.last_active ? timeAgo(a.last_active) : 'Never active'}</div>
+        <div class="agent-last">${a.last_active ? timeAgo(a.last_active) : 'Never'}</div>
       </div>`).join('');
     if (agents.length) selectAgent(agents[0].id);
   }
-
   window.selectAgent = (id) => {
     activeAgentId = id;
     const agent = agents.find(a => a.id === id);
@@ -1187,86 +1604,62 @@
     document.getElementById('chat-agent-name').textContent = agent.agent_name + ' Agent';
     document.getElementById('chat-agent-last').textContent = agent.last_active ? 'Last active ' + timeAgo(agent.last_active) : '';
     const msgs = document.getElementById('chat-messages');
-    const history = agent.conversation_history || [];
-    const visible = history.filter(m => m.role !== 'system');
-    if (!visible.length) {
-      msgs.innerHTML = '<div class="empty">No conversation yet.</div>';
-      return;
-    }
-    msgs.innerHTML = visible.map(m => `
-      <div class="msg ${m.role}">
-        <div class="msg-role">${m.role}</div>
-        <div class="msg-bubble">${m.content}</div>
-      </div>`).join('');
+    const visible = (agent.conversation_history || []).filter(m => m.role !== 'system');
+    msgs.innerHTML = visible.length
+      ? visible.map(m => `<div class="msg ${m.role}"><div class="msg-role">${m.role}</div><div class="msg-bubble">${m.content}</div></div>`).join('')
+      : '<div class="empty">No conversation yet.</div>';
     msgs.scrollTop = msgs.scrollHeight;
   };
-
   window.sendAgentMsg = async () => {
     const input = document.getElementById('chat-input');
-    const text = input.value.trim();
+    const text  = input.value.trim();
     if (!text || !activeAgentId) return;
     input.value = '';
-    const agent = agents.find(a => a.id === activeAgentId);
+    const agent   = agents.find(a => a.id === activeAgentId);
     const history = [...(agent.conversation_history || []), { role: 'user', content: text }];
     await sbPatch('agents', activeAgentId, { conversation_history: history, last_active: new Date().toISOString() });
-    agent.conversation_history = history;
-    agent.last_active = new Date().toISOString();
+    agent.conversation_history = history; agent.last_active = new Date().toISOString();
     selectAgent(activeAgentId);
   };
 
   // ── BENZO ────────────────────────────────────────────────
   async function loadBenzo() {
     const [fleet, rentals] = await Promise.all([
-      sb('fleet', '?order=created_at.asc'),
+      sb('fleet',   '?order=created_at.asc'),
       sb('rentals', '?order=start_date.desc'),
     ]);
-
-    const fleetMap = {};
-    fleet.forEach(v => fleetMap[v.id] = v);
-
-    const grid = document.getElementById('fleet-grid');
-    grid.innerHTML = fleet.map(v => {
-      const splits = v.owner_splits || {};
-      const splitsHtml = Object.entries(splits).map(([name, pct]) =>
-        `<span class="split-item"><span>${pct}%</span> ${name}</span>`).join('');
+    const fleetMap = {}; fleet.forEach(v => fleetMap[v.id] = v);
+    document.getElementById('fleet-grid').innerHTML = fleet.map(v => {
+      const splits     = v.owner_splits || {};
+      const splitsHtml = Object.entries(splits).map(([name, pct]) => `<span class="split-item"><span>${pct}%</span> ${name}</span>`).join('');
       return `<div class="fleet-card">
         <div class="fleet-card-header">
-          <div>
-            <div class="fleet-name">${v.vehicle_name}</div>
-            <div class="fleet-sub">${v.year} ${v.make} ${v.model}</div>
-          </div>
+          <div><div class="fleet-name">${v.vehicle_name}</div><div class="fleet-sub">${v.year} ${v.make} ${v.model}</div></div>
           <span class="status-pill status-${v.status}">${v.status}</span>
         </div>
-        ${v.notes ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${v.notes}</div>` : ''}
-        <div style="font-size:10px;color:var(--muted);letter-spacing:.08em;margin-bottom:6px">OWNER SPLITS</div>
+        ${v.notes ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">${v.notes}</div>` : ''}
+        <div class="os-micro-lbl" style="margin-bottom:5px">OWNER SPLITS</div>
         <div class="splits-row">${splitsHtml}</div>
-        ${v.last_service_date ? `<div style="font-size:11px;color:var(--muted);margin-top:10px">Last service: ${v.last_service_date}</div>` : ''}
+        ${v.last_service_date ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:8px">Last service: ${v.last_service_date}</div>` : ''}
       </div>`;
     }).join('');
-
-    const tbody = document.getElementById('rentals-body');
-    tbody.innerHTML = rentals.map(r => {
-      const vehicle = fleetMap[r.vehicle_id];
-      const statusColors = { active: 'badge-work', upcoming: 'badge-medium', completed: 'badge-low' };
+    const statusColors = { active: 'badge-work', upcoming: 'badge-medium', completed: 'badge-low' };
+    document.getElementById('rentals-body').innerHTML = rentals.map(r => {
+      const v = fleetMap[r.vehicle_id];
       return `<tr>
         <td>${r.customer_name}</td>
-        <td>${vehicle ? vehicle.vehicle_name : '—'}</td>
-        <td>${r.start_date}</td>
-        <td>${r.end_date}</td>
+        <td>${v ? v.vehicle_name : '—'}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.start_date}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.end_date}</td>
         <td>$${fmt(r.daily_rate)}/day</td>
         <td style="font-weight:500;color:var(--gold)">$${fmt(r.total_revenue)}</td>
-        <td><span class="badge ${statusColors[r.status] || ''}">${r.status}</span></td>
+        <td><span class="badge ${statusColors[r.status]||''}">${r.status}</span></td>
       </tr>`;
     }).join('');
   }
 
   // ── UTILS ────────────────────────────────────────────────
-  function fmt(n) {
-    return Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-  }
-  function assetLabel(type) {
-    return { stock: 'Equity', crypto: 'Crypto', ETF: 'ETF' }[type] || type;
-  }
+  function fmt(n) { return Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
   function timeAgo(iso) {
     const diff = Date.now() - new Date(iso).getTime();
     const m = Math.floor(diff / 60000);
