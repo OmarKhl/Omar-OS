@@ -345,8 +345,29 @@
     .sidebar-kv .sub { font-size: 9px; color: var(--muted); }
     .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
 
+    .fp-monkey-btn { background:transparent;border:none;font-size:16px;cursor:pointer;padding:0 2px;margin-left:auto;line-height:1;transition:transform .2s; }
+    .fp-monkey-btn:hover { transform:scale(1.2); }
+    .fp-blur-wrap { transition:filter .4s,opacity .4s; }
+    .fp-blur-wrap.blurred { filter:blur(7px);opacity:.55;pointer-events:none;user-select:none; }
+
     /* ── TASKS PAGE ── */
-    #page-tasks { flex-direction: column; padding: 24px 28px; overflow-y: auto; }
+    #page-tasks { flex-direction:column; padding:20px 24px 24px; overflow-y:auto; }
+    .tasks-stats-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+    .tstat-pill { display:flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; background:var(--bg3); border:1px solid var(--border2); font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.06em; }
+    .tstat-val { color:var(--text); font-weight:600; font-size:11px; }
+    .tstat-lbl { color:var(--muted); }
+    .tstat-key { border-color:var(--gold-dim); }
+    .tasks-search-row { display:flex; gap:8px; margin-bottom:12px; }
+    .tasks-search-wrap { flex:1; position:relative; }
+    .tasks-search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--muted2); font-size:12px; pointer-events:none; }
+    .tasks-search-inp { width:100%; background:var(--bg3); border:1px solid var(--border2); color:var(--text); padding:8px 10px 8px 28px; border-radius:5px; font-size:12px; outline:none; font-family:inherit; }
+    .tasks-search-inp:focus { border-color:var(--gold-dim); }
+    .task-group-hdr { display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600; letter-spacing:.12em; color:var(--muted2); text-transform:uppercase; margin:18px 0 7px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .task-group-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .tasks-grid { display:flex; flex-direction:column; gap:6px; }
+    .task-star-btn { width:22px; height:22px; border:none; background:transparent; color:var(--muted2); font-size:14px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:color .15s,transform .15s; line-height:1; }
+    .task-star-btn:hover { color:var(--gold); transform:scale(1.2); }
+    .task-star-btn.starred { color:var(--gold); }
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
     .page-title { font-size: 26px; font-weight: 400; }
     .btn-add {
@@ -584,6 +605,24 @@
     .habit-cal-dot.partial { background: var(--gold-dim); }
     .habit-cal-lbl { font-family: 'JetBrains Mono', monospace; font-size: 7px; color: var(--muted2); text-transform: uppercase; }
 
+    .habit-prog { height:3px; background:var(--bg4); border-radius:2px; margin:5px 0 3px; overflow:hidden; }
+    .habit-prog-fill { height:100%; background:var(--green); border-radius:2px; transition:width .3s; }
+    .habit-count-lbl { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); }
+    .habit-subs { display:flex; flex-direction:column; gap:2px; margin-top:5px; border-top:1px solid var(--border); padding-top:5px; }
+    .habit-sub-row { display:flex; align-items:center; gap:5px; font-size:9px; color:var(--muted); cursor:pointer; padding:2px 0; }
+    .habit-sub-row:hover { color:var(--text); }
+    .habit-sub-chk { width:11px; height:11px; border-radius:2px; flex-shrink:0; border:1px solid var(--border2); background:transparent; display:flex; align-items:center; justify-content:center; font-size:7px; transition:all .15s; }
+    .habit-sub-chk.done { background:var(--green); border-color:var(--green); color:#fff; }
+    @keyframes confetti-fall { 0%{transform:translateY(-10px) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+    .confetti-piece { position:fixed; width:8px; height:8px; top:0; border-radius:2px; animation:confetti-fall linear forwards; pointer-events:none; z-index:9999; }
+
+    #page-journal { flex-direction:column; padding:24px 28px; overflow-y:auto; }
+    .journal-textarea { width:100%; background:var(--bg2); border:1px solid var(--border); color:var(--text); padding:16px 18px; border-radius:6px; font-size:14px; line-height:1.7; outline:none; resize:vertical; font-family:inherit; min-height:220px; }
+    .journal-textarea:focus { border-color:var(--gold-dim); }
+    .journal-past-entry { margin-bottom:20px; padding:14px 16px; background:var(--bg2); border:1px solid var(--border); border-radius:5px; }
+    .journal-past-date { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--gold-dim); letter-spacing:.08em; margin-bottom:8px; }
+    .journal-past-text { font-size:13px; color:var(--muted); line-height:1.6; white-space:pre-wrap; }
+
     /* ── RIGHT-COL TODO ── */
     .todo-row {
       display: flex; align-items: center; gap: 7px;
@@ -686,6 +725,7 @@
     <button class="nav-tab" data-tab="tasks">TASKS</button>
     <button class="nav-tab" data-tab="agents">AGENTS</button>
     <button class="nav-tab" data-tab="benzo">BENZO</button>
+    <button class="nav-tab" data-tab="journal">JOURNAL</button>
   </div>
   <div class="nav-right">
     <div class="tg-pill">
@@ -761,8 +801,9 @@
       <div class="os-card" style="flex-shrink:0;cursor:pointer" onclick="switchTab('finance')">
         <div class="os-card-hdr">
           <span class="os-num">02 //</span> FINANCE PULSE
-          <button class="os-eye-btn" id="home-eye-btn" onclick="event.stopPropagation();toggleHomePrivacy()" title="Hide amounts">◉</button>
+          <button class="fp-monkey-btn" id="home-eye-btn" onclick="event.stopPropagation();toggleHomePrivacy()" title="Hide amounts">🙈</button>
         </div>
+        <div class="fp-blur-wrap blurred" id="fp-blur-wrap">
         <div class="os-micro-lbl">NET WORTH</div>
         <div class="home-nw-val" id="home-nw">—</div>
         <div style="height:42px;margin:6px 0 0;overflow:hidden">
@@ -778,6 +819,7 @@
             <div class="v" id="hs-notes">—</div>
           </div>
         </div>
+        </div><!-- end fp-blur-wrap -->
       </div>
 
       <!-- 03 TODAY KEY TASKS -->
@@ -980,11 +1022,23 @@
 
 <!-- ══════════════════════════════════════════════════════ TASKS ══ -->
 <div class="page" id="page-tasks">
-  <div class="page-header">
-    <div class="page-title">Tasks</div>
-    <button class="btn-add" onclick="openAddTask()">+ Add Task</button>
+  <!-- Stats bar -->
+  <div class="tasks-stats-bar">
+    <div class="tstat-pill"><span class="tstat-val" id="tstat-open">—</span><span style="color:var(--muted2)">/</span><span class="tstat-val" id="tstat-total">—</span><span class="tstat-lbl">OPEN</span></div>
+    <div class="tstat-pill"><span class="tstat-val" id="tstat-today-count">—</span><span class="tstat-lbl">TODAY</span></div>
+    <div class="tstat-pill"><span class="tstat-val" id="tstat-week-count">—</span><span class="tstat-lbl">THIS WEEK</span></div>
+    <div class="tstat-pill tstat-key"><span class="tstat-val" id="tstat-key-count">—</span><span class="tstat-lbl">KEY ★</span></div>
   </div>
-  <div class="filter-row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+  <!-- Search + add -->
+  <div class="tasks-search-row">
+    <div class="tasks-search-wrap">
+      <span class="tasks-search-icon">⊕</span>
+      <input class="tasks-search-inp" id="task-search" placeholder="Search title, description, tag…" oninput="renderTasks()" />
+    </div>
+    <button class="btn-add" onclick="openAddTask()">+ ADD</button>
+  </div>
+  <!-- Filters -->
+  <div class="filter-row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <button class="filter-btn active" data-filter="all">ALL</button>
       <button class="filter-btn" data-filter="Work">WORK</button>
@@ -998,12 +1052,10 @@
       </div>
     </div>
     <button class="filter-btn" id="toggle-done-btn" onclick="toggleShowDone()" style="display:flex;align-items:center;gap:5px">
-      <span id="toggle-done-icon">▸</span> Show Completed
+      <span id="toggle-done-icon">▸</span> Completed
     </button>
   </div>
-  <div class="tasks-grid" id="tasks-list">
-    <div class="loading">Loading tasks…</div>
-  </div>
+  <div id="tasks-list"><div class="loading">Loading tasks…</div></div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════ AGENTS ══ -->
@@ -1053,6 +1105,19 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════ JOURNAL ══ -->
+<div class="page" id="page-journal">
+  <div class="page-header" style="margin-bottom:8px">
+    <div class="page-title">Journal</div>
+    <button class="btn-add" onclick="saveJournalEntry()">Save Entry</button>
+  </div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.08em;margin-bottom:20px" id="journal-today-label"></div>
+  <textarea class="journal-textarea" id="journal-today-text" placeholder="What happened today? What are you grateful for? What will you do differently tomorrow?…"></textarea>
+  <hr class="os-divider" style="margin:28px 0" />
+  <div class="os-micro-lbl" style="margin-bottom:14px">PAST ENTRIES</div>
+  <div id="journal-past-entries"><div class="empty">No past entries yet.</div></div>
+</div>
+
 </div><!-- /app -->
 
 <!-- ADD HABIT MODAL -->
@@ -1066,6 +1131,10 @@
     <div class="form-group">
       <label class="form-label">Subtitle (optional)</label>
       <input class="form-input" id="new-habit-sub" placeholder="e.g. Chest &amp; shoulders, 30 pages" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Sub-habits (one per line, optional)</label>
+      <textarea class="form-input" id="new-habit-subs" rows="3" placeholder="Vitamin D&#10;Omega 3&#10;Magnesium" style="resize:vertical;font-size:11px;line-height:1.6"></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeAddHabit()">Cancel</button>
@@ -1231,9 +1300,12 @@
       <label class="form-label">Due Date</label>
       <input class="form-input" type="date" id="edit-task-due" />
     </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeEditTask()">Cancel</button>
-      <button class="btn-save" onclick="updateTask()">Save Changes</button>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn-cancel" onclick="deleteCurrentTask()" style="color:var(--red);border-color:var(--red);opacity:.8">Delete</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" onclick="closeEditTask()">Cancel</button>
+        <button class="btn-save" onclick="updateTask()">Save Changes</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1365,11 +1437,15 @@
   const FX_SYM = { USD: '$', CAD: 'C$', AED: 'AED ' };
   let activeCurrency  = 'USD';
   let privacyMode     = false;
-  let homePrivacyMode = false;
+  let homePrivacyMode = true;
+  let keyTaskIds      = new Set();   // populated from tasks.is_starred on load
   let activeTimeframe = '1M';
   let finData         = null;  // cached finance data
   let portfolioChart  = null;
   let homeSparkChart  = null;
+  // ── Habit in-memory cache (loaded from Supabase) ──────────
+  let habitsData   = [];   // array of habit rows
+  let checkinsData = {};   // { "YYYY-MM-DD": ["id", "id:subId", ...] }
 
   function fmtMoney(usdVal, priv) {
     if (priv !== undefined ? priv : privacyMode) return '••••••';
@@ -1403,9 +1479,10 @@
 
   window.toggleHomePrivacy = () => {
     homePrivacyMode = !homePrivacyMode;
-    document.getElementById('home-eye-btn').classList.toggle('active', homePrivacyMode);
-    const el = document.getElementById('home-nw');
-    if (el && finData) el.textContent = fmtMoneyHome(finData.costTotal);
+    const wrap = document.getElementById('fp-blur-wrap');
+    const btn  = document.getElementById('home-eye-btn');
+    if (wrap) wrap.classList.toggle('blurred', homePrivacyMode);
+    if (btn)  btn.textContent = homePrivacyMode ? '🙈' : '🙉';
   };
 
   window.setTimeframe = (tf) => {
@@ -1525,15 +1602,17 @@
     if (tab === 'home')    await loadHome();
     if (tab === 'finance') await loadFinance();
     if (tab === 'tasks')   await loadTasks();
+    if (tab === 'habits')  await loadHabitsData();
     if (tab === 'agents')  await loadAgents();
     if (tab === 'benzo')   await loadBenzo();
+    if (tab === 'journal') await loadJournal();
   }
 
   // ── HOME ─────────────────────────────────────────────────
   async function loadHome() {
     const safe = async (fn) => { try { return await fn(); } catch(e) { return []; } };
     const [tasks, rentals, fleet, goals, notes, txs] = await Promise.all([
-      safe(() => sb('tasks',       '?select=id,completed,due_date,task_text,category,priority')),
+      safe(() => sb('tasks',       '?select=id,completed,due_date,task_text,category,priority,is_starred')),
       safe(() => sb('rentals',     '?select=id,status,customer_name,vehicle_id,end_date,daily_rate')),
       safe(() => sb('fleet',       '?select=id,vehicle_name,status')),
       safe(() => sb('goals',       '?select=id,title,category,completed,target_date')),
@@ -1569,19 +1648,9 @@
     }
 
     // Left col: key tasks list
-    const dotColors = { high: 'var(--red)', medium: 'var(--gold)', low: 'var(--green)' };
-    const keyTasks = [...openToday]
-      .sort((a, b) => { const p = {high:0,medium:1,low:2}; return (p[a.priority]||1) - (p[b.priority]||1); })
-      .slice(0, 8);
-    const ktEl = document.getElementById('home-key-tasks');
-    if (ktEl) ktEl.innerHTML = keyTasks.length
-      ? keyTasks.map(t => `
-        <div class="key-task-row">
-          <div class="key-task-dot" style="background:${dotColors[t.priority]||'var(--muted)'}"></div>
-          <div class="key-task-text">${t.task_text}</div>
-          <div class="key-task-cat">${t.category}</div>
-        </div>`).join('')
-      : '<div class="empty">No urgent tasks today ✓</div>';
+    allTasks = tasks;
+    keyTaskIds = new Set(tasks.filter(t => t.is_starred).map(t => t.id));
+    renderKeyTasksHome();
 
     // Right col: Goals
     const activeGoals = goals.filter(g => !g.completed);
@@ -1994,6 +2063,8 @@
 
   async function loadTasks() {
     allTasks = await sb('tasks', '?order=created_at.desc');
+    // Populate keyTaskIds from is_starred column
+    keyTaskIds = new Set(allTasks.filter(t => t.is_starred).map(t => t.id));
     renderTasks();
   }
 
@@ -2291,12 +2362,57 @@ Return raw JSON only.`,
     }
   };
 
-  // ── HABITS (localStorage) ────────────────────────────────
-  function getHabits()   { return JSON.parse(localStorage.getItem('omar_habits')   || '[]'); }
-  function getCheckins() { return JSON.parse(localStorage.getItem('omar_checkins') || '{}'); }
-  function saveHabits(h) { localStorage.setItem('omar_habits',   JSON.stringify(h)); }
-  function saveCkins(c)  { localStorage.setItem('omar_checkins', JSON.stringify(c)); }
+  // ── HABITS (Supabase) ────────────────────────────────────
+  function getHabits()   { return habitsData; }
+  function getCheckins() { return checkinsData; }
   function todayKey()    { return new Date().toISOString().slice(0, 10); }
+
+  // Load habits + last 30 days of checkins from Supabase into memory cache
+  async function loadHabitsData() {
+    try {
+      const [habits, checkins] = await Promise.all([
+        sb('habits', '?order=sort_order.asc,created_at.asc'),
+        sb('habit_checkins', `?checkin_date=gte.${(() => { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().slice(0,10); })(
+        )}&order=checkin_date.asc`),
+      ]);
+      habitsData = habits || [];
+      checkinsData = {};
+      (checkins || []).forEach(row => {
+        checkinsData[row.checkin_date] = Array.isArray(row.checked_ids) ? row.checked_ids : JSON.parse(row.checked_ids || '[]');
+      });
+    } catch(e) {
+      console.warn('loadHabitsData error', e);
+    }
+    renderHabits();
+  }
+
+  // Upsert today's checkin row to Supabase (fire-and-forget)
+  function saveCkins(c) {
+    checkinsData = c;
+    const tk  = todayKey();
+    const ids = c[tk] || [];
+    fetch(`${SUPABASE_URL}/rest/v1/habit_checkins`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify({ checkin_date: tk, checked_ids: ids, updated_at: new Date().toISOString() }),
+    }).catch(e => console.warn('saveCkins error', e));
+  }
+
+  // Persist habits array order to Supabase (fire-and-forget, updates sort_order)
+  function saveHabits(h) {
+    habitsData = h;
+    h.forEach((habit, idx) => {
+      fetch(`${SUPABASE_URL}/rest/v1/habits?id=eq.${habit.id}`, {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sort_order: idx }),
+      }).catch(e => console.warn('saveHabits order error', e));
+    });
+  }
 
   function habitStreak(id) {
     const c = getCheckins();
@@ -2373,24 +2489,38 @@ Return raw JSON only.`,
     const tk = todayKey();
     if (!c[tk]) c[tk] = [];
     const idx = c[tk].indexOf(id);
+    const wasUndone = idx < 0;
     if (idx >= 0) c[tk].splice(idx, 1); else c[tk].push(id);
+    if (wasUndone) launchConfetti();
     saveCkins(c);
     renderHabits();
   };
 
   window.openAddHabit  = () => document.getElementById('habit-modal').classList.add('open');
   window.closeAddHabit = () => document.getElementById('habit-modal').classList.remove('open');
-  window.saveHabit = () => {
+  window.saveHabit = async () => {
     const title = document.getElementById('new-habit-title').value.trim();
     if (!title) return;
     const sub  = document.getElementById('new-habit-sub').value.trim();
-    const habits = getHabits();
-    habits.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), title, sub });
-    saveHabits(habits);
+    const subLines = document.getElementById('new-habit-subs').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const subHabits = subLines.map((t,i) => ({ id: Date.now().toString(36)+i, title:t }));
+    const newId = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    const newHabit = { id: newId, title, sub, sub_habits: subHabits, sort_order: habitsData.length };
+    // Optimistic update (sub_habits matches the DB column name)
+    habitsData.push(newHabit);
     document.getElementById('new-habit-title').value = '';
     document.getElementById('new-habit-sub').value   = '';
+    document.getElementById('new-habit-subs').value  = '';
     closeAddHabit();
     renderHabits();
+    // Persist to Supabase
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/habits`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(newHabit),
+      });
+    } catch(e) { console.warn('saveHabit error', e); }
   };
 
   // ── SBDELETE HELPER ──────────────────────────────────────
@@ -2449,13 +2579,18 @@ Return raw JSON only.`,
     habitDragId = null;
     renderHabits();
   };
-  window.deleteHabit = (id) => {
-    const habits = getHabits().filter(h => h.id !== id);
-    saveHabits(habits);
+  window.deleteHabit = async (id) => {
+    habitsData = habitsData.filter(h => h.id !== id);
     renderHabits();
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/habits?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}` },
+      });
+    } catch(e) { console.warn('deleteHabit error', e); }
   };
 
-  // Patch renderHabits to include drag + delete (override inline)
+  // Patch renderHabits to include drag + delete + sub-habits
   const _origRenderHabits = renderHabits;
   renderHabits = function() {
     const habits   = getHabits();
@@ -2477,6 +2612,25 @@ Return raw JSON only.`,
         grid.innerHTML = habits.map(h => {
           const done   = checkins[tk] && checkins[tk].includes(h.id);
           const streak = habitStreak(h.id);
+          const subs   = h.sub_habits || h.subHabits || [];
+          const hasSubs = subs.length > 0;
+          let subHtml = '';
+          if (hasSubs) {
+            const subsDone = subs.filter(sh => checkins[tk] && checkins[tk].includes(h.id + ':' + sh.id)).length;
+            const pct = Math.round((subsDone / subs.length) * 100);
+            subHtml = `
+              <div class="habit-prog"><div class="habit-prog-fill" style="width:${pct}%"></div></div>
+              <div class="habit-count-lbl">${subsDone}/${subs.length}</div>
+              <div class="habit-subs">
+                ${subs.map(sh => {
+                  const shDone = checkins[tk] && checkins[tk].includes(h.id + ':' + sh.id);
+                  return `<div class="habit-sub-row" onclick="toggleSubHabit(event,'${h.id}','${sh.id}')">
+                    <div class="habit-sub-chk ${shDone ? 'done' : ''}">${shDone ? '✓' : ''}</div>
+                    <span>${sh.title}</span>
+                  </div>`;
+                }).join('')}
+              </div>`;
+          }
           return `<div class="habit-item ${done ? 'done' : ''}" style="position:relative"
             draggable="true"
             ondragstart="habitDragStart(event,'${h.id}')"
@@ -2484,15 +2638,15 @@ Return raw JSON only.`,
             ondragover="habitDragOver(event,'${h.id}')"
             ondragleave="habitDragLeave(event)"
             ondrop="habitDrop(event,'${h.id}')"
-            onclick="toggleCheckin('${h.id}')">
+            ${hasSubs ? '' : `onclick="toggleCheckin('${h.id}')"`}>
             <button class="habit-del" onclick="event.stopPropagation();deleteHabit('${h.id}')" title="Remove habit"
               style="position:absolute;top:4px;right:4px;width:16px;height:16px;border:none;background:var(--bg4);color:var(--red);border-radius:2px;cursor:pointer;font-size:10px;display:none;align-items:center;justify-content:center;line-height:1">✕</button>
             <div class="habit-title" title="${h.title}">${h.title}</div>
-            ${h.sub ? `<div class="habit-sub" title="${h.sub}">${h.sub}</div>` : '<div style="height:5px"></div>'}
-            <div class="habit-streak">🔥 ${streak}d</div>
+            ${h.sub ? `<div class="habit-sub" title="${h.sub}">${h.sub}</div>` : (hasSubs ? '' : '<div style="height:5px"></div>')}
+            ${hasSubs ? subHtml : `<div class="habit-streak">🔥 ${streak}d</div>`}
           </div>`;
         }).join('');
-        // Show delete button on hover via JS (since CSS :hover on nested button is tricky in grid)
+        // Show delete button on hover via JS
         grid.querySelectorAll('.habit-item').forEach(el => {
           el.addEventListener('mouseenter', () => { const b = el.querySelector('.habit-del'); if (b) b.style.display = 'flex'; });
           el.addEventListener('mouseleave', () => { const b = el.querySelector('.habit-del'); if (b) b.style.display = 'none'; });
@@ -2614,31 +2768,55 @@ Return raw JSON only.`,
     });
   });
 
-  // Override renderTasks to add sort + edit button
+  // Override renderTasks — full grouped redesign with stars + search + stats
   const _origRenderTasks = renderTasks;
   renderTasks = function() {
+    const today     = new Date().toISOString().slice(0,10);
+    const weekEnd   = new Date(); weekEnd.setDate(weekEnd.getDate() + 7);
+    const weekEndStr = weekEnd.toISOString().slice(0,10);
+
+    const searchVal = (document.getElementById('task-search')?.value || '').toLowerCase().trim();
+
     let filtered = allTasks;
     if (['Work','Personal','Benzo'].includes(activeFilter)) filtered = allTasks.filter(t => t.category === activeFilter);
     if (!showDone) filtered = filtered.filter(t => !t.completed);
+    if (searchVal) filtered = filtered.filter(t =>
+      (t.task_text || '').toLowerCase().includes(searchVal) ||
+      (t.category  || '').toLowerCase().includes(searchVal) ||
+      (t.priority  || '').toLowerCase().includes(searchVal)
+    );
 
-    // Sort
-    filtered = [...filtered].sort((a, b) => {
-      if (activeSort === 'priority') {
-        const p = {high:0,medium:1,low:2};
-        return (p[a.priority]||1) - (p[b.priority]||1);
-      }
-      if (activeSort === 'due') {
-        return (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1;
-      }
-      // created (default) — newest first
+    // Sort within groups
+    const sortFn = (a, b) => {
+      if (activeSort === 'priority') { const p={high:0,medium:1,low:2}; return (p[a.priority]||1)-(p[b.priority]||1); }
+      if (activeSort === 'due')      { return (a.due_date||'9999') < (b.due_date||'9999') ? -1 : 1; }
       return new Date(b.created_at) - new Date(a.created_at);
-    });
+    };
+
+    const open = filtered.filter(t => !t.completed);
+    const done = filtered.filter(t => t.completed);
+
+    // Update stats bar
+    const allOpen  = allTasks.filter(t => !t.completed);
+    const todayTasks = allOpen.filter(t => t.due_date && t.due_date <= today);
+    const weekTasks  = allOpen.filter(t => t.due_date && t.due_date > today && t.due_date <= weekEndStr);
+    const keyCount   = allOpen.filter(t => keyTaskIds.has(t.id)).length;
+    const setS = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setS('tstat-open',       allOpen.length);
+    setS('tstat-total',      allTasks.length);
+    setS('tstat-today-count',todayTasks.length);
+    setS('tstat-week-count', weekTasks.length);
+    setS('tstat-key-count',  keyCount);
 
     const list = document.getElementById('tasks-list');
     if (!filtered.length) { list.innerHTML = '<div class="empty">No tasks found.</div>'; return; }
+
     const priColors = { high: 'var(--red)', medium: 'var(--gold)', low: 'var(--green)' };
-    list.innerHTML = filtered.map(t => `
-      <div class="task-row ${t.completed ? 'done' : ''}" id="task-${t.id}">
+
+    const taskRowHtml = (t) => {
+      const starred = keyTaskIds.has(t.id);
+      return `<div class="task-row ${t.completed ? 'done' : ''}" id="task-${t.id}">
+        <button class="task-star-btn ${starred ? 'starred' : ''}" onclick="starTask(event,'${t.id}')" title="${starred?'Unstar':'Star as key task'}">★</button>
         <div class="task-check ${t.completed ? 'checked' : ''}" onclick="toggleTask('${t.id}', ${t.completed})"></div>
         <div class="task-text" style="${t.completed ? 'text-decoration:line-through;color:var(--muted)' : ''}"
           title="Double-click to edit"
@@ -2648,8 +2826,34 @@ Return raw JSON only.`,
           <span class="badge badge-${t.priority}" style="color:${priColors[t.priority]||'var(--muted)'}">${t.priority}</span>
           ${t.due_date ? `<span class="task-due">${t.due_date}</span>` : ''}
         </div>
-        <button class="task-edit-btn" onclick='openEditTask(${JSON.stringify(t)})' title="Edit task" style="width:22px;height:22px;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--muted);cursor:pointer;font-size:11px;flex-shrink:0">✎</button>
-      </div>`).join('');
+        <button class="task-edit-btn" onclick='openEditTask(${JSON.stringify(t)})' title="Edit task">✎</button>
+      </div>`;
+    };
+
+    // Group open tasks
+    const keyGroup      = open.filter(t => keyTaskIds.has(t.id)).sort(sortFn);
+    const todayGroup    = open.filter(t => !keyTaskIds.has(t.id) && t.due_date && t.due_date <= today).sort(sortFn);
+    const thisWeekGroup = open.filter(t => !keyTaskIds.has(t.id) && t.due_date && t.due_date > today && t.due_date <= weekEndStr).sort(sortFn);
+    const upcomingGroup = open.filter(t => !keyTaskIds.has(t.id) && t.due_date && t.due_date > weekEndStr).sort(sortFn);
+    const noDateGroup   = open.filter(t => !keyTaskIds.has(t.id) && !t.due_date).sort(sortFn);
+
+    const groupHtml = (label, color, tasks) => tasks.length ? `
+      <div class="task-group-hdr"><div class="task-group-dot" style="background:${color}"></div>${label} <span style="color:var(--muted2);font-weight:400">(${tasks.length})</span></div>
+      <div class="tasks-grid">${tasks.map(taskRowHtml).join('')}</div>` : '';
+
+    let html = '';
+    html += groupHtml('KEY ★',     '#c8a84b',           keyGroup);
+    html += groupHtml('TODAY',     'var(--red)',         todayGroup);
+    html += groupHtml('THIS WEEK', 'var(--gold-dim)',    thisWeekGroup);
+    html += groupHtml('UPCOMING',  'var(--blue)',        upcomingGroup);
+    html += groupHtml('NO DATE',   'var(--muted2)',      noDateGroup);
+
+    if (showDone && done.length) {
+      html += `<div class="task-group-hdr"><div class="task-group-dot" style="background:var(--green)"></div>COMPLETED <span style="color:var(--muted2);font-weight:400">(${done.length})</span></div>
+      <div class="tasks-grid">${done.sort(sortFn).map(taskRowHtml).join('')}</div>`;
+    }
+
+    list.innerHTML = html || '<div class="empty">No tasks found.</div>';
   };
 
   window.openEditTask = (task) => {
@@ -2661,6 +2865,14 @@ Return raw JSON only.`,
     document.getElementById('edit-task-modal').classList.add('open');
   };
   window.closeEditTask = () => document.getElementById('edit-task-modal').classList.remove('open');
+  window.deleteCurrentTask = async () => {
+    const id = document.getElementById('edit-task-id').value;
+    if (!id || !confirm('Delete this task?')) return;
+    await sbDelete('tasks', id);
+    allTasks = allTasks.filter(t => t.id != id);
+    closeEditTask();
+    renderTasks();
+  };
   window.updateTask = async () => {
     const id = document.getElementById('edit-task-id').value;
     const patch = {
@@ -2723,16 +2935,19 @@ Return raw JSON only.`,
       ? benzoFleet.map(v => {
           const splits     = v.owner_splits || {};
           const splitsHtml = Object.entries(splits).map(([name, pct]) => `<span class="split-item"><span>${pct}%</span> ${name}</span>`).join('');
-          return `<div class="fleet-card" style="position:relative">
-            <div style="position:absolute;top:10px;right:10px;display:flex;gap:5px">
-              <button onclick="openEditVehicle(${JSON.stringify(v).replace(/"/g,'&quot;')})"
-                style="padding:3px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--muted);cursor:pointer">Edit</button>
-              <button onclick="confirmDeleteVehicle('${v.id}')"
-                style="padding:3px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--red);cursor:pointer">Del</button>
-            </div>
+          return `<div class="fleet-card">
             <div class="fleet-card-header">
-              <div><div class="fleet-name">${v.vehicle_name}</div><div class="fleet-sub">${v.year} ${v.make} ${v.model}</div></div>
-              <span class="status-pill status-${v.status}">${v.status}</span>
+              <div style="min-width:0;flex:1">
+                <div class="fleet-name">${v.vehicle_name}</div>
+                <div class="fleet-sub">${v.year} ${v.make} ${v.model}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
+                <span class="status-pill status-${v.status}">${v.status}</span>
+                <button onclick="openEditVehicle(${JSON.stringify(v).replace(/"/g,'&quot;')})"
+                  style="padding:2px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.04em;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--muted);cursor:pointer">Edit</button>
+                <button onclick="confirmDeleteVehicle('${v.id}')"
+                  style="padding:2px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.04em;border:1px solid rgba(239,68,68,.4);border-radius:3px;background:transparent;color:var(--red);cursor:pointer">Del</button>
+              </div>
             </div>
             ${v.notes ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">${v.notes}</div>` : ''}
             <div class="os-micro-lbl" style="margin-bottom:5px">OWNER SPLITS</div>
@@ -2905,6 +3120,131 @@ Return raw JSON only.`,
     if (!confirm('Delete this rental? This cannot be undone.')) return;
     try { await sbDelete('rentals', id); await loadBenzo(); }
     catch(e) { alert('Error: ' + e.message); }
+  };
+
+  // ── CONFETTI ─────────────────────────────────────────────
+  function launchConfetti() {
+    const colors = ['#c8a84b','#22c55e','#4a7cbb','#ef4444','#fff','#f97316'];
+    for (let i = 0; i < 60; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.cssText = `left:${Math.random()*100}vw;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${0.8+Math.random()*1.2}s;animation-delay:${Math.random()*0.4}s;width:${6+Math.random()*6}px;height:${6+Math.random()*6}px;border-radius:${Math.random()>.5?'50%':'2px'}`;
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+  }
+
+  // ── STAR TASKS / KEY TASKS ───────────────────────────────
+  window.starTask = async (e, id) => {
+    e.stopPropagation();
+    const nowStarred = !keyTaskIds.has(id);
+    if (nowStarred) keyTaskIds.add(id); else keyTaskIds.delete(id);
+    // Optimistic UI
+    renderTasks();
+    const home = document.getElementById('home-key-tasks');
+    if (home) renderKeyTasksHome();
+    // Persist to Supabase
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ is_starred: nowStarred }),
+      });
+    } catch(e2) { console.warn('starTask error', e2); }
+  };
+  function renderKeyTasksHome() {
+    const el = document.getElementById('home-key-tasks');
+    if (!el) return;
+    const keyed = allTasks.filter(t => !t.completed && keyTaskIds.has(t.id));
+    const dotColors = { high:'var(--red)', medium:'var(--gold)', low:'var(--green)' };
+    el.innerHTML = keyed.length
+      ? keyed.map(t => `<div class="key-task-row">
+          <div class="key-task-dot" style="background:${dotColors[t.priority]||'var(--muted)'}"></div>
+          <div class="key-task-text">${t.task_text}</div>
+          <div class="key-task-cat">${t.category}</div>
+        </div>`).join('')
+      : '<div class="empty">No key tasks starred yet ★</div>';
+  }
+
+  // ── SUB-HABITS ───────────────────────────────────────────
+  window.toggleSubHabit = (e, habitId, subId) => {
+    e.stopPropagation();
+    const c  = getCheckins();
+    const tk = todayKey();
+    if (!c[tk]) c[tk] = [];
+    const key = habitId + ':' + subId;
+    const idx = c[tk].indexOf(key);
+    if (idx >= 0) c[tk].splice(idx, 1); else c[tk].push(key);
+    const habits = getHabits();
+    const habit  = habits.find(h => h.id === habitId);
+    const subs   = habit ? (habit.sub_habits || habit.subHabits || []) : [];
+    if (habit && subs.length > 0) {
+      const allDone = subs.every(sh => c[tk].includes(habitId + ':' + sh.id));
+      const mainIdx = c[tk].indexOf(habitId);
+      if (allDone && mainIdx < 0) { c[tk].push(habitId); launchConfetti(); }
+      else if (!allDone && mainIdx >= 0) c[tk].splice(mainIdx, 1);
+    }
+    saveCkins(c);
+    renderHabits();
+  };
+
+  // ── JOURNAL (Supabase) ───────────────────────────────────
+  let journalSaveTimer = null;
+
+  async function upsertJournalEntry(date, content) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/journal_entries`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=minimal',
+        },
+        body: JSON.stringify({ entry_date: date, content, updated_at: new Date().toISOString() }),
+      });
+    } catch(e) { console.warn('upsertJournalEntry error', e); }
+  }
+
+  async function loadJournal() {
+    const today = new Date().toISOString().slice(0,10);
+    const label = document.getElementById('journal-today-label');
+    if (label) label.textContent = new Date().toLocaleDateString('en-CA', { weekday:'long', year:'numeric', month:'long', day:'numeric' }).toUpperCase();
+
+    // Fetch last 60 days of journal entries from Supabase
+    let entries = [];
+    try {
+      const since = (() => { const d = new Date(); d.setDate(d.getDate()-60); return d.toISOString().slice(0,10); })();
+      entries = await sb('journal_entries', `?entry_date=gte.${since}&order=entry_date.desc`);
+    } catch(e) { console.warn('loadJournal fetch error', e); }
+
+    const todayEntry = (entries || []).find(e => e.entry_date === today);
+    const inp = document.getElementById('journal-today-text');
+    if (inp) {
+      inp.value = todayEntry?.content || '';
+      // Remove any previous listener then add fresh debounced auto-save
+      const newInp = inp.cloneNode(true);
+      inp.parentNode.replaceChild(newInp, inp);
+      newInp.addEventListener('input', () => {
+        clearTimeout(journalSaveTimer);
+        journalSaveTimer = setTimeout(() => upsertJournalEntry(today, newInp.value), 1200);
+      });
+    }
+
+    const past = (entries || []).filter(e => e.entry_date !== today);
+    const pastEl = document.getElementById('journal-past-entries');
+    if (pastEl) pastEl.innerHTML = past.length
+      ? past.slice(0,30).map(e => `<div class="journal-past-entry">
+          <div class="journal-past-date">${new Date(e.entry_date+'T12:00:00').toLocaleDateString('en-CA',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).toUpperCase()}</div>
+          <div class="journal-past-text">${(e.content||'').replace(/</g,'&lt;').slice(0,400)}${(e.content||'').length>400?'…':''}</div>
+        </div>`).join('')
+      : '<div class="empty">No past entries yet.</div>';
+  }
+
+  window.saveJournalEntry = async () => {
+    const today = new Date().toISOString().slice(0,10);
+    const text  = document.getElementById('journal-today-text')?.value || '';
+    await upsertJournalEntry(today, text);
+    await loadJournal();
   };
 
   // ── UTILS ────────────────────────────────────────────────
