@@ -169,15 +169,25 @@
     /* ── HOME 3-COL GRID ── */
     #page-home { padding: 10px; flex-direction: column !important; overflow-y: auto; }
     .home-os-grid {
-      display: grid;
-      grid-template-columns: 254px 1fr 238px;
-      gap: 8px;
+      display: flex;
+      gap: 0;
       width: 100%;
-      min-width: 700px; /* prevents columns from collapsing at small sizes */
+      min-width: 700px;
+      flex: 1;
     }
     .home-col {
-      display: flex; flex-direction: column; gap: 8px;
+      display: flex; flex-direction: column; gap: 8px; overflow: hidden;
     }
+    #home-col-left  { width: 254px; min-width: 160px; max-width: 400px; flex-shrink: 0; padding-right: 8px; }
+    #home-col-center{ flex: 1; min-width: 200px; overflow: hidden; padding: 0 4px; }
+    #home-col-right { width: 238px; min-width: 160px; max-width: 400px; flex-shrink: 0; padding-left: 8px; }
+    .col-resize-handle {
+      width: 6px; cursor: col-resize; background: transparent;
+      flex-shrink: 0; position: relative; z-index: 10;
+      transition: background .15s;
+      border-radius: 3px;
+    }
+    .col-resize-handle:hover, .col-resize-handle.dragging { background: var(--gold-dim); }
 
     /* ── OPERATOR CARD ── */
     .online-dot {
@@ -494,6 +504,16 @@
     .btn-cancel { padding: 7px 14px; background: transparent; border: 1px solid var(--border2); color: var(--muted); border-radius: 4px; cursor: pointer; font-size: 11px; }
     .btn-save   { padding: 7px 14px; background: var(--gold); color: #000; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 11px; font-family: 'JetBrains Mono', monospace; }
 
+    /* ── THEME PICKER ── */
+    .theme-picker-row { display: flex; flex-direction: column; gap: 5px; }
+    .theme-picker-lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+    .theme-color-inp {
+      width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border2);
+      padding: 1px; background: var(--bg3); cursor: pointer; flex-shrink: 0;
+    }
+    .theme-color-inp::-webkit-color-swatch-wrapper { padding: 2px; }
+    .theme-color-inp::-webkit-color-swatch { border-radius: 3px; border: none; }
+
     /* ── UTILS ── */
     ::-webkit-scrollbar { width: 3px; height: 3px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -567,18 +587,14 @@
 
     /* ── HABITS ── */
     .habit-score-ring {
-      width: 38px; height: 38px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      position: relative; cursor: default;
-    }
-    .habit-score-ring::before {
-      content: ''; position: absolute; inset: 5px;
-      background: var(--bg2); border-radius: 50%; z-index: 1;
+      width: 52px; height: 52px;
+      position: relative; cursor: default; flex-shrink: 0;
     }
     .habit-score-inner {
-      position: relative; z-index: 2;
-      font-family: 'JetBrains Mono', monospace; font-size: 8px;
-      font-weight: 500; color: var(--text); white-space: nowrap;
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      font-weight: 600; color: var(--text);
     }
     .habits-grid {
       display: grid; grid-template-columns: repeat(3, 1fr);
@@ -619,6 +635,7 @@
     #page-journal { flex-direction:column; padding:24px 28px; overflow-y:auto; }
     .journal-textarea { width:100%; background:var(--bg2); border:1px solid var(--border); color:var(--text); padding:16px 18px; border-radius:6px; font-size:14px; line-height:1.7; outline:none; resize:vertical; font-family:inherit; min-height:220px; }
     .journal-textarea:focus { border-color:var(--gold-dim); }
+    .journal-past-entry.active-entry { border-color: var(--gold-dim); background: rgba(200,168,75,.04); }
     .journal-past-entry { margin-bottom:20px; padding:14px 16px; background:var(--bg2); border:1px solid var(--border); border-radius:5px; }
     .journal-past-date { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--gold-dim); letter-spacing:.08em; margin-bottom:8px; }
     .journal-past-text { font-size:13px; color:var(--muted); line-height:1.6; white-space:pre-wrap; }
@@ -743,6 +760,8 @@
     }
     .nav-settings-btn:hover { color: var(--gold); border-color: var(--gold-dim); }
 
+    .font-slider { width: 100%; accent-color: var(--gold); cursor: pointer; }
+
     /* ── FORM TEXTAREA ── */
     .form-textarea {
       width: 100%; background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
@@ -806,7 +825,7 @@
   <div class="home-os-grid">
 
     <!-- ── LEFT COL ── -->
-    <div class="home-col">
+    <div class="home-col" id="home-col-left">
 
       <!-- 01 OPERATOR -->
       <div class="os-card">
@@ -858,6 +877,7 @@
       <div class="os-card" style="flex-shrink:0;cursor:pointer" onclick="switchTab('finance')">
         <div class="os-card-hdr">
           <span class="os-num">02 //</span> FINANCE PULSE
+          <span id="home-fp-badge" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:20px;padding:2px 8px;display:none"></span>
           <button class="fp-monkey-btn" id="home-eye-btn" onclick="event.stopPropagation();toggleHomePrivacy()" title="Hide amounts">🙈</button>
         </div>
         <div class="fp-blur-wrap blurred" id="fp-blur-wrap">
@@ -867,13 +887,15 @@
           <canvas id="home-sparkline" style="display:block;width:100%;height:42px"></canvas>
         </div>
         <div class="home-stat-grid" style="margin-top:8px">
-          <div class="home-stat-cell">
-            <div class="k">POSITIONS</div>
-            <div class="v" id="hs-holdings" style="cursor:pointer" onclick="switchTab('finance')">—</div>
+          <div class="home-stat-cell" id="hfp-daily">
+            <div class="k">DAILY</div>
+            <div class="v fp-pnl-val" id="hfp-daily-val" style="font-size:18px">—</div>
+            <div class="fp-pnl-pct" id="hfp-daily-pct" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px">—</div>
           </div>
-          <div class="home-stat-cell">
-            <div class="k">UNREAD NOTES</div>
-            <div class="v" id="hs-notes">—</div>
+          <div class="home-stat-cell" id="hfp-monthly">
+            <div class="k">MONTHLY</div>
+            <div class="v fp-pnl-val" id="hfp-monthly-val" style="font-size:18px">—</div>
+            <div class="fp-pnl-pct" id="hfp-monthly-pct" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px">—</div>
           </div>
         </div>
         </div><!-- end fp-blur-wrap -->
@@ -890,8 +912,10 @@
 
     </div><!-- /left col -->
 
+    <div class="col-resize-handle" id="resize-lc"></div>
+
     <!-- ── CENTER COL ── -->
-    <div class="home-col">
+    <div class="home-col" id="home-col-center">
 
       <!-- 04 SESSION -->
       <div class="os-card os-session-card">
@@ -921,6 +945,12 @@
           <span><span class="os-num">05 //</span> HABITS</span>
           <div style="display:flex;align-items:center;gap:7px">
             <div class="habit-score-ring" id="habit-score-ring">
+              <svg viewBox="0 0 52 52" style="width:52px;height:52px;transform:rotate(-90deg)">
+                <circle cx="26" cy="26" r="22" fill="none" stroke="var(--bg4)" stroke-width="4"/>
+                <circle id="habit-ring-arc" cx="26" cy="26" r="22" fill="none" stroke="var(--green)" stroke-width="4"
+                  stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="138.2"
+                  style="transition:stroke-dashoffset .4s ease"/>
+              </svg>
               <span class="habit-score-inner" id="habit-score-txt">—</span>
             </div>
             <button class="os-icon-btn" onclick="openAddHabit()">+</button>
@@ -938,8 +968,10 @@
 
     </div><!-- /center col -->
 
+    <div class="col-resize-handle" id="resize-cr"></div>
+
     <!-- ── RIGHT COL ── -->
-    <div class="home-col">
+    <div class="home-col" id="home-col-right">
 
       <!-- 06 GOALS -->
       <div class="os-card">
@@ -971,9 +1003,9 @@
         <div id="home-active-rentals"><div class="loading">Loading…</div></div>
       </div>
 
-      <!-- 09 VOICE NOTES -->
+      <!-- 09 QUICK NOTES -->
       <div class="os-card os-card-grow">
-        <div class="os-card-hdr"><span class="os-num">09 //</span> VOICE NOTES</div>
+        <div class="os-card-hdr"><span class="os-num">09 //</span> QUICK NOTES <span style="font-size:9px;color:var(--muted);margin-left:4px">(unprocessed)</span></div>
         <div id="home-voice-notes"><div class="loading">Loading…</div></div>
       </div>
 
@@ -1163,15 +1195,25 @@
 
 <!-- ══════════════════════════════════════════════════════ JOURNAL ══ -->
 <div class="page" id="page-journal">
-  <div class="page-header" style="margin-bottom:8px">
-    <div class="page-title">Journal</div>
-    <button class="btn-add" onclick="saveJournalEntry()">Save Entry</button>
+  <!-- Header with date navigation -->
+  <div class="page-header" style="margin-bottom:16px">
+    <div class="page-title">JOURNAL</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="btn-cancel" onclick="journalNavDay(-1)" style="padding:5px 10px;font-size:14px">‹</button>
+      <input type="date" id="journal-date-picker" class="form-input" style="width:160px;padding:5px 8px;font-size:12px" oninput="journalGoToDate(this.value)" />
+      <button class="btn-cancel" onclick="journalNavDay(1)" style="padding:5px 10px;font-size:14px">›</button>
+      <button class="btn-cancel" onclick="journalGoToToday()" style="font-size:10px;letter-spacing:.06em">TODAY</button>
+    </div>
+    <button class="btn-save" onclick="saveCurrentJournalEntry()" style="margin-left:8px">Save</button>
   </div>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.08em;margin-bottom:20px" id="journal-today-label"></div>
-  <textarea class="journal-textarea" id="journal-today-text" placeholder="What happened today? What are you grateful for? What will you do differently tomorrow?…"></textarea>
-  <hr class="os-divider" style="margin:28px 0" />
-  <div class="os-micro-lbl" style="margin-bottom:14px">PAST ENTRIES</div>
-  <div id="journal-past-entries"><div class="empty">No past entries yet.</div></div>
+  <div id="journal-current-date-label" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:12px"></div>
+  <textarea class="journal-textarea" id="journal-textarea" placeholder="Write your thoughts…" style="min-height:260px;flex:1"></textarea>
+  <hr class="os-divider" style="margin:24px 0" />
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div class="os-micro-lbl">ALL ENTRIES</div>
+    <div id="journal-entry-count" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)"></div>
+  </div>
+  <div id="journal-entries-list"></div>
 </div>
 
 </div><!-- /app -->
@@ -1235,8 +1277,8 @@
       <input class="form-input" id="new-cat-name" placeholder="e.g. Health, Finance, Strategy…" autocomplete="off" onkeydown="if(event.key==='Enter')saveNewCategory()" />
     </div>
     <div class="modal-actions" style="margin-top:18px">
-      <button class="modal-btn-cancel" onclick="closeAddCategoryModal()">Cancel</button>
-      <button class="modal-btn-save" onclick="saveNewCategory()">Add Category</button>
+      <button class="btn-cancel" onclick="closeAddCategoryModal()">Cancel</button>
+      <button class="btn-save" onclick="saveNewCategory()">Add Category</button>
     </div>
   </div>
 </div>
@@ -1248,8 +1290,8 @@
     <p style="font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.5">Edit or delete your task categories. Renaming a category will update all tasks assigned to it.</p>
     <div id="manage-cats-list" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto"></div>
     <div class="modal-actions" style="margin-top:18px">
-      <button class="modal-btn-cancel" onclick="closeManageCategoriesModal()">Close</button>
-      <button class="modal-btn-save" onclick="openAddCategoryModal()">+ New Category</button>
+      <button class="btn-cancel" onclick="closeManageCategoriesModal()">Close</button>
+      <button class="btn-save" onclick="openAddCategoryModal()">+ New Category</button>
     </div>
   </div>
 </div>
@@ -1286,16 +1328,99 @@
 
 <!-- SETTINGS MODAL -->
 <div class="modal-overlay" id="settings-modal">
-  <div class="modal" style="width:440px">
-    <h3>Settings</h3>
+  <div class="modal" style="width:520px;max-height:90vh;overflow-y:auto">
+    <h3 style="margin-bottom:20px">SETTINGS</h3>
+
+    <!-- API KEY -->
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:10px">API</div>
     <div class="form-group">
       <label class="form-label">Claude API Key <span style="color:var(--muted);font-weight:400">(enables AI quick input)</span></label>
       <input class="form-input" id="settings-api-key" type="password" placeholder="sk-ant-…" />
-      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:5px">Stored locally in your browser only. Used for the home page quick input agent.</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:5px">Stored locally in your browser only.</div>
     </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
-      <button class="btn-save" onclick="saveSettings()">Save</button>
+
+    <div style="border-top:1px solid var(--border);margin:18px 0"></div>
+
+    <!-- INTERFACE SCALE -->
+    <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;width:100%">
+        <label class="settings-label" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">Interface Scale</label>
+        <span id="font-size-display" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold)">14px</span>
+      </div>
+      <input type="range" id="font-size-slider" class="font-slider" min="12" max="18" step="1" value="14" oninput="window.livePreviewFontSize(this.value)" />
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin:18px 0"></div>
+
+    <!-- THEME -->
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:12px">THEME</div>
+
+    <!-- Mode presets -->
+    <div class="form-group">
+      <label class="form-label">Mode Preset</label>
+      <div style="display:flex;gap:8px">
+        <button id="preset-dark"  onclick="applyPreset('dark')"  style="flex:1;padding:8px;border-radius:4px;border:1px solid var(--border2);background:var(--bg4);color:var(--text);cursor:pointer;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;transition:border-color .15s">◼ DARK</button>
+        <button id="preset-light" onclick="applyPreset('light')" style="flex:1;padding:8px;border-radius:4px;border:1px solid var(--border2);background:#f0f0eb;color:#1a1a1a;cursor:pointer;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;transition:border-color .15s">◻ LIGHT</button>
+      </div>
+    </div>
+
+    <!-- Color pickers -->
+    <div class="form-group">
+      <label class="form-label">Customize Colors</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="theme-picker-row">
+          <label class="theme-picker-lbl">Background</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="color" id="cp-bg"   class="theme-color-inp" oninput="livePreviewColor('--bg',this.value)" />
+            <input type="color" id="cp-bg2"  class="theme-color-inp" oninput="livePreviewColor('--bg2',this.value)" />
+            <span style="font-size:9px;color:var(--muted)">base · surface</span>
+          </div>
+        </div>
+        <div class="theme-picker-row">
+          <label class="theme-picker-lbl">Text</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="color" id="cp-text"  class="theme-color-inp" oninput="livePreviewColor('--text',this.value)" />
+            <input type="color" id="cp-muted" class="theme-color-inp" oninput="livePreviewColor('--muted',this.value)" />
+            <span style="font-size:9px;color:var(--muted)">main · dim</span>
+          </div>
+        </div>
+        <div class="theme-picker-row">
+          <label class="theme-picker-lbl">Accent (Gold)</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="color" id="cp-gold"     class="theme-color-inp" oninput="livePreviewColor('--gold',this.value)" />
+            <input type="color" id="cp-gold-dim" class="theme-color-inp" oninput="livePreviewColor('--gold-dim',this.value)" />
+            <span style="font-size:9px;color:var(--muted)">bright · dim</span>
+          </div>
+        </div>
+        <div class="theme-picker-row">
+          <label class="theme-picker-lbl">Borders</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="color" id="cp-border"  class="theme-color-inp" oninput="livePreviewColor('--border',this.value)" />
+            <input type="color" id="cp-border2" class="theme-color-inp" oninput="livePreviewColor('--border2',this.value)" />
+            <span style="font-size:9px;color:var(--muted)">soft · strong</span>
+          </div>
+        </div>
+        <div class="theme-picker-row">
+          <label class="theme-picker-lbl">Green (progress)</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="color" id="cp-green" class="theme-color-inp" oninput="livePreviewColor('--green',this.value)" />
+          </div>
+        </div>
+        <div class="theme-picker-row">
+          <label class="theme-picker-lbl">Blue (info)</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="color" id="cp-blue" class="theme-color-inp" oninput="livePreviewColor('--blue',this.value)" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn-cancel" onclick="resetThemeToDefault()" style="color:var(--muted)">↺ Set to Default</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" onclick="cancelThemeChanges()">Cancel</button>
+        <button class="btn-save"   onclick="saveSettings()">Save</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1818,6 +1943,41 @@
         scales: { x: { display: false }, y: { display: false } }
       }
     });
+
+    // Calculate daily and monthly P&L
+    const n = values.length;
+    if (n >= 2) {
+      const today = values[n-1];
+      const yesterday = values[n-2];
+      const monthStart = values[0];
+
+      const dailyAbs = today - yesterday;
+      const dailyPct = yesterday > 0 ? (dailyAbs / yesterday * 100) : 0;
+      const monthAbs = today - monthStart;
+      const monthPct = monthStart > 0 ? (monthAbs / monthStart * 100) : 0;
+
+      const fmtPnl = (v) => {
+        const sign = v >= 0 ? '+' : '';
+        return sign + '$' + Math.abs(v).toLocaleString('en-US', {maximumFractionDigits:0});
+      };
+      const fmtPct = (v) => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+      const col = (v) => v >= 0 ? 'var(--green)' : 'var(--red)';
+
+      const setEl = (id, text, color) => { const el = document.getElementById(id); if (el) { el.textContent = text; if (color) el.style.color = color; } };
+      setEl('hfp-daily-val',   fmtPnl(dailyAbs), col(dailyAbs));
+      setEl('hfp-daily-pct',   fmtPct(dailyPct), col(dailyPct));
+      setEl('hfp-monthly-val', fmtPnl(monthAbs), col(monthAbs));
+      setEl('hfp-monthly-pct', fmtPct(monthPct), col(monthPct));
+
+      // Update badge
+      const badge = document.getElementById('home-fp-badge');
+      if (badge) {
+        const sign = monthAbs >= 0 ? '▲' : '▼';
+        badge.textContent = sign + ' ' + fmtPct(monthPct) + ' · 30D';
+        badge.style.color = col(monthAbs);
+        badge.style.display = '';
+      }
+    }
   }
 
   // ── CRYPTO TICKERS ───────────────────────────────────────
@@ -2137,6 +2297,7 @@
 
   // ── TASKS ────────────────────────────────────────────────
   let allTasks = [], activeFilter = 'all', showDone = false;
+  const dotColors = { high:'var(--red)', medium:'var(--gold)', low:'var(--green)' };
 
   window.toggleShowDone = () => {
     showDone = !showDone;
@@ -2759,9 +2920,12 @@ Return raw JSON only.`,
     const score    = habits.length ? Math.round((todayDone / habits.length) * 100) : 0;
 
     // Score ring
-    const ring = document.getElementById('habit-score-ring');
+    const arc = document.getElementById('habit-ring-arc');
     const txt  = document.getElementById('habit-score-txt');
-    if (ring) ring.style.background = `conic-gradient(var(--green) 0% ${score}%, var(--bg4) ${score}% 100%)`;
+    if (arc) {
+      const circumference = 2 * Math.PI * 22;
+      arc.style.strokeDashoffset = circumference * (1 - score / 100);
+    }
     if (txt)  txt.textContent = habits.length ? score + '%' : '—';
 
     // Habit grid
@@ -2857,17 +3021,152 @@ Return raw JSON only.`,
   }
 
   // ── SETTINGS ─────────────────────────────────────────────
+  // ── THEME SYSTEM ─────────────────────────────────────────────────────────
+  const THEME_DEFAULT = {
+    '--bg':       '#080808',
+    '--bg2':      '#0c0c0c',
+    '--bg3':      '#111111',
+    '--bg4':      '#161616',
+    '--border':   '#1c1c1c',
+    '--border2':  '#252525',
+    '--gold':     '#c8a84b',
+    '--gold-dim': '#8a7234',
+    '--text':     '#e4e2dc',
+    '--muted':    '#525252',
+    '--muted2':   '#363636',
+    '--green':    '#22c55e',
+    '--red':      '#ef4444',
+    '--blue':     '#4a7cbb',
+  };
+  const THEME_LIGHT = {
+    '--bg':       '#f5f4ef',
+    '--bg2':      '#eeeee9',
+    '--bg3':      '#e6e5e0',
+    '--bg4':      '#dddcd7',
+    '--border':   '#d0cfc9',
+    '--border2':  '#bdbcb6',
+    '--gold':     '#9a7828',
+    '--gold-dim': '#7a601e',
+    '--text':     '#1a1916',
+    '--muted':    '#888880',
+    '--muted2':   '#b5b4ae',
+    '--green':    '#16a34a',
+    '--red':      '#dc2626',
+    '--blue':     '#3b6aa0',
+  };
+
+  // Apply a theme object to the :root element
+  function applyThemeVars(vars) {
+    const root = document.documentElement;
+    Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v));
+  }
+
+  // Read current CSS var values from :root
+  function readCurrentThemeVars() {
+    const root = document.documentElement;
+    const out = {};
+    Object.keys(THEME_DEFAULT).forEach(k => {
+      out[k] = getComputedStyle(root).getPropertyValue(k).trim();
+    });
+    return out;
+  }
+
+  // Sync color picker inputs to a theme object
+  function syncPickersToTheme(theme) {
+    const map = {
+      'cp-bg': '--bg', 'cp-bg2': '--bg2',
+      'cp-text': '--text', 'cp-muted': '--muted',
+      'cp-gold': '--gold', 'cp-gold-dim': '--gold-dim',
+      'cp-border': '--border', 'cp-border2': '--border2',
+      'cp-green': '--green', 'cp-blue': '--blue',
+    };
+    Object.entries(map).forEach(([id, varName]) => {
+      const el = document.getElementById(id);
+      if (el && theme[varName]) el.value = theme[varName];
+    });
+  }
+
+  // Load saved theme on init
+  function initTheme() {
+    const saved = localStorage.getItem('omar_theme');
+    if (saved) {
+      try { applyThemeVars(JSON.parse(saved)); } catch(e) {}
+    }
+  }
+  initTheme();
+  initFontSize();
+
+  // Snapshot before opening settings (for cancel)
+  let _themeSnapshot = null;
+  let _fontSizeSnapshot = 14;
+
   window.openSettings = () => {
     const key = localStorage.getItem('omar_claude_key') || '';
     document.getElementById('settings-api-key').value = key;
+    // Snapshot current theme for cancel
+    _themeSnapshot = readCurrentThemeVars();
+    _fontSizeSnapshot = parseInt(localStorage.getItem('omar_font_size')) || 14;
+    // Sync pickers
+    syncPickersToTheme(_themeSnapshot);
+    // Set font size slider
+    const slider = document.getElementById('font-size-slider');
+    const display = document.getElementById('font-size-display');
+    if (slider) slider.value = _fontSizeSnapshot;
+    if (display) display.textContent = _fontSizeSnapshot + 'px';
     document.getElementById('settings-modal').classList.add('open');
   };
+
   window.closeSettings = () => document.getElementById('settings-modal').classList.remove('open');
-  window.saveSettings  = () => {
+
+  window.saveSettings = () => {
     const key = document.getElementById('settings-api-key').value.trim();
     if (key) localStorage.setItem('omar_claude_key', key);
     else     localStorage.removeItem('omar_claude_key');
+    // Save current theme vars to localStorage
+    const current = readCurrentThemeVars();
+    localStorage.setItem('omar_theme', JSON.stringify(current));
+    // Save font size
+    const slider = document.getElementById('font-size-slider');
+    if (slider) localStorage.setItem('omar_font_size', slider.value);
+    _themeSnapshot = null;
     closeSettings();
+  };
+
+  window.cancelThemeChanges = () => {
+    // Restore snapshot
+    if (_themeSnapshot) applyThemeVars(_themeSnapshot);
+    _themeSnapshot = null;
+    // Restore font size snapshot
+    if (_fontSizeSnapshot) {
+      document.documentElement.style.fontSize = _fontSizeSnapshot + 'px';
+    }
+    closeSettings();
+  };
+
+  window.livePreviewColor = (varName, value) => {
+    document.documentElement.style.setProperty(varName, value);
+  };
+
+  window.livePreviewFontSize = (v) => {
+    document.documentElement.style.fontSize = v + 'px';
+    const el = document.getElementById('font-size-display');
+    if (el) el.textContent = v + 'px';
+  };
+
+  function initFontSize() {
+    const saved = parseInt(localStorage.getItem('omar_font_size')) || 14;
+    document.documentElement.style.fontSize = saved + 'px';
+  }
+
+  window.applyPreset = (preset) => {
+    const theme = preset === 'light' ? THEME_LIGHT : THEME_DEFAULT;
+    applyThemeVars(theme);
+    syncPickersToTheme(theme);
+  };
+
+  window.resetThemeToDefault = () => {
+    applyThemeVars(THEME_DEFAULT);
+    syncPickersToTheme(THEME_DEFAULT);
   };
 
   // ── HABIT DRAG-AND-DROP + DELETE ─────────────────────────
@@ -2929,10 +3228,13 @@ Return raw JSON only.`,
     const todayDone = habits.filter(h => checkins[tk] && checkins[tk].includes(h.id)).length;
     const score    = habits.length ? Math.round((todayDone / habits.length) * 100) : 0;
 
-    const ring = document.getElementById('habit-score-ring');
+    const arc = document.getElementById('habit-ring-arc');
     const txt  = document.getElementById('habit-score-txt');
-    if (ring) ring.style.background = `conic-gradient(var(--green) 0% ${score}%, var(--bg4) ${score}% 100%)`;
-    if (txt)  txt.textContent = habits.length ? score + '%' : '—';
+    if (arc) {
+      const circumference = 2 * Math.PI * 22; // ≈ 138.23
+      arc.style.strokeDashoffset = circumference * (1 - score / 100);
+    }
+    if (txt) txt.textContent = habits.length ? score + '%' : '—';
 
     const grid = document.getElementById('habits-grid');
     if (grid) {
@@ -3516,7 +3818,6 @@ Return raw JSON only.`,
     const el = document.getElementById('home-key-tasks');
     if (!el) return;
     const keyed = allTasks.filter(t => !t.completed && keyTaskIds.has(t.id));
-    const dotColors = { high:'var(--red)', medium:'var(--gold)', low:'var(--green)' };
     el.innerHTML = keyed.length
       ? keyed.map(t => `<div class="key-task-row">
           <div class="key-task-dot" style="background:${dotColors[t.priority]||'var(--muted)'}"></div>
@@ -3548,64 +3849,164 @@ Return raw JSON only.`,
     renderHabits();
   };
 
-  // ── JOURNAL (Supabase) ───────────────────────────────────
+  // ── JOURNAL ──────────────────────────────────────────────────────────────
   let journalSaveTimer = null;
+  let journalCurrentDate = new Date().toISOString().slice(0,10);
+  let journalAllEntries = []; // cache
 
   async function upsertJournalEntry(date, content) {
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/journal_entries`, {
         method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates,return=minimal',
-        },
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify({ entry_date: date, content, updated_at: new Date().toISOString() }),
       });
+      // Update cache
+      const idx = journalAllEntries.findIndex(e => e.entry_date === date);
+      if (idx >= 0) journalAllEntries[idx].content = content;
+      else journalAllEntries.unshift({ entry_date: date, content });
+      journalAllEntries.sort((a,b) => b.entry_date.localeCompare(a.entry_date));
+      renderJournalEntriesList();
     } catch(e) { console.warn('upsertJournalEntry error', e); }
   }
 
-  async function loadJournal() {
-    const today = new Date().toISOString().slice(0,10);
-    const label = document.getElementById('journal-today-label');
-    if (label) label.textContent = new Date().toLocaleDateString('en-CA', { weekday:'long', year:'numeric', month:'long', day:'numeric' }).toUpperCase();
+  function renderJournalForDate(date) {
+    journalCurrentDate = date;
+    const picker = document.getElementById('journal-date-picker');
+    if (picker) picker.value = date;
+    const label = document.getElementById('journal-current-date-label');
+    if (label) label.textContent = new Date(date+'T12:00:00').toLocaleDateString('en-CA',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).toUpperCase();
+    const entry = journalAllEntries.find(e => e.entry_date === date);
+    const ta = document.getElementById('journal-textarea');
+    if (ta) {
+      ta.value = entry?.content || '';
+      // Remove old listener, add new debounced save for this date
+      const fresh = ta.cloneNode(true);
+      ta.parentNode.replaceChild(fresh, ta);
+      fresh.addEventListener('input', () => {
+        clearTimeout(journalSaveTimer);
+        journalSaveTimer = setTimeout(() => upsertJournalEntry(journalCurrentDate, fresh.value), 1200);
+      });
+    }
+    renderJournalEntriesList();
+  }
 
-    // Fetch last 60 days of journal entries from Supabase
+  function renderJournalEntriesList() {
+    const el = document.getElementById('journal-entries-list');
+    const countEl = document.getElementById('journal-entry-count');
+    if (!el) return;
+    if (countEl) countEl.textContent = journalAllEntries.length + ' ENTRIES';
+    if (!journalAllEntries.length) { el.innerHTML = '<div class="empty">No entries yet — start writing above.</div>'; return; }
+    el.innerHTML = journalAllEntries.map(e => {
+      const isActive = e.entry_date === journalCurrentDate;
+      const preview = (e.content||'').trim().slice(0,120).replace(/</g,'&lt;');
+      const dateStr = new Date(e.entry_date+'T12:00:00').toLocaleDateString('en-CA',{weekday:'short',year:'numeric',month:'short',day:'numeric'}).toUpperCase();
+      return `<div class="journal-past-entry ${isActive ? 'active-entry' : ''}" onclick="renderJournalForDate('${e.entry_date}')" style="cursor:pointer">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div class="journal-past-date">${dateStr}</div>
+          ${isActive ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;color:var(--gold);letter-spacing:.08em">EDITING ✎</span>' : ''}
+        </div>
+        <div class="journal-past-text">${preview || '<span style="color:var(--muted2);font-style:italic">Empty entry</span>'}${(e.content||'').length>120?'…':''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadJournal() {
+    journalCurrentDate = new Date().toISOString().slice(0,10);
     let entries = [];
     try {
-      const since = (() => { const d = new Date(); d.setDate(d.getDate()-60); return d.toISOString().slice(0,10); })();
+      const since = (() => { const d = new Date(); d.setFullYear(d.getFullYear()-2); return d.toISOString().slice(0,10); })();
       entries = await sb('journal_entries', `?entry_date=gte.${since}&order=entry_date.desc`);
     } catch(e) { console.warn('loadJournal fetch error', e); }
+    journalAllEntries = entries || [];
+    renderJournalForDate(journalCurrentDate);
+    renderJournalEntriesList();
+  }
 
-    const todayEntry = (entries || []).find(e => e.entry_date === today);
-    const inp = document.getElementById('journal-today-text');
-    if (inp) {
-      inp.value = todayEntry?.content || '';
-      // Remove any previous listener then add fresh debounced auto-save
-      const newInp = inp.cloneNode(true);
-      inp.parentNode.replaceChild(newInp, inp);
-      newInp.addEventListener('input', () => {
-        clearTimeout(journalSaveTimer);
-        journalSaveTimer = setTimeout(() => upsertJournalEntry(today, newInp.value), 1200);
+  window.saveCurrentJournalEntry = async () => {
+    const ta = document.getElementById('journal-textarea');
+    if (ta) await upsertJournalEntry(journalCurrentDate, ta.value);
+  };
+
+  window.journalNavDay = (delta) => {
+    const d = new Date(journalCurrentDate + 'T12:00:00');
+    d.setDate(d.getDate() + delta);
+    const newDate = d.toISOString().slice(0,10);
+    // Don't navigate to future
+    if (newDate > new Date().toISOString().slice(0,10)) return;
+    renderJournalForDate(newDate);
+  };
+
+  window.journalGoToDate = (date) => {
+    if (!date) return;
+    if (date > new Date().toISOString().slice(0,10)) return;
+    renderJournalForDate(date);
+  };
+
+  window.journalGoToToday = () => {
+    renderJournalForDate(new Date().toISOString().slice(0,10));
+  };
+
+  // ── COLUMN RESIZE ─────────────────────────────────────────────────────────
+  function initColResize() {
+    const lcHandle = document.getElementById('resize-lc');
+    const crHandle = document.getElementById('resize-cr');
+    const leftCol  = document.getElementById('home-col-left');
+    const midCol   = document.getElementById('home-col-center');
+    const rightCol = document.getElementById('home-col-right');
+    if (!lcHandle || !crHandle || !leftCol || !midCol || !rightCol) return;
+
+    function makeResizer(handle, colA, colB, side) {
+      let startX, startAW, startBW;
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        startX  = e.clientX;
+        startAW = colA.offsetWidth;
+        startBW = colB.offsetWidth;
+        handle.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        const onMove = (e) => {
+          const dx = e.clientX - startX;
+          const newAW = Math.max(160, Math.min(500, startAW + dx));
+          const newBW = Math.max(160, Math.min(500, startBW - dx));
+          colA.style.width = newAW + 'px';
+          colA.style.flex  = 'none';
+          if (side === 'right') {
+            colB.style.width = newBW + 'px';
+            colB.style.flex  = 'none';
+          }
+        };
+        const onUp = () => {
+          handle.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          // Save widths
+          localStorage.setItem('omar_col_widths', JSON.stringify({
+            left: leftCol.offsetWidth, right: rightCol.offsetWidth
+          }));
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
       });
     }
 
-    const past = (entries || []).filter(e => e.entry_date !== today);
-    const pastEl = document.getElementById('journal-past-entries');
-    if (pastEl) pastEl.innerHTML = past.length
-      ? past.slice(0,30).map(e => `<div class="journal-past-entry">
-          <div class="journal-past-date">${new Date(e.entry_date+'T12:00:00').toLocaleDateString('en-CA',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).toUpperCase()}</div>
-          <div class="journal-past-text">${(e.content||'').replace(/</g,'&lt;').slice(0,400)}${(e.content||'').length>400?'…':''}</div>
-        </div>`).join('')
-      : '<div class="empty">No past entries yet.</div>';
-  }
+    makeResizer(lcHandle, leftCol, midCol, 'left');
+    makeResizer(crHandle, rightCol, midCol, 'right');
 
-  window.saveJournalEntry = async () => {
-    const today = new Date().toISOString().slice(0,10);
-    const text  = document.getElementById('journal-today-text')?.value || '';
-    await upsertJournalEntry(today, text);
-    await loadJournal();
-  };
+    // Restore saved widths
+    const saved = localStorage.getItem('omar_col_widths');
+    if (saved) {
+      try {
+        const { left, right } = JSON.parse(saved);
+        if (left)  { leftCol.style.width  = left  + 'px'; leftCol.style.flex  = 'none'; }
+        if (right) { rightCol.style.width = right + 'px'; rightCol.style.flex = 'none'; }
+      } catch(e) {}
+    }
+  }
+  initColResize();
 
   // ── UTILS ────────────────────────────────────────────────
   function fmt(n) { return Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
