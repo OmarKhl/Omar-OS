@@ -167,17 +167,16 @@
     .os-divider { border: none; border-top: 1px solid var(--border); margin: 11px 0; }
 
     /* ── HOME 3-COL GRID ── */
-    #page-home { padding: 10px; flex-direction: row !important; }
+    #page-home { padding: 10px; flex-direction: column !important; overflow-y: auto; }
     .home-os-grid {
       display: grid;
       grid-template-columns: 254px 1fr 238px;
       gap: 8px;
-      flex: 1;
-      overflow: hidden;
+      width: 100%;
+      min-width: 700px; /* prevents columns from collapsing at small sizes */
     }
     .home-col {
       display: flex; flex-direction: column; gap: 8px;
-      overflow-y: auto; min-height: 0;
     }
 
     /* ── OPERATOR CARD ── */
@@ -1172,7 +1171,8 @@
       </div>
       <div class="form-group">
         <label class="form-label">Investment Account</label>
-        <input class="form-input" id="tr-account" placeholder="TFSA, RRSP, Margin…" />
+        <input class="form-input" id="tr-account" placeholder="TFSA, RRSP, Margin…" list="tr-account-list" autocomplete="off" />
+        <datalist id="tr-account-list"></datalist>
       </div>
       <div class="form-group" id="tr-qty-grp">
         <label class="form-label">Quantity of Units</label>
@@ -2173,48 +2173,65 @@
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5',
-          max_tokens: 256,
-          system: `You are the Omar OS AI agent. Parse the user's command and return ONLY a JSON object (no markdown, no explanation).
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 300,
+          system: `You are Omar's OS AI agent. Parse the user command and return ONLY valid JSON — no markdown, no explanation, no code fences.
 
-Available actions:
-- add_task: { action:"add_task", task_text:string, category:"Personal"|"Work"|"Benzo", priority:"high"|"medium"|"low" }
-- add_goal: { action:"add_goal", title:string, category:"weekly"|"monthly" }
-- add_habit: { action:"add_habit", title:string, sub:string }
-- add_note: { action:"add_note", transcript:string }
-- respond: { action:"respond", message:string }
+Actions available:
+{ action:"add_task",  task_text:string, category:"Personal"|"Work"|"Benzo", priority:"high"|"medium"|"low" }
+{ action:"add_goal",  title:string, category:"weekly"|"monthly" }
+{ action:"add_habit", title:string, sub:string }
+{ action:"add_note",  transcript:string }
+{ action:"respond",   message:string }
 
-Rules:
-- "habit" mentions → add_habit
-- "goal", "target", "achieve", "this week/month" → add_goal
-- "remind", "buy", "call", "send", "email", "fix", "book", "schedule", "finish", "check" → add_task
-- questions/unclear → respond
-- Return raw JSON only`,
+Routing rules (apply in order):
+1. Any mention of "habit" → add_habit (title = the habit name without the word "habit" or "add")
+2. "goal", "target", "achieve", "this week", "this month", "monthly" → add_goal
+3. "note:", "voice note", "log this", "remember this" → add_note
+4. Action verbs (call, email, send, buy, book, schedule, remind, fix, review, follow up, finish, complete, check) → add_task
+5. Unclear / question → respond
+
+Return raw JSON only.`,
           messages: [{ role: 'user', content: text }]
         })
       });
       const data = await res.json();
-      return JSON.parse(data.content[0].text);
+      const raw = data.content?.[0]?.text || '';
+      // Strip markdown code fences if model wraps in them
+      const clean = raw.replace(/^```(?:json)?\n?/,'').replace(/\n?```$/,'').trim();
+      return JSON.parse(clean);
     } catch(e) { return null; }
   }
 
   function smartRoute(text) {
-    const t = text.toLowerCase();
-    // Explicit habit
-    if (/\bhabit\b/.test(t)) {
-      const title = text.replace(/^(add\s+)?habit[:\s]*/i, '').replace(/\s+(habit|every\s+day)$/i, '').trim() || text;
-      return { action: 'add_habit', title, sub: '' };
+    const t = text.toLowerCase().trim();
+    // Habit — any mention of "habit" or "daily" prefix patterns
+    if (/\bhabit\b|^add\s+\w[\w\s]+(daily|every day)$/i.test(t)) {
+      // Extract the habit name: strip "add (a|my|new)? habit" or trailing "habit"
+      let title = text
+        .replace(/^(add\s+)?(a\s+|my\s+|new\s+)?habit[:\s]*/i, '')
+        .replace(/\s+habit$/i, '')
+        .replace(/\s+(every\s+day|daily)$/i, '')
+        .trim();
+      if (!title || title.toLowerCase() === text.toLowerCase()) {
+        // Fallback: strip leading action words
+        title = text.replace(/^(add\s+|create\s+|new\s+|track\s+)/i, '').replace(/\bhabit\b/gi, '').trim() || text;
+      }
+      return { action: 'add_habit', title: title || text, sub: '' };
     }
     // Goal patterns
-    if (/^goal[:\s]|\bgoal\b|\b(this (week|month))\b|achieve|target/i.test(t))
-      return { action: 'add_goal', title: text.replace(/^goal[:\s]*/i,''), category: 'weekly' };
+    if (/^goal[:\s]|\bgoal\b|\b(this (week|month))\b|\bachieve\b|\btarget\b|\bmonthly\b|\bweekly\b/i.test(t)) {
+      const isMonthly = /month/i.test(t);
+      const title = text.replace(/^goal[:\s]*/i,'').replace(/\b(weekly|monthly|this week|this month)\b/gi,'').trim() || text;
+      return { action: 'add_goal', title, category: isMonthly ? 'monthly' : 'weekly' };
+    }
     // Note
-    if (/^note[:\s]/i.test(t))
-      return { action: 'add_note', transcript: text.replace(/^note[:\s]*/i,'') };
-    // Task keywords
-    if (/^task[:\s]|remind|buy |call |send |email |fix |finish |schedule |book |check |complete |follow/i.test(t))
-      return { action: 'add_task', task_text: text.replace(/^task[:\s]*/i,''), category: 'Personal', priority: 'medium' };
-    // Default to task
+    if (/^note[:\s]|voice note|log this|remember this/i.test(t))
+      return { action: 'add_note', transcript: text.replace(/^(note[:\s]|voice note[:\s])/i,'').trim() };
+    // Task action verbs
+    if (/^task[:\s]|\b(remind|buy|call|send|email|fix|finish|schedule|book|check|complete|follow.?up|review|prepare|meet|draft|write|update|build)\b/i.test(t))
+      return { action: 'add_task', task_text: text.replace(/^task[:\s]*/i,'').trim(), category: 'Personal', priority: 'medium' };
+    // Default — short inputs that don't match = task; sentence starters that are statements = task
     return { action: 'add_task', task_text: text, category: 'Personal', priority: 'medium' };
   }
 
@@ -2223,8 +2240,12 @@ Rules:
     const hint = document.getElementById('home-qi-hint');
     const text = inp.value.trim();
     if (!text) return;
+
+    // If no API key, show a nudge but still use smartRoute
+    const hasKey = !!localStorage.getItem('omar_claude_key');
+
     inp.disabled = true;
-    if (hint) hint.textContent = '⟳ Thinking…';
+    if (hint) hint.textContent = hasKey ? '⟳ Thinking…' : '⟳ Routing…';
 
     let result = await callAIAgent(text);
     if (!result) result = smartRoute(text);
@@ -2263,7 +2284,11 @@ Rules:
       inp.value = '';
     } catch(e) { msg = '⚠ Error — ' + e.message; }
     inp.disabled = false; inp.focus();
-    if (hint) { hint.textContent = msg; setTimeout(() => hint.textContent = '', 5000); }
+    if (hint) {
+      const suffix = !hasKey ? ' · <span style="cursor:pointer;text-decoration:underline" onclick="openSettings()">Add Claude key for smarter AI</span>' : '';
+      hint.innerHTML = msg + suffix;
+      setTimeout(() => { if (hint) hint.innerHTML = ''; }, 6000);
+    }
   };
 
   // ── HABITS (localStorage) ────────────────────────────────
@@ -2513,6 +2538,12 @@ Rules:
     document.getElementById('tr-account').value = '';
     document.getElementById('tr-split').value   = '';
     document.getElementById('tr-fx').value      = '1';
+    // Populate account datalist from existing transactions
+    const dl = document.getElementById('tr-account-list');
+    if (dl && finData?.txs) {
+      const accounts = [...new Set(finData.txs.map(tx => tx.investment_account).filter(Boolean))].sort();
+      dl.innerHTML = accounts.map(a => `<option value="${a}">`).join('');
+    }
     tradeTypeChanged();
     document.getElementById('trade-modal').classList.add('open');
   };
@@ -2609,7 +2640,9 @@ Rules:
     list.innerHTML = filtered.map(t => `
       <div class="task-row ${t.completed ? 'done' : ''}" id="task-${t.id}">
         <div class="task-check ${t.completed ? 'checked' : ''}" onclick="toggleTask('${t.id}', ${t.completed})"></div>
-        <div class="task-text" style="${t.completed ? 'text-decoration:line-through;color:var(--muted)' : ''}">${t.task_text}</div>
+        <div class="task-text" style="${t.completed ? 'text-decoration:line-through;color:var(--muted)' : ''}"
+          title="Double-click to edit"
+          ondblclick="inlineEditTask(event,'${t.id}')">${t.task_text}</div>
         <div class="task-meta">
           <span class="badge badge-${(t.category||'personal').toLowerCase()}">${t.category}</span>
           <span class="badge badge-${t.priority}" style="color:${priColors[t.priority]||'var(--muted)'}">${t.priority}</span>
@@ -2642,6 +2675,34 @@ Rules:
     if (t) Object.assign(t, patch);
     closeEditTask();
     renderTasks();
+  };
+
+  // Inline double-click editing of task text
+  window.inlineEditTask = (e, id) => {
+    const div = e.currentTarget;
+    if (div.querySelector('input')) return; // already editing
+    const original = div.textContent.trim();
+    div.innerHTML = '';
+    const inp = document.createElement('input');
+    inp.value = original;
+    inp.style.cssText = 'width:100%;background:var(--bg3);border:1px solid var(--gold-dim);border-radius:3px;color:var(--text);font-size:13px;padding:2px 6px;font-family:inherit;outline:none';
+    div.appendChild(inp);
+    inp.focus(); inp.select();
+
+    const commit = async () => {
+      const newText = inp.value.trim();
+      if (newText && newText !== original) {
+        await sbPatch('tasks', id, { task_text: newText });
+        const t = allTasks.find(t => t.id == id);
+        if (t) t.task_text = newText;
+      }
+      renderTasks();
+    };
+    inp.addEventListener('blur', commit);
+    inp.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter')  { ev.preventDefault(); inp.removeEventListener('blur', commit); commit(); }
+      if (ev.key === 'Escape') { ev.preventDefault(); inp.removeEventListener('blur', commit); renderTasks(); }
+    });
   };
 
   // ── BENZO CRUD ───────────────────────────────────────────
