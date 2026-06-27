@@ -2096,148 +2096,106 @@
   }
 
   // ── LIVE PRICES ──────────────────────────────────────────
-  // Primary: Yahoo Finance v8 (batched, 4-proxy waterfall)
-  // Fallback: Google Finance info API + HTML scrape for missed tickers
+  // Three independent sources tried in parallel per ticker.
+  // raceFetch() fires all CORS proxies simultaneously and takes first winner.
   async function fetchLivePrices(tickers) {
     const statusEl = document.getElementById('prices-status');
-    if (statusEl) statusEl.textContent = 'Fetching prices…';
+    if (statusEl) statusEl.textContent = 'Fetching live prices…';
 
-    // CORS proxy wrappers — tried in order until one returns valid data
-    const proxies = [
+    const PROXIES = [
       u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
       u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
       u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
       u => `https://thingproxy.freeboard.io/fetch/${u}`,
     ];
 
-    // ── Yahoo Finance (primary) ───────────────────────────
-    const makeYahooUrl = (syms) =>
-      `https://query1.finance.yahoo.com/v8/finance/quote?symbols=${encodeURIComponent(syms)}&fields=regularMarketPrice,regularMarketChangePercent,shortName,currency`;
-
-    const parseYahooQuotes = (data) => {
-      const quotes = data?.quoteResponse?.result || [];
-      const out = {};
-      quotes.forEach(q => {
-        if (!q.regularMarketPrice) return;
-        const ticker = q.symbol.replace(/-USD$/i, '');
-        out[ticker] = {
-          price:     q.regularMarketPrice,
-          changePct: q.regularMarketChangePercent || 0,
-          name:      q.shortName || ticker,
-          currency:  q.currency || 'USD',
-          source:    'yahoo',
-        };
+    // Fire all proxies at once — first valid text response wins
+    const raceFetch = (url, ms = 9000) => new Promise(resolve => {
+      let done = false;
+      let left = PROXIES.length;
+      const fin = (val) => { if (!done) { done = true; resolve(val); } };
+      PROXIES.forEach(px => {
+        fetch(px(url), { signal: AbortSignal.timeout(ms) })
+          .then(r => r.ok ? r.text() : Promise.reject('bad status'))
+          .then(t  => (t && t.length > 15 ? fin(t) : (--left === 0 && fin(null))))
+          .catch(() => { if (--left === 0) fin(null); });
       });
-      return out;
-    };
-
-    const BATCH = 20;
-    const batches = [];
-    const allSymbols = tickers.map(yahooSymbol);
-    for (let i = 0; i < allSymbols.length; i += BATCH) {
-      batches.push(allSymbols.slice(i, i + BATCH));
-    }
+    });
 
     const prices = {};
-    let fetchedAny = false;
 
-    for (const batch of batches) {
-      const yahooUrl = makeYahooUrl(batch.join(','));
-      let batchPrices = null;
-      for (const makeProxy of proxies) {
-        try {
-          const resp = await fetch(makeProxy(yahooUrl), { signal: AbortSignal.timeout(9000) });
-          if (!resp.ok) continue;
-          const text = await resp.text();
-          let data;
-          try { data = JSON.parse(text); } catch { continue; }
-          const parsed = parseYahooQuotes(data);
-          if (Object.keys(parsed).length > 0) { batchPrices = parsed; break; }
-        } catch (e) { /* try next proxy */ }
-      }
-      if (batchPrices) { Object.assign(prices, batchPrices); fetchedAny = true; }
-    }
+    // ── Source A: Yahoo Finance v8 batch (20 at a time) ──
+    const toYahooSym = t => CRYPTO_TICKERS.has(t) ? t + '-USD' : t;
+    const yBatches = [];
+    for (let i = 0; i < tickers.length; i += 20) yBatches.push(tickers.slice(i, i + 20));
 
-    // ── Google Finance fallback for any missed tickers ────
-    const missed = tickers.filter(t => !prices[t] && !CRYPTO_TICKERS.has(t));
-    if (missed.length > 0) {
-      if (statusEl) statusEl.textContent = `Yahoo: ${Object.keys(prices).length} prices · checking Google for ${missed.length} more…`;
-
-      // Map ticker → Google Finance symbol (exchange:ticker format)
-      const googleSym = (t) => {
-        if (t.endsWith('.TO'))  return 'TSE:'  + t.slice(0, -3);
-        if (t.endsWith('.V'))   return 'CVE:'  + t.slice(0, -2);
-        if (t.endsWith('.AX'))  return 'ASX:'  + t.slice(0, -3);
-        if (t.endsWith('.L'))   return 'LON:'  + t.slice(0, -2);
-        if (t.endsWith('.HK'))  return 'HKG:'  + t.slice(0, -3);
-        if (t.endsWith('.DE'))  return 'ETR:'  + t.slice(0, -3);
-        return t; // US stocks — Google resolves without exchange prefix
-      };
-
-      // Fetch all missed tickers in parallel — no sequential blocking
-      const googleResults = await Promise.all(missed.map(async (ticker) => {
-        const sym = googleSym(ticker);
-
-        // Attempt 1: old Google Finance info API (returns "// [{...}]")
-        const infoUrl = `https://finance.google.com/finance/info?client=ig&q=${encodeURIComponent(sym)}`;
-        for (const makeProxy of proxies) {
-          try {
-            const resp = await fetch(makeProxy(infoUrl), { signal: AbortSignal.timeout(6000) });
-            if (!resp.ok) continue;
-            const text = await resp.text();
-            const jsonStr = text.replace(/^[^[{]*/, '').trim();
-            let data;
-            try { data = JSON.parse(jsonStr); } catch (e2) { continue; }
-            const item = Array.isArray(data) ? data[0] : data;
-            if (!item) continue;
-            const price = parseFloat((item.l || '').toString().replace(/,/g, ''));
-            if (price > 0) {
-              return { ticker, price, changePct: parseFloat(item.cp || 0), name: item.t || ticker, source: 'google' };
-            }
-          } catch (e) { /* try next proxy */ }
-        }
-
-        // Attempt 2: scrape Google Finance quote page HTML
-        const pageUrl = `https://www.google.com/finance/quote/${encodeURIComponent(sym)}`;
-        for (const makeProxy of proxies) {
-          try {
-            const resp = await fetch(makeProxy(pageUrl), { signal: AbortSignal.timeout(7000) });
-            if (!resp.ok) continue;
-            const html = await resp.text();
-            const m = html.match(/data-last-price="([0-9.]+)"/i)
-                   || html.match(/class="[^"]*YMlKec fxKbKc[^"]*"[^>]*>\$?([0-9,]+\.?[0-9]*)</i)
-                   || html.match(/class="[^"]*YMlKec[^"]*"[^>]*>([0-9,]+\.?[0-9]*)</i)
-                   || html.match(/"price"\s*:\s*"([0-9.]+)"/i);
-            if (m) {
-              const price = parseFloat(m[1].replace(/,/g, ''));
-              if (price > 0) return { ticker, price, changePct: 0, name: ticker, source: 'google-html' };
-            }
-          } catch (e) { /* try next proxy */ }
-        }
-        return null; // all attempts failed for this ticker
-      }));
-
-      googleResults.forEach(r => {
-        if (!r) return;
-        prices[r.ticker] = { price: r.price, changePct: r.changePct, name: r.name, currency: 'USD', source: r.source };
-        fetchedAny = true;
+    await Promise.all(yBatches.map(async batch => {
+      const syms = batch.map(toYahooSym).join(',');
+      const url  = `https://query1.finance.yahoo.com/v8/finance/quote?symbols=${encodeURIComponent(syms)}&fields=regularMarketPrice,regularMarketChangePercent,shortName,currency`;
+      const text = await raceFetch(url, 10000);
+      if (!text) return;
+      let data; try { data = JSON.parse(text); } catch { return; }
+      (data?.quoteResponse?.result || []).forEach(q => {
+        if (!q.regularMarketPrice) return;
+        const t = q.symbol.replace(/-USD$/i, '');
+        prices[t] = { price: q.regularMarketPrice, changePct: q.regularMarketChangePercent || 0, name: q.shortName || t, currency: q.currency || 'USD', source: 'yahoo' };
       });
+    }));
+
+    // ── Source B: Stooq CSV — parallel per ticker ─────────
+    // Stooq is a different server from Yahoo, so if Yahoo is blocked it often isn't.
+    // Symbols: US = lowercase ticker, Canada .TO → .ca, crypto → .v suffix
+    const toStooq = t => {
+      if (CRYPTO_TICKERS.has(t)) return t.toLowerCase() + '.v';
+      if (t.endsWith('.TO'))     return t.slice(0, -3).toLowerCase() + '.ca';
+      if (t.endsWith('.V'))      return t.slice(0, -2).toLowerCase() + '.ca';
+      if (t.endsWith('.AX'))     return t.slice(0, -3).toLowerCase() + '.au';
+      if (t.endsWith('.L'))      return t.slice(0, -2).toLowerCase() + '.uk';
+      return t.toLowerCase();
+    };
+
+    const missedA = tickers.filter(t => !prices[t]);
+    if (missedA.length > 0) {
+      await Promise.all(missedA.map(async t => {
+        const url  = `https://stooq.com/q/l/?s=${toStooq(t)}&f=sd2t2ohlcv&h&e=csv`;
+        const text = await raceFetch(url, 8000);
+        if (!text) return;
+        // Response: header row + data row, comma separated
+        const rows = text.trim().split('\n');
+        if (rows.length < 2) return;
+        const cols  = rows[1].split(',');
+        const close = parseFloat(cols[4]);   // index 4 = Close
+        if (close > 0 && isFinite(close)) {
+          prices[t] = { price: close, changePct: 0, name: t, currency: 'USD', source: 'stooq' };
+        }
+      }));
     }
 
-    // ── Status bar update ────────────────────────────────
-    if (fetchedAny) {
-      const total       = Object.keys(prices).length;
-      const stillMissed = tickers.filter(t => !prices[t]);
-      const missedStr   = stillMissed.length ? ` · ${stillMissed.length} no feed` : '';
-      const yahooCount  = Object.values(prices).filter(p => p.source === 'yahoo').length;
-      const gCount      = Object.values(prices).filter(p => p.source?.startsWith('google')).length;
-      const srcStr      = gCount > 0 ? ` (${yahooCount} Yahoo · ${gCount} Google)` : '';
+    // ── Source C: Yahoo per-ticker chart endpoint ─────────
+    // Different endpoint from Source A — sometimes works when batch is blocked
+    const missedB = tickers.filter(t => !prices[t] && !CRYPTO_TICKERS.has(t));
+    if (missedB.length > 0) {
+      await Promise.all(missedB.map(async t => {
+        const url  = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(t)}?interval=1d&range=1d`;
+        const text = await raceFetch(url, 8000);
+        if (!text) return;
+        let data; try { data = JSON.parse(text); } catch { return; }
+        const p = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+        if (p > 0) prices[t] = { price: p, changePct: 0, name: t, currency: 'USD', source: 'yahoo-chart' };
+      }));
+    }
+
+    // ── Status ─────────────────────────────────────────────
+    const count    = Object.keys(prices).length;
+    const noFeed   = tickers.filter(t => !prices[t]).length;
+    const sources  = [...new Set(Object.values(prices).map(p => p.source))].join(' + ');
+    const timeStr  = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
+    if (count > 0) {
       if (statusEl) statusEl.textContent =
-        `${total} prices${srcStr} · ${new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' })}${missedStr}`;
+        `${count} prices via ${sources} · ${timeStr}${noFeed ? ` · ${noFeed} no feed` : ''}`;
     } else {
-      if (statusEl) statusEl.textContent = '⚠ Live prices unavailable — showing cost basis values';
+      if (statusEl) statusEl.textContent = '⚠ Live prices unavailable — showing cost basis';
     }
-
     return prices;
   }
 
