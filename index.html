@@ -599,6 +599,62 @@
     .todo-check:hover { border-color: var(--green); }
     .todo-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
     .todo-text { flex: 1; line-height: 1.3; }
+
+    /* ── HABITS: drag + delete ── */
+    .habit-item { position: relative; }
+    .habit-item.dragging { opacity: .4; }
+    .habit-item.drag-over { border-color: var(--gold); background: rgba(200,168,75,.08); }
+    .habit-del {
+      position: absolute; top: 4px; right: 4px;
+      width: 15px; height: 15px; display: none; align-items: center; justify-content: center;
+      background: transparent; border: none; color: var(--muted2); cursor: pointer;
+      font-size: 14px; line-height: 1; z-index: 2; padding: 0;
+    }
+    .habit-item:hover .habit-del { display: flex; }
+    .habit-del:hover { color: var(--red); }
+
+    /* ── TASK EDIT BTN ── */
+    .task-edit-btn {
+      width: 22px; height: 22px; background: transparent; border: 1px solid var(--border2);
+      border-radius: 3px; color: var(--muted); font-size: 11px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: all .15s; flex-shrink: 0;
+    }
+    .task-edit-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+    .sort-group { display: flex; gap: 3px; }
+    .sort-btn {
+      padding: 3px 9px; background: transparent; border: 1px solid var(--border2); border-radius: 20px;
+      color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 9px;
+      cursor: pointer; letter-spacing: .05em; transition: all .15s;
+    }
+    .sort-btn:hover, .sort-btn.active { border-color: var(--gold); color: var(--gold); }
+
+    /* ── FLEET CRUD ── */
+    .fleet-action-row { display: flex; gap: 6px; margin-top: 12px; }
+    .fleet-btn {
+      flex: 1; padding: 5px 8px; background: transparent; border: 1px solid var(--border2);
+      color: var(--muted); border-radius: 3px; font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; letter-spacing: .05em; cursor: pointer; transition: all .15s; text-align: center;
+    }
+    .fleet-btn:hover { color: var(--text); border-color: var(--muted2); }
+    .fleet-btn.del:hover { color: var(--red); border-color: var(--red); }
+    .fleet-btn.pri { border-color: var(--gold-dim); color: var(--gold); }
+    .fleet-btn.pri:hover { background: rgba(200,168,75,.08); }
+
+    /* ── SETTINGS ICON IN NAV ── */
+    .nav-settings-btn {
+      width: 28px; height: 28px; border-radius: 4px; background: transparent;
+      border: 1px solid var(--border2); color: var(--muted); font-size: 14px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s;
+    }
+    .nav-settings-btn:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+    /* ── FORM TEXTAREA ── */
+    .form-textarea {
+      width: 100%; background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+      padding: 8px 11px; border-radius: 4px; font-size: 13px; outline: none; resize: vertical; min-height: 64px;
+    }
+    .form-textarea:focus { border-color: var(--gold-dim); }
+    .form-splits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   </style>
 </head>
 <body>
@@ -641,7 +697,8 @@
       <div class="nav-time" id="nav-clock">--:--</div>
       <div id="nav-date" style="font-size:9px;letter-spacing:.05em"></div>
     </div>
-    <div class="nav-avatar">OB</div>
+    <div class="nav-avatar" id="nav-avatar">OB</div>
+    <button class="nav-settings-btn" onclick="openSettings()" title="Settings">⚙</button>
     <button class="btn-signout" onclick="signOut()">Sign out</button>
   </div>
 </nav>
@@ -702,10 +759,10 @@
       </div>
 
       <!-- 02 FINANCE PULSE -->
-      <div class="os-card" style="flex-shrink:0">
+      <div class="os-card" style="flex-shrink:0;cursor:pointer" onclick="switchTab('finance')">
         <div class="os-card-hdr">
           <span class="os-num">02 //</span> FINANCE PULSE
-          <button class="os-eye-btn" id="home-eye-btn" onclick="toggleHomePrivacy()" title="Hide amounts">◉</button>
+          <button class="os-eye-btn" id="home-eye-btn" onclick="event.stopPropagation();toggleHomePrivacy()" title="Hide amounts">◉</button>
         </div>
         <div class="os-micro-lbl">NET WORTH</div>
         <div class="home-nw-val" id="home-nw">—</div>
@@ -839,9 +896,10 @@
         <button class="fin-cur-btn" data-cur="AED" onclick="setCurrency('AED')">AED</button>
       </div>
       <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
+        <button class="fin-icon-btn" onclick="openAddTrade()">+ LOG TRADE</button>
         <button class="fin-icon-btn" id="fin-priv-btn" onclick="togglePrivacy()" title="Hide amounts">◉ HIDE</button>
         <button class="fin-icon-btn" onclick="refreshFinance()">↺ REFRESH</button>
-        <span id="prices-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.06em">Fetching prices…</span>
+        <span id="prices-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.06em">—</span>
       </div>
     </div>
 
@@ -927,12 +985,18 @@
     <div class="page-title">Tasks</div>
     <button class="btn-add" onclick="openAddTask()">+ Add Task</button>
   </div>
-  <div class="filter-row" style="justify-content:space-between;align-items:center">
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
+  <div class="filter-row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <button class="filter-btn active" data-filter="all">ALL</button>
       <button class="filter-btn" data-filter="Work">WORK</button>
       <button class="filter-btn" data-filter="Personal">PERSONAL</button>
       <button class="filter-btn" data-filter="Benzo">BENZO</button>
+      <span style="color:var(--muted2);font-size:11px;margin:0 4px">|</span>
+      <div class="sort-group">
+        <button class="sort-btn active" data-sort="created">NEWEST</button>
+        <button class="sort-btn" data-sort="priority">PRIORITY</button>
+        <button class="sort-btn" data-sort="due">DUE DATE</button>
+      </div>
     </div>
     <button class="filter-btn" id="toggle-done-btn" onclick="toggleShowDone()" style="display:flex;align-items:center;gap:5px">
       <span id="toggle-done-icon">▸</span> Show Completed
@@ -965,6 +1029,10 @@
 <div class="page" id="page-benzo">
   <div class="page-header">
     <div class="page-title">Benzo Fleet</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-add" style="background:var(--bg4);color:var(--muted);border:1px solid var(--border2)" onclick="openAddRental()">+ Add Rental</button>
+      <button class="btn-add" onclick="openAddVehicle()">+ Add Vehicle</button>
+    </div>
   </div>
   <div class="section-label" style="margin-bottom:12px">VEHICLES</div>
   <div class="benzo-grid" id="fleet-grid">
@@ -976,7 +1044,7 @@
       <thead>
         <tr>
           <th>CUSTOMER</th><th>VEHICLE</th><th>START</th><th>END</th>
-          <th>DAILY RATE</th><th>REVENUE</th><th>STATUS</th>
+          <th>DAILY RATE</th><th>REVENUE</th><th>STATUS</th><th></th>
         </tr>
       </thead>
       <tbody id="rentals-body">
@@ -1064,6 +1132,225 @@
   </div>
 </div>
 
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal" style="width:440px">
+    <h3>Settings</h3>
+    <div class="form-group">
+      <label class="form-label">Claude API Key <span style="color:var(--muted);font-weight:400">(enables AI quick input)</span></label>
+      <input class="form-input" id="settings-api-key" type="password" placeholder="sk-ant-…" />
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:5px">Stored locally in your browser only. Used for the home page quick input agent.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+      <button class="btn-save" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TRADE MODAL -->
+<div class="modal-overlay" id="trade-modal">
+  <div class="modal" style="width:520px">
+    <h3 id="trade-modal-title">Log Trade</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" type="date" id="tr-date" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Transaction Type</label>
+        <select class="form-select" id="tr-type" onchange="tradeTypeChanged()">
+          <option value="Buy">Buy</option>
+          <option value="Sell">Sell</option>
+          <option value="Dividend">Dividend</option>
+          <option value="Split">Split</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ticker / Symbol</label>
+        <input class="form-input" id="tr-ticker" placeholder="AAPL, BTC…" style="text-transform:uppercase" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Investment Account</label>
+        <input class="form-input" id="tr-account" placeholder="TFSA, RRSP, Margin…" />
+      </div>
+      <div class="form-group" id="tr-qty-grp">
+        <label class="form-label">Quantity of Units</label>
+        <input class="form-input" type="number" id="tr-qty" placeholder="100" step="any" min="0" />
+      </div>
+      <div class="form-group" id="tr-price-grp">
+        <label class="form-label">Amount per Unit</label>
+        <input class="form-input" type="number" id="tr-price" placeholder="178.25" step="any" min="0" />
+      </div>
+      <div class="form-group" id="tr-total-grp">
+        <label class="form-label">Total Amount</label>
+        <input class="form-input" type="number" id="tr-total" placeholder="Auto-calculated" step="any" min="0" />
+      </div>
+      <div class="form-group" id="tr-fees-grp">
+        <label class="form-label">Trading Fees</label>
+        <input class="form-input" type="number" id="tr-fees" placeholder="0.00" step="any" min="0" value="0" />
+      </div>
+      <div class="form-group" id="tr-split-grp" style="display:none">
+        <label class="form-label">Split Ratio (new per old)</label>
+        <input class="form-input" type="number" id="tr-split" placeholder="e.g. 4 for 4-for-1" step="any" min="0" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">FX Rate (USD base)</label>
+        <input class="form-input" type="number" id="tr-fx" placeholder="1.00" value="1" step="any" min="0" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddTrade()">Cancel</button>
+      <button class="btn-save" onclick="saveTrade()" id="tr-save-btn">Save Trade</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT TASK MODAL -->
+<div class="modal-overlay" id="edit-task-modal">
+  <div class="modal">
+    <h3>Edit Task</h3>
+    <input type="hidden" id="edit-task-id" />
+    <div class="form-group">
+      <label class="form-label">Task</label>
+      <input class="form-input" id="edit-task-text" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select class="form-select" id="edit-task-cat">
+        <option>Personal</option><option>Work</option><option>Benzo</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Priority</label>
+      <select class="form-select" id="edit-task-pri">
+        <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Due Date</label>
+      <input class="form-input" type="date" id="edit-task-due" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEditTask()">Cancel</button>
+      <button class="btn-save" onclick="updateTask()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT VEHICLE MODAL -->
+<div class="modal-overlay" id="vehicle-modal">
+  <div class="modal" style="width:500px">
+    <h3 id="vehicle-modal-title">Add Vehicle</h3>
+    <input type="hidden" id="veh-id" />
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Vehicle Name</label>
+        <input class="form-input" id="veh-name" placeholder="Black G-Wagon" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Make</label>
+        <input class="form-input" id="veh-make" placeholder="Mercedes" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Model</label>
+        <input class="form-input" id="veh-model" placeholder="G63 AMG" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Year</label>
+        <input class="form-input" type="number" id="veh-year" placeholder="2023" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="veh-status">
+          <option value="available">Available</option>
+          <option value="rented">Rented</option>
+          <option value="maintenance">Maintenance</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Last Service Date</label>
+        <input class="form-input" type="date" id="veh-service" />
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" id="veh-notes" placeholder="Any notes…" rows="2"></textarea>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Owner Splits (must total 100%)</label>
+        <div class="form-splits-grid" id="veh-splits-grid">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input class="form-input" id="split-name-0" placeholder="Owner name" style="flex:1" />
+            <input class="form-input" type="number" id="split-pct-0" placeholder="%" style="width:60px" min="0" max="100" />
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input class="form-input" id="split-name-1" placeholder="Owner name" style="flex:1" />
+            <input class="form-input" type="number" id="split-pct-1" placeholder="%" style="width:60px" min="0" max="100" />
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input class="form-input" id="split-name-2" placeholder="Owner name" style="flex:1" />
+            <input class="form-input" type="number" id="split-pct-2" placeholder="%" style="width:60px" min="0" max="100" />
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input class="form-input" id="split-name-3" placeholder="Owner name" style="flex:1" />
+            <input class="form-input" type="number" id="split-pct-3" placeholder="%" style="width:60px" min="0" max="100" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeVehicleModal()">Cancel</button>
+      <button class="btn-save" onclick="saveVehicle()" id="veh-save-btn">Add Vehicle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT RENTAL MODAL -->
+<div class="modal-overlay" id="rental-modal">
+  <div class="modal">
+    <h3 id="rental-modal-title">Add Rental</h3>
+    <input type="hidden" id="ren-id" />
+    <div class="form-group">
+      <label class="form-label">Vehicle</label>
+      <select class="form-select" id="ren-vehicle"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Customer Name</label>
+      <input class="form-input" id="ren-customer" placeholder="Ahmed Al Rashid" />
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group">
+        <label class="form-label">Start Date</label>
+        <input class="form-input" type="date" id="ren-start" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">End Date</label>
+        <input class="form-input" type="date" id="ren-end" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Daily Rate ($)</label>
+        <input class="form-input" type="number" id="ren-rate" placeholder="1200" min="0" step="any" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="ren-status">
+          <option value="upcoming">Upcoming</option>
+          <option value="active">Active</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <textarea class="form-textarea" id="ren-notes" placeholder="Deposit received, paid upfront…" rows="2"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeRentalModal()">Cancel</button>
+      <button class="btn-save" onclick="saveRental()" id="ren-save-btn">Add Rental</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   // ── SUPABASE CONFIG ─────────────────────────────────────
   const SUPABASE_URL  = 'https://mafpxfswilljtbopxffq.supabase.co';
@@ -1100,8 +1387,18 @@
 
   window.togglePrivacy = () => {
     privacyMode = !privacyMode;
-    document.getElementById('fin-priv-btn').classList.toggle('active', privacyMode);
-    if (finData) renderFinance();
+    const btn = document.getElementById('fin-priv-btn');
+    if (btn) btn.classList.toggle('active', privacyMode);
+    // Always re-render; if no finData yet, still hide/show known elements
+    if (finData) {
+      renderFinance();
+    } else {
+      const mask = privacyMode ? '••••••' : '—';
+      ['fin-total','sc-port','sb-networth'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = mask;
+      });
+    }
   };
 
   window.toggleHomePrivacy = () => {
@@ -1559,9 +1856,10 @@
   window.refreshFinance = () => { finData = null; loaders['finance'] = false; loadFinance(); loaders['finance'] = true; };
 
   async function loadFinance() {
+    const safe = async (fn) => { try { return await fn(); } catch(e) { return []; } };
     const [txs, watchlist] = await Promise.all([
-      sb('transactions', '?order=trade_date.asc'),
-      sb('watchlist',    '?order=ticker.asc'),
+      safe(() => sb('transactions', '?order=trade_date.asc')),
+      safe(() => sb('watchlist',    '?order=ticker.asc')),
     ]);
 
     const holdings = txs.length ? calcHoldings(txs) : [];
@@ -1805,41 +2103,6 @@
   };
 
   // ── BENZO ────────────────────────────────────────────────
-  async function loadBenzo() {
-    const [fleet, rentals] = await Promise.all([
-      sb('fleet',   '?order=created_at.asc'),
-      sb('rentals', '?order=start_date.desc'),
-    ]);
-    const fleetMap = {}; fleet.forEach(v => fleetMap[v.id] = v);
-    document.getElementById('fleet-grid').innerHTML = fleet.map(v => {
-      const splits     = v.owner_splits || {};
-      const splitsHtml = Object.entries(splits).map(([name, pct]) => `<span class="split-item"><span>${pct}%</span> ${name}</span>`).join('');
-      return `<div class="fleet-card">
-        <div class="fleet-card-header">
-          <div><div class="fleet-name">${v.vehicle_name}</div><div class="fleet-sub">${v.year} ${v.make} ${v.model}</div></div>
-          <span class="status-pill status-${v.status}">${v.status}</span>
-        </div>
-        ${v.notes ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">${v.notes}</div>` : ''}
-        <div class="os-micro-lbl" style="margin-bottom:5px">OWNER SPLITS</div>
-        <div class="splits-row">${splitsHtml}</div>
-        ${v.last_service_date ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:8px">Last service: ${v.last_service_date}</div>` : ''}
-      </div>`;
-    }).join('');
-    const statusColors = { active: 'badge-work', upcoming: 'badge-medium', completed: 'badge-low' };
-    document.getElementById('rentals-body').innerHTML = rentals.map(r => {
-      const v = fleetMap[r.vehicle_id];
-      return `<tr>
-        <td>${r.customer_name}</td>
-        <td>${v ? v.vehicle_name : '—'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.start_date}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.end_date}</td>
-        <td>$${fmt(r.daily_rate)}/day</td>
-        <td style="font-weight:500;color:var(--gold)">$${fmt(r.total_revenue)}</td>
-        <td><span class="badge ${statusColors[r.status]||''}">${r.status}</span></td>
-      </tr>`;
-    }).join('');
-  }
-
   // ── OPERATOR PROFILE (localStorage) ─────────────────────
   function loadOpProfile() {
     const photo = localStorage.getItem('op_photo');
@@ -1896,35 +2159,111 @@
     if (el) localStorage.setItem('op_focus', el.value);
   };
 
-  // ── QUICK INPUT ROUTER ───────────────────────────────────
+  // ── AI QUICK INPUT AGENT ─────────────────────────────────
+  async function callAIAgent(text) {
+    const apiKey = localStorage.getItem('omar_claude_key');
+    if (!apiKey) return null;
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 256,
+          system: `You are the Omar OS AI agent. Parse the user's command and return ONLY a JSON object (no markdown, no explanation).
+
+Available actions:
+- add_task: { action:"add_task", task_text:string, category:"Personal"|"Work"|"Benzo", priority:"high"|"medium"|"low" }
+- add_goal: { action:"add_goal", title:string, category:"weekly"|"monthly" }
+- add_habit: { action:"add_habit", title:string, sub:string }
+- add_note: { action:"add_note", transcript:string }
+- respond: { action:"respond", message:string }
+
+Rules:
+- "habit" mentions → add_habit
+- "goal", "target", "achieve", "this week/month" → add_goal
+- "remind", "buy", "call", "send", "email", "fix", "book", "schedule", "finish", "check" → add_task
+- questions/unclear → respond
+- Return raw JSON only`,
+          messages: [{ role: 'user', content: text }]
+        })
+      });
+      const data = await res.json();
+      return JSON.parse(data.content[0].text);
+    } catch(e) { return null; }
+  }
+
+  function smartRoute(text) {
+    const t = text.toLowerCase();
+    // Explicit habit
+    if (/\bhabit\b/.test(t)) {
+      const title = text.replace(/^(add\s+)?habit[:\s]*/i, '').replace(/\s+(habit|every\s+day)$/i, '').trim() || text;
+      return { action: 'add_habit', title, sub: '' };
+    }
+    // Goal patterns
+    if (/^goal[:\s]|\bgoal\b|\b(this (week|month))\b|achieve|target/i.test(t))
+      return { action: 'add_goal', title: text.replace(/^goal[:\s]*/i,''), category: 'weekly' };
+    // Note
+    if (/^note[:\s]/i.test(t))
+      return { action: 'add_note', transcript: text.replace(/^note[:\s]*/i,'') };
+    // Task keywords
+    if (/^task[:\s]|remind|buy |call |send |email |fix |finish |schedule |book |check |complete |follow/i.test(t))
+      return { action: 'add_task', task_text: text.replace(/^task[:\s]*/i,''), category: 'Personal', priority: 'medium' };
+    // Default to task
+    return { action: 'add_task', task_text: text, category: 'Personal', priority: 'medium' };
+  }
+
   window.processQuickInput = async () => {
     const inp  = document.getElementById('home-qi');
     const hint = document.getElementById('home-qi-hint');
     const text = inp.value.trim();
     if (!text) return;
     inp.disabled = true;
-    const lower = text.toLowerCase();
+    if (hint) hint.textContent = '⟳ Thinking…';
+
+    let result = await callAIAgent(text);
+    if (!result) result = smartRoute(text);
+
     let msg = '';
     try {
-      if (/^goal[:\s]|this (week|month)|want to|achieve|target/i.test(text)) {
-        await sbPost('goals', { title: text.replace(/^goal[:\s]*/i,''), category: 'weekly', completed: false });
-        msg = '✓ Added as weekly goal';
-      } else if (/^task[:\s]|remind|buy |call |send |email |fix |finish |schedule |book |check /i.test(text)) {
-        await sbPost('tasks', { task_text: text.replace(/^task[:\s]*/i,''), category: 'Personal', priority: 'medium', source: 'manual' });
-        msg = '✓ Added as task';
-      } else if (/^note[:\s]/i.test(text)) {
-        await sbPost('voice_notes', { transcript: text.replace(/^note[:\s]*/i,''), source: 'in-app', routed_to: 'ignored', processed: false });
-        msg = '✓ Saved as note';
-      } else {
-        // Default: task
-        await sbPost('tasks', { task_text: text, category: 'Personal', priority: 'medium', source: 'manual' });
-        msg = '✓ Added as task  ·  prefix "goal:" or "note:" to route differently';
+      switch (result.action) {
+        case 'add_habit':
+          const habits = getHabits();
+          habits.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), title: result.title || text, sub: result.sub || '' });
+          saveHabits(habits);
+          renderHabits();
+          msg = `✓ Habit added — "${result.title || text}"`;
+          break;
+        case 'add_goal':
+          await sbPost('goals', { title: result.title || text, category: result.category || 'weekly', completed: false });
+          loaders['home'] = false; await loadHome(); loaders['home'] = true;
+          msg = `✓ ${result.category === 'monthly' ? 'Monthly' : 'Weekly'} goal added`;
+          break;
+        case 'add_task':
+          await sbPost('tasks', { task_text: result.task_text || text, category: result.category || 'Personal', priority: result.priority || 'medium', source: 'manual' });
+          loaders['home'] = false; await loadHome(); loaders['home'] = true;
+          msg = `✓ Task added — ${result.priority || 'medium'} priority`;
+          break;
+        case 'add_note':
+          await sbPost('voice_notes', { transcript: result.transcript || text, source: 'in-app', routed_to: 'ignored', processed: false });
+          loaders['home'] = false; await loadHome(); loaders['home'] = true;
+          msg = '✓ Saved as note';
+          break;
+        case 'respond':
+          msg = '→ ' + (result.message || 'Done');
+          break;
+        default:
+          msg = '⚠ Could not process — try "task:", "goal:", "habit:", or "note:" prefix';
       }
       inp.value = '';
-      loaders['home'] = false; await loadHome(); loaders['home'] = true;
-    } catch(e) { msg = '⚠ Error — check connection'; }
-    inp.disabled = false;
-    if (hint) { hint.textContent = msg; setTimeout(() => hint.textContent = '', 4000); }
+    } catch(e) { msg = '⚠ Error — ' + e.message; }
+    inp.disabled = false; inp.focus();
+    if (hint) { hint.textContent = msg; setTimeout(() => hint.textContent = '', 5000); }
   };
 
   // ── HABITS (localStorage) ────────────────────────────────
@@ -2027,6 +2366,484 @@
     document.getElementById('new-habit-sub').value   = '';
     closeAddHabit();
     renderHabits();
+  };
+
+  // ── SBDELETE HELPER ──────────────────────────────────────
+  async function sbDelete(table, id) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return true;
+  }
+
+  // ── SETTINGS ─────────────────────────────────────────────
+  window.openSettings = () => {
+    const key = localStorage.getItem('omar_claude_key') || '';
+    document.getElementById('settings-api-key').value = key;
+    document.getElementById('settings-modal').classList.add('open');
+  };
+  window.closeSettings = () => document.getElementById('settings-modal').classList.remove('open');
+  window.saveSettings  = () => {
+    const key = document.getElementById('settings-api-key').value.trim();
+    if (key) localStorage.setItem('omar_claude_key', key);
+    else     localStorage.removeItem('omar_claude_key');
+    closeSettings();
+  };
+
+  // ── HABIT DRAG-AND-DROP + DELETE ─────────────────────────
+  let habitDragId = null;
+
+  window.habitDragStart = (e, id) => {
+    habitDragId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => e.target.classList.add('dragging'), 0);
+  };
+  window.habitDragEnd = (e) => {
+    e.target.classList.remove('dragging');
+    document.querySelectorAll('.habit-item').forEach(el => el.classList.remove('drag-over'));
+  };
+  window.habitDragOver = (e, id) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.habit-item').forEach(el => el.classList.remove('drag-over'));
+    if (id !== habitDragId) e.currentTarget.classList.add('drag-over');
+  };
+  window.habitDragLeave = (e) => { e.currentTarget.classList.remove('drag-over'); };
+  window.habitDrop = (e, targetId) => {
+    e.preventDefault();
+    if (!habitDragId || habitDragId === targetId) return;
+    const habits = getHabits();
+    const fromIdx = habits.findIndex(h => h.id === habitDragId);
+    const toIdx   = habits.findIndex(h => h.id === targetId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const [moved] = habits.splice(fromIdx, 1);
+    habits.splice(toIdx, 0, moved);
+    saveHabits(habits);
+    habitDragId = null;
+    renderHabits();
+  };
+  window.deleteHabit = (id) => {
+    const habits = getHabits().filter(h => h.id !== id);
+    saveHabits(habits);
+    renderHabits();
+  };
+
+  // Patch renderHabits to include drag + delete (override inline)
+  const _origRenderHabits = renderHabits;
+  renderHabits = function() {
+    const habits   = getHabits();
+    const checkins = getCheckins();
+    const tk       = todayKey();
+    const todayDone = habits.filter(h => checkins[tk] && checkins[tk].includes(h.id)).length;
+    const score    = habits.length ? Math.round((todayDone / habits.length) * 100) : 0;
+
+    const ring = document.getElementById('habit-score-ring');
+    const txt  = document.getElementById('habit-score-txt');
+    if (ring) ring.style.background = `conic-gradient(var(--green) 0% ${score}%, var(--bg4) ${score}% 100%)`;
+    if (txt)  txt.textContent = habits.length ? score + '%' : '—';
+
+    const grid = document.getElementById('habits-grid');
+    if (grid) {
+      if (!habits.length) {
+        grid.innerHTML = '<div class="empty" style="grid-column:1/-1;font-size:10px">No habits yet — tap + to add</div>';
+      } else {
+        grid.innerHTML = habits.map(h => {
+          const done   = checkins[tk] && checkins[tk].includes(h.id);
+          const streak = habitStreak(h.id);
+          return `<div class="habit-item ${done ? 'done' : ''}" style="position:relative"
+            draggable="true"
+            ondragstart="habitDragStart(event,'${h.id}')"
+            ondragend="habitDragEnd(event)"
+            ondragover="habitDragOver(event,'${h.id}')"
+            ondragleave="habitDragLeave(event)"
+            ondrop="habitDrop(event,'${h.id}')"
+            onclick="toggleCheckin('${h.id}')">
+            <button class="habit-del" onclick="event.stopPropagation();deleteHabit('${h.id}')" title="Remove habit"
+              style="position:absolute;top:4px;right:4px;width:16px;height:16px;border:none;background:var(--bg4);color:var(--red);border-radius:2px;cursor:pointer;font-size:10px;display:none;align-items:center;justify-content:center;line-height:1">✕</button>
+            <div class="habit-title" title="${h.title}">${h.title}</div>
+            ${h.sub ? `<div class="habit-sub" title="${h.sub}">${h.sub}</div>` : '<div style="height:5px"></div>'}
+            <div class="habit-streak">🔥 ${streak}d</div>
+          </div>`;
+        }).join('');
+        // Show delete button on hover via JS (since CSS :hover on nested button is tricky in grid)
+        grid.querySelectorAll('.habit-item').forEach(el => {
+          el.addEventListener('mouseenter', () => { const b = el.querySelector('.habit-del'); if (b) b.style.display = 'flex'; });
+          el.addEventListener('mouseleave', () => { const b = el.querySelector('.habit-del'); if (b) b.style.display = 'none'; });
+        });
+      }
+    }
+
+    const calGrid = document.getElementById('habit-cal-grid');
+    if (calGrid) {
+      const days = [];
+      const now = new Date(); now.setHours(0,0,0,0);
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now); d.setDate(now.getDate() - i);
+        const k = d.toISOString().slice(0,10);
+        const done  = habits.filter(h => checkins[k] && checkins[k].includes(h.id)).length;
+        const total = habits.length;
+        const label = d.toLocaleDateString('en-CA', { weekday: 'narrow' }).toUpperCase();
+        let cls = 'habit-cal-dot';
+        if (total > 0) {
+          if (done === total && done > 0) cls += ' full';
+          else if (done > 0) cls += ' partial';
+        }
+        days.push(`<div class="habit-cal-cell" title="${k}: ${done}/${total}">
+          <div class="${cls}"></div>
+          <div class="habit-cal-lbl">${label}</div>
+        </div>`);
+      }
+      calGrid.innerHTML = days.join('');
+    }
+  };
+
+  // ── TRADE MODAL ──────────────────────────────────────────
+  window.openAddTrade = () => {
+    document.getElementById('trade-modal-title').textContent = 'Log Trade';
+    document.getElementById('tr-save-btn').textContent = 'Save Trade';
+    document.getElementById('tr-date').value    = new Date().toISOString().slice(0, 10);
+    document.getElementById('tr-type').value    = 'Buy';
+    document.getElementById('tr-ticker').value  = '';
+    document.getElementById('tr-qty').value     = '';
+    document.getElementById('tr-price').value   = '';
+    document.getElementById('tr-total').value   = '';
+    document.getElementById('tr-fees').value    = '0';
+    document.getElementById('tr-account').value = '';
+    document.getElementById('tr-split').value   = '';
+    document.getElementById('tr-fx').value      = '1';
+    tradeTypeChanged();
+    document.getElementById('trade-modal').classList.add('open');
+  };
+  window.closeAddTrade = () => document.getElementById('trade-modal').classList.remove('open');
+
+  window.tradeTypeChanged = () => {
+    const type   = document.getElementById('tr-type').value;
+    const isSplit = type === 'Split';
+    const isDividend = type === 'Dividend';
+    document.getElementById('tr-split-grp').style.display = isSplit    ? '' : 'none';
+    document.getElementById('tr-qty-grp').style.display   = isSplit    ? 'none' : '';
+    document.getElementById('tr-price-grp').style.display = isDividend ? 'none' : '';
+    document.getElementById('tr-fees-grp').style.display  = isDividend ? 'none' : '';
+  };
+
+  // Auto-calc total when qty/price change
+  ['tr-qty', 'tr-price'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => {
+      const qty   = parseFloat(document.getElementById('tr-qty').value)   || 0;
+      const price = parseFloat(document.getElementById('tr-price').value) || 0;
+      if (qty && price) document.getElementById('tr-total').value = (qty * price).toFixed(2);
+    });
+  });
+
+  window.saveTrade = async () => {
+    const btn    = document.getElementById('tr-save-btn');
+    const type   = document.getElementById('tr-type').value;
+    const ticker = document.getElementById('tr-ticker').value.trim().toUpperCase();
+    const date   = document.getElementById('tr-date').value;
+    if (!ticker || !date) { alert('Ticker and date are required.'); return; }
+
+    btn.textContent = 'Saving…'; btn.disabled = true;
+    try {
+      const row = {
+        trade_date:        date,
+        transaction_type:  type,
+        ticker,
+        quantity:          parseFloat(document.getElementById('tr-qty').value)   || null,
+        amount_per_unit:   parseFloat(document.getElementById('tr-price').value) || null,
+        total_amount:      parseFloat(document.getElementById('tr-total').value) || null,
+        trading_fees:      parseFloat(document.getElementById('tr-fees').value)  || 0,
+        investment_account:document.getElementById('tr-account').value.trim()    || null,
+        split_ratio:       type === 'Split' ? (parseFloat(document.getElementById('tr-split').value) || null) : null,
+        fx_rate:           parseFloat(document.getElementById('tr-fx').value)    || 1,
+        row_hash:          Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2,'0')).join('')
+      };
+      await sbPost('transactions', row);
+      closeAddTrade();
+      finData = null;
+      loaders['finance'] = false;
+      await loadFinance();
+      loaders['finance'] = true;
+    } catch(e) { alert('Error: ' + e.message); }
+    btn.textContent = 'Save Trade'; btn.disabled = false;
+  };
+
+  // ── TASK EDIT + SORT ─────────────────────────────────────
+  let activeSort = 'created';
+
+  // Wire sort buttons
+  document.querySelectorAll('.sort-btn[data-sort]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.sort-btn[data-sort]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeSort = btn.dataset.sort;
+      renderTasks();
+    });
+  });
+
+  // Override renderTasks to add sort + edit button
+  const _origRenderTasks = renderTasks;
+  renderTasks = function() {
+    let filtered = allTasks;
+    if (['Work','Personal','Benzo'].includes(activeFilter)) filtered = allTasks.filter(t => t.category === activeFilter);
+    if (!showDone) filtered = filtered.filter(t => !t.completed);
+
+    // Sort
+    filtered = [...filtered].sort((a, b) => {
+      if (activeSort === 'priority') {
+        const p = {high:0,medium:1,low:2};
+        return (p[a.priority]||1) - (p[b.priority]||1);
+      }
+      if (activeSort === 'due') {
+        return (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1;
+      }
+      // created (default) — newest first
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    const list = document.getElementById('tasks-list');
+    if (!filtered.length) { list.innerHTML = '<div class="empty">No tasks found.</div>'; return; }
+    const priColors = { high: 'var(--red)', medium: 'var(--gold)', low: 'var(--green)' };
+    list.innerHTML = filtered.map(t => `
+      <div class="task-row ${t.completed ? 'done' : ''}" id="task-${t.id}">
+        <div class="task-check ${t.completed ? 'checked' : ''}" onclick="toggleTask('${t.id}', ${t.completed})"></div>
+        <div class="task-text" style="${t.completed ? 'text-decoration:line-through;color:var(--muted)' : ''}">${t.task_text}</div>
+        <div class="task-meta">
+          <span class="badge badge-${(t.category||'personal').toLowerCase()}">${t.category}</span>
+          <span class="badge badge-${t.priority}" style="color:${priColors[t.priority]||'var(--muted)'}">${t.priority}</span>
+          ${t.due_date ? `<span class="task-due">${t.due_date}</span>` : ''}
+        </div>
+        <button class="task-edit-btn" onclick='openEditTask(${JSON.stringify(t)})' title="Edit task" style="width:22px;height:22px;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--muted);cursor:pointer;font-size:11px;flex-shrink:0">✎</button>
+      </div>`).join('');
+  };
+
+  window.openEditTask = (task) => {
+    document.getElementById('edit-task-id').value   = task.id;
+    document.getElementById('edit-task-text').value = task.task_text;
+    document.getElementById('edit-task-cat').value  = task.category  || 'Personal';
+    document.getElementById('edit-task-pri').value  = task.priority  || 'medium';
+    document.getElementById('edit-task-due').value  = task.due_date  || '';
+    document.getElementById('edit-task-modal').classList.add('open');
+  };
+  window.closeEditTask = () => document.getElementById('edit-task-modal').classList.remove('open');
+  window.updateTask = async () => {
+    const id = document.getElementById('edit-task-id').value;
+    const patch = {
+      task_text: document.getElementById('edit-task-text').value.trim(),
+      category:  document.getElementById('edit-task-cat').value,
+      priority:  document.getElementById('edit-task-pri').value,
+      due_date:  document.getElementById('edit-task-due').value || null
+    };
+    if (!patch.task_text) return;
+    await sbPatch('tasks', id, patch);
+    const t = allTasks.find(t => t.id == id);
+    if (t) Object.assign(t, patch);
+    closeEditTask();
+    renderTasks();
+  };
+
+  // ── BENZO CRUD ───────────────────────────────────────────
+  let benzoFleet = [], benzoRentals = [];
+
+  async function loadBenzo() {
+    [benzoFleet, benzoRentals] = await Promise.all([
+      sb('fleet',   '?order=created_at.asc'),
+      sb('rentals', '?order=start_date.desc'),
+    ]);
+    renderBenzo();
+  }
+
+  function renderBenzo() {
+    const fleetMap = {}; benzoFleet.forEach(v => fleetMap[v.id] = v);
+
+    document.getElementById('fleet-grid').innerHTML = benzoFleet.length
+      ? benzoFleet.map(v => {
+          const splits     = v.owner_splits || {};
+          const splitsHtml = Object.entries(splits).map(([name, pct]) => `<span class="split-item"><span>${pct}%</span> ${name}</span>`).join('');
+          return `<div class="fleet-card" style="position:relative">
+            <div style="position:absolute;top:10px;right:10px;display:flex;gap:5px">
+              <button onclick="openEditVehicle(${JSON.stringify(v).replace(/"/g,'&quot;')})"
+                style="padding:3px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--muted);cursor:pointer">Edit</button>
+              <button onclick="confirmDeleteVehicle('${v.id}')"
+                style="padding:3px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--red);cursor:pointer">Del</button>
+            </div>
+            <div class="fleet-card-header">
+              <div><div class="fleet-name">${v.vehicle_name}</div><div class="fleet-sub">${v.year} ${v.make} ${v.model}</div></div>
+              <span class="status-pill status-${v.status}">${v.status}</span>
+            </div>
+            ${v.notes ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">${v.notes}</div>` : ''}
+            <div class="os-micro-lbl" style="margin-bottom:5px">OWNER SPLITS</div>
+            <div class="splits-row">${splitsHtml || '<span style="color:var(--muted2);font-size:10px">—</span>'}</div>
+            ${v.last_service_date ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:8px">Last service: ${v.last_service_date}</div>` : ''}
+          </div>`;
+        }).join('')
+      : '<div class="empty">No vehicles yet.</div>';
+
+    const statusColors = { active: 'badge-work', upcoming: 'badge-medium', completed: 'badge-low' };
+    document.getElementById('rentals-body').innerHTML = benzoRentals.length
+      ? benzoRentals.map(r => {
+          const v = fleetMap[r.vehicle_id];
+          return `<tr>
+            <td>${r.customer_name}</td>
+            <td>${v ? v.vehicle_name : '—'}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.start_date}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.end_date}</td>
+            <td>$${fmt(r.daily_rate)}/day</td>
+            <td style="font-weight:500;color:var(--gold)">$${fmt(r.total_revenue)}</td>
+            <td><span class="badge ${statusColors[r.status]||''}">${r.status}</span></td>
+            <td style="text-align:right">
+              <button onclick="openEditRental(${JSON.stringify(r).replace(/"/g,'&quot;')})"
+                style="padding:3px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--muted);cursor:pointer;margin-right:4px">Edit</button>
+              <button onclick="confirmDeleteRental('${r.id}')"
+                style="padding:3px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--red);cursor:pointer">Del</button>
+            </td>
+          </tr>`;
+        }).join('')
+      : '<tr><td colspan="8" class="empty">No rentals yet.</td></tr>';
+  }
+
+  // Vehicle CRUD
+  window.openAddVehicle = () => {
+    document.getElementById('vehicle-modal-title').textContent = 'Add Vehicle';
+    document.getElementById('veh-save-btn').textContent = 'Add Vehicle';
+    document.getElementById('veh-id').value      = '';
+    document.getElementById('veh-name').value    = '';
+    document.getElementById('veh-make').value    = '';
+    document.getElementById('veh-model').value   = '';
+    document.getElementById('veh-year').value    = '';
+    document.getElementById('veh-status').value  = 'available';
+    document.getElementById('veh-service').value = '';
+    document.getElementById('veh-notes').value   = '';
+    [0,1,2,3].forEach(i => {
+      document.getElementById(`split-name-${i}`).value = '';
+      document.getElementById(`split-pct-${i}`).value  = '';
+    });
+    document.getElementById('vehicle-modal').classList.add('open');
+  };
+  window.openEditVehicle = (v) => {
+    document.getElementById('vehicle-modal-title').textContent = 'Edit Vehicle';
+    document.getElementById('veh-save-btn').textContent = 'Save Changes';
+    document.getElementById('veh-id').value      = v.id;
+    document.getElementById('veh-name').value    = v.vehicle_name    || '';
+    document.getElementById('veh-make').value    = v.make            || '';
+    document.getElementById('veh-model').value   = v.model           || '';
+    document.getElementById('veh-year').value    = v.year            || '';
+    document.getElementById('veh-status').value  = v.status          || 'available';
+    document.getElementById('veh-service').value = v.last_service_date || '';
+    document.getElementById('veh-notes').value   = v.notes           || '';
+    const splits = v.owner_splits || {};
+    const splitEntries = Object.entries(splits);
+    [0,1,2,3].forEach(i => {
+      document.getElementById(`split-name-${i}`).value = splitEntries[i]?.[0] || '';
+      document.getElementById(`split-pct-${i}`).value  = splitEntries[i]?.[1] || '';
+    });
+    document.getElementById('vehicle-modal').classList.add('open');
+  };
+  window.closeVehicleModal = () => document.getElementById('vehicle-modal').classList.remove('open');
+  window.saveVehicle = async () => {
+    const btn  = document.getElementById('veh-save-btn');
+    const name = document.getElementById('veh-name').value.trim();
+    if (!name) { alert('Vehicle name is required.'); return; }
+    btn.textContent = 'Saving…'; btn.disabled = true;
+    try {
+      const splits = {};
+      [0,1,2,3].forEach(i => {
+        const n = document.getElementById(`split-name-${i}`).value.trim();
+        const p = parseFloat(document.getElementById(`split-pct-${i}`).value);
+        if (n && !isNaN(p)) splits[n] = p;
+      });
+      const row = {
+        vehicle_name:      name,
+        make:              document.getElementById('veh-make').value.trim()    || null,
+        model:             document.getElementById('veh-model').value.trim()   || null,
+        year:              parseInt(document.getElementById('veh-year').value) || null,
+        status:            document.getElementById('veh-status').value,
+        last_service_date: document.getElementById('veh-service').value        || null,
+        notes:             document.getElementById('veh-notes').value.trim()   || null,
+        owner_splits:      splits
+      };
+      const vehEditId = document.getElementById('veh-id').value;
+      if (vehEditId) await sbPatch('fleet', vehEditId, row);
+      else           await sbPost('fleet', row);
+      closeVehicleModal();
+      await loadBenzo();
+    } catch(e) { alert('Error: ' + e.message); }
+    btn.textContent = 'Save Changes'; btn.disabled = false;
+  };
+  window.confirmDeleteVehicle = async (id) => {
+    if (!confirm('Delete this vehicle? This cannot be undone.')) return;
+    try { await sbDelete('fleet', id); await loadBenzo(); }
+    catch(e) { alert('Error: ' + e.message); }
+  };
+
+  // Rental CRUD
+  function populateRentalVehicleSelect(selectedId) {
+    const sel = document.getElementById('ren-vehicle');
+    sel.innerHTML = benzoFleet.map(v => `<option value="${v.id}" ${v.id === selectedId ? 'selected' : ''}>${v.vehicle_name}</option>`).join('');
+  }
+  window.openAddRental = () => {
+    document.getElementById('rental-modal-title').textContent = 'Add Rental';
+    document.getElementById('ren-save-btn').textContent = 'Add Rental';
+    document.getElementById('ren-id').value       = '';
+    document.getElementById('ren-customer').value = '';
+    document.getElementById('ren-start').value    = new Date().toISOString().slice(0, 10);
+    document.getElementById('ren-end').value      = '';
+    document.getElementById('ren-rate').value     = '';
+    document.getElementById('ren-status').value   = 'upcoming';
+    document.getElementById('ren-notes').value    = '';
+    populateRentalVehicleSelect('');
+    document.getElementById('rental-modal').classList.add('open');
+  };
+  window.openEditRental = (r) => {
+    document.getElementById('rental-modal-title').textContent = 'Edit Rental';
+    document.getElementById('ren-save-btn').textContent = 'Save Changes';
+    document.getElementById('ren-id').value       = r.id;
+    document.getElementById('ren-customer').value = r.customer_name  || '';
+    document.getElementById('ren-start').value    = r.start_date     || '';
+    document.getElementById('ren-end').value      = r.end_date       || '';
+    document.getElementById('ren-rate').value     = r.daily_rate     || '';
+    document.getElementById('ren-status').value   = r.status         || 'upcoming';
+    document.getElementById('ren-notes').value    = r.notes          || '';
+    populateRentalVehicleSelect(r.vehicle_id);
+    document.getElementById('rental-modal').classList.add('open');
+  };
+  window.closeRentalModal = () => document.getElementById('rental-modal').classList.remove('open');
+  window.saveRental = async () => {
+    const btn  = document.getElementById('ren-save-btn');
+    const cust = document.getElementById('ren-customer').value.trim();
+    const vehId = document.getElementById('ren-vehicle').value;
+    const start = document.getElementById('ren-start').value;
+    const end   = document.getElementById('ren-end').value;
+    const rate  = parseFloat(document.getElementById('ren-rate').value) || 0;
+    if (!cust || !start || !end) { alert('Customer, start date and end date are required.'); return; }
+
+    btn.textContent = 'Saving…'; btn.disabled = true;
+    try {
+      const days = Math.max(1, Math.round((new Date(end) - new Date(start)) / 86400000));
+      const row = {
+        vehicle_id:     vehId     || null,
+        customer_name:  cust,
+        start_date:     start,
+        end_date:       end,
+        daily_rate:     rate,
+        total_revenue:  rate * days,
+        status:         document.getElementById('ren-status').value,
+        notes:          document.getElementById('ren-notes').value.trim() || null
+      };
+      const id = document.getElementById('ren-id').value;
+      if (id) await sbPatch('rentals', id, row);
+      else    await sbPost('rentals', row);
+      closeRentalModal();
+      await loadBenzo();
+    } catch(e) { alert('Error: ' + e.message); }
+    btn.textContent = 'Save Changes'; btn.disabled = false;
+  };
+  window.confirmDeleteRental = async (id) => {
+    if (!confirm('Delete this rental? This cannot be undone.')) return;
+    try { await sbDelete('rentals', id); await loadBenzo(); }
+    catch(e) { alert('Error: ' + e.message); }
   };
 
   // ── UTILS ────────────────────────────────────────────────
