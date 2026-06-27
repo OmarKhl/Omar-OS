@@ -422,7 +422,8 @@
     .task-check.checked { background: var(--green); border-color: var(--green); }
     .task-check.checked::after { content: '✓'; color: #fff; font-size: 9px; }
     .task-text { flex: 1; font-size: 13px; }
-    .task-meta { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .task-meta { display: grid; grid-template-columns: 72px 58px 82px; gap: 3px 6px; align-items: center; flex-shrink: 0; }
+    .task-meta .badge, .task-meta .task-due { text-align: center; }
     .badge {
       padding: 2px 7px; border-radius: 3px; font-size: 9px;
       font-family: 'JetBrains Mono', monospace;
@@ -618,7 +619,7 @@
     }
     .habit-item:hover { border-color: var(--border2); }
     .habit-item.done  { border-color: var(--green); background: rgba(34,197,94,.05); }
-    .habit-title { font-size: 10px; font-weight: 500; line-height: 1.2; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .habit-title { font-size: 10px; font-weight: 500; line-height: 1.2; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .habit-sub   { font-size: 8.5px; color: var(--muted); margin-bottom: 5px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .habit-streak { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--gold); }
     .habit-cal-wrap { }
@@ -727,6 +728,47 @@
     .habit-sub-item-chk.done { background: var(--green); border-color: var(--green); }
     .habit-sub-item-title { font-size: 11px; font-weight: 500; line-height: 1.2; }
     .habit-sub-item.done .habit-sub-item-title { text-decoration: line-through; color: var(--muted); }
+    /* Sub-habit delete button */
+    .habit-sub-item { position: relative; }
+    .sub-del-btn {
+      position: absolute; top: 3px; right: 3px;
+      width: 14px; height: 14px; border: none; background: transparent;
+      color: var(--red); cursor: pointer; font-size: 10px; line-height: 1;
+      display: none; align-items: center; justify-content: center;
+      border-radius: 2px; padding: 0; opacity: .8; z-index: 3;
+    }
+    .habit-sub-item:hover .sub-del-btn { display: flex; }
+    /* Inline title editing */
+    .habit-title-edit-inp {
+      background: var(--bg4); border: 1px solid var(--gold-dim); border-radius: 3px;
+      color: var(--text); font-size: 10px; font-weight: 600; padding: 2px 5px;
+      width: 100%; max-width: 100%; box-sizing: border-box; display: block;
+      outline: none; font-family: inherit; min-width: 0;
+    }
+    .sub-title-edit-inp {
+      background: var(--bg4); border: 1px solid var(--gold-dim); border-radius: 3px;
+      color: var(--text); font-size: 11px; font-weight: 500; padding: 1px 4px;
+      outline: none; font-family: inherit; max-width: 100%; box-sizing: border-box; min-width: 0; width: 90px;
+    }
+    /* Sub-tasks header add button */
+    .sub-add-btn {
+      background: none; border: none; color: var(--gold); cursor: pointer;
+      font-size: 16px; line-height: 1; padding: 0 2px; opacity: .75;
+      transition: opacity .15s; display: flex; align-items: center;
+    }
+    .sub-add-btn:hover { opacity: 1; }
+    /* Inline new sub-task input row */
+    .sub-new-item {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--bg3); border: 1px dashed var(--gold-dim);
+      border-radius: 5px; padding: 6px 10px;
+      min-width: 140px; flex: 1 1 140px; max-width: 260px;
+    }
+    .sub-new-inp {
+      background: none; border: none; color: var(--text); font-size: 11px;
+      font-weight: 500; outline: none; font-family: inherit; width: 100%;
+    }
+    .sub-new-inp::placeholder { color: var(--muted); }
     .habit-del {
       position: absolute; top: 4px; right: 4px;
       width: 15px; height: 15px; display: none; align-items: center; justify-content: center;
@@ -963,7 +1005,7 @@
               </svg>
               <span class="habit-score-inner" id="habit-score-txt">—</span>
             </div>
-            <button class="os-icon-btn" onclick="openAddHabit()">+</button>
+            <button class="os-icon-btn" onclick="openAddHabit()" title="Add new habit" style="font-size:16px">+</button>
           </div>
         </div>
         <div class="habits-grid" id="habits-grid">
@@ -1037,7 +1079,7 @@
       </div>
       <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
         <button class="fin-icon-btn" onclick="openAddTrade()">+ LOG TRADE</button>
-        <button class="fin-icon-btn" id="fin-priv-btn" onclick="togglePrivacy()" title="Hide amounts">◉ HIDE</button>
+        <button class="fin-icon-btn active" id="fin-priv-btn" onclick="togglePrivacy()" title="Hide amounts">◉ HIDE</button>
         <button class="fin-icon-btn" onclick="refreshFinance()">↺ REFRESH</button>
         <span id="prices-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.06em">—</span>
       </div>
@@ -1134,6 +1176,7 @@
       <span class="tasks-search-icon">⊕</span>
       <input class="tasks-search-inp" id="task-search" placeholder="Search title, description, tag…" oninput="doTaskSearch()" />
     </div>
+    <button class="btn-sm" onclick="openInlineAddTask()" title="Quick add" style="padding:0;width:26px;height:26px;font-size:18px;line-height:1;display:inline-flex;align-items:center;justify-content:center">+</button>
     <button class="btn-add" onclick="openAddTask()">+ ADD</button>
   </div>
   <!-- Filters -->
@@ -1653,7 +1696,7 @@
   const FX     = { USD: 1, CAD: 1.37, AED: 3.67 };
   const FX_SYM = { USD: '$', CAD: 'C$', AED: 'AED ' };
   let activeCurrency  = 'USD';
-  let privacyMode     = false;
+  let privacyMode     = true;
   let homePrivacyMode = true;
   let keyTaskIds      = new Set();   // populated from tasks.is_starred on load
   let activeTimeframe = '1M';
@@ -1812,6 +1855,13 @@
   const loaders = {};
   document.querySelectorAll('.nav-tab').forEach(btn => {
     btn.addEventListener('click', () => {
+      const prevTab = document.querySelector('.nav-tab.active')?.dataset.tab;
+      // Auto-hide finance when leaving it
+      if (prevTab === 'finance' && btn.dataset.tab !== 'finance' && !privacyMode) {
+        privacyMode = true;
+        const pb = document.getElementById('fin-priv-btn');
+        if (pb) pb.classList.add('active');
+      }
       document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
@@ -1821,6 +1871,13 @@
     });
   });
   window.switchTab = (tab) => {
+    const prevTab = document.querySelector('.nav-tab.active')?.dataset.tab;
+    // Auto-hide finance when leaving it
+    if (prevTab === 'finance' && tab !== 'finance' && !privacyMode) {
+      privacyMode = true;
+      const pb = document.getElementById('fin-priv-btn');
+      if (pb) pb.classList.add('active');
+    }
     document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const btn = document.querySelector(`.nav-tab[data-tab="${tab}"]`);
@@ -2008,14 +2065,18 @@
     const map = {};
     const sorted = [...txs].sort((a, b) => new Date(a.trade_date) - new Date(b.trade_date));
     sorted.forEach(tx => {
-      const t     = tx.ticker;
-      const qty   = Math.abs(parseFloat(tx.quantity) || 0);
-      const price = parseFloat(tx.amount_per_unit) || 0;
-      const fees  = parseFloat(tx.trading_fees) || 0;
-      const type  = (tx.transaction_type || '').toLowerCase();
+      const t      = tx.ticker;
+      const qty    = Math.abs(parseFloat(tx.quantity) || 0);
+      const price  = parseFloat(tx.amount_per_unit) || 0;
+      const fees   = parseFloat(tx.trading_fees) || 0;
+      const type   = (tx.transaction_type || '').toLowerCase();
+      // fx_rate: local currency units per 1 USD (e.g. 1.37 = CAD). Divide to normalize to USD.
+      const fxRate  = Math.max(parseFloat(tx.fx_rate) || 1, 0.0001);
+      const priceUSD = price / fxRate;
+      const feesUSD  = fees  / fxRate;
       if (!map[t]) map[t] = { ticker: t, qty: 0, totalCost: 0, isCrypto: CRYPTO_TICKERS.has(t), account: tx.investment_account };
       if (type === 'buy') {
-        map[t].totalCost += price * qty + fees;
+        map[t].totalCost += priceUSD * qty + feesUSD;
         map[t].qty += qty;
       } else if (type === 'sell') {
         if (map[t].qty > 0) {
@@ -2027,7 +2088,7 @@
         const splitRatio = parseFloat(tx.split_ratio) || 1;
         if (map[t].qty > 0 && splitRatio > 0) map[t].qty *= splitRatio;
       }
-      // dividend → no change to holdings
+      // dividend / return of capital → no change to qty or cost basis
     });
     return Object.values(map)
       .filter(h => h.qty > 0.000001)
@@ -2035,27 +2096,160 @@
   }
 
   // ── LIVE PRICES ──────────────────────────────────────────
+  // Primary: Yahoo Finance v8 (batched, 4-proxy waterfall)
+  // Fallback: Google Finance info API + HTML scrape for missed tickers
   async function fetchLivePrices(tickers) {
-    const symbols = tickers.map(yahooSymbol).join(',');
     const statusEl = document.getElementById('prices-status');
-    try {
-      const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(
-        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}&fields=regularMarketPrice,regularMarketChangePercent,shortName`
-      )}`;
-      const resp  = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      const data  = await resp.json();
+    if (statusEl) statusEl.textContent = 'Fetching prices…';
+
+    // CORS proxy wrappers — tried in order until one returns valid data
+    const proxies = [
+      u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+      u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+      u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+      u => `https://thingproxy.freeboard.io/fetch/${u}`,
+    ];
+
+    // ── Yahoo Finance (primary) ───────────────────────────
+    const makeYahooUrl = (syms) =>
+      `https://query1.finance.yahoo.com/v8/finance/quote?symbols=${encodeURIComponent(syms)}&fields=regularMarketPrice,regularMarketChangePercent,shortName,currency`;
+
+    const parseYahooQuotes = (data) => {
       const quotes = data?.quoteResponse?.result || [];
-      const prices = {};
+      const out = {};
       quotes.forEach(q => {
-        const ticker = q.symbol.replace('-USD', '');
-        prices[ticker] = { price: q.regularMarketPrice || 0, changePct: q.regularMarketChangePercent || 0, name: q.shortName || ticker };
+        if (!q.regularMarketPrice) return;
+        const ticker = q.symbol.replace(/-USD$/i, '');
+        out[ticker] = {
+          price:     q.regularMarketPrice,
+          changePct: q.regularMarketChangePercent || 0,
+          name:      q.shortName || ticker,
+          currency:  q.currency || 'USD',
+          source:    'yahoo',
+        };
       });
-      if (statusEl) statusEl.textContent = 'Updated ' + new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
-      return prices;
-    } catch (e) {
-      if (statusEl) statusEl.textContent = '⚠ Price fetch failed';
-      return {};
+      return out;
+    };
+
+    const BATCH = 20;
+    const batches = [];
+    const allSymbols = tickers.map(yahooSymbol);
+    for (let i = 0; i < allSymbols.length; i += BATCH) {
+      batches.push(allSymbols.slice(i, i + BATCH));
     }
+
+    const prices = {};
+    let fetchedAny = false;
+
+    for (const batch of batches) {
+      const yahooUrl = makeYahooUrl(batch.join(','));
+      let batchPrices = null;
+      for (const makeProxy of proxies) {
+        try {
+          const resp = await fetch(makeProxy(yahooUrl), { signal: AbortSignal.timeout(9000) });
+          if (!resp.ok) continue;
+          const text = await resp.text();
+          let data;
+          try { data = JSON.parse(text); } catch { continue; }
+          const parsed = parseYahooQuotes(data);
+          if (Object.keys(parsed).length > 0) { batchPrices = parsed; break; }
+        } catch (e) { /* try next proxy */ }
+      }
+      if (batchPrices) { Object.assign(prices, batchPrices); fetchedAny = true; }
+    }
+
+    // ── Google Finance fallback for any missed tickers ────
+    const missed = tickers.filter(t => !prices[t] && !CRYPTO_TICKERS.has(t));
+    if (missed.length > 0) {
+      if (statusEl) statusEl.textContent = `Yahoo: ${Object.keys(prices).length} prices · checking Google for ${missed.length} more…`;
+
+      // Map ticker → Google Finance symbol (exchange:ticker format)
+      const googleSym = (t) => {
+        if (t.endsWith('.TO'))  return 'TSE:'  + t.slice(0, -3);
+        if (t.endsWith('.V'))   return 'CVE:'  + t.slice(0, -2);
+        if (t.endsWith('.AX'))  return 'ASX:'  + t.slice(0, -3);
+        if (t.endsWith('.L'))   return 'LON:'  + t.slice(0, -2);
+        if (t.endsWith('.HK'))  return 'HKG:'  + t.slice(0, -3);
+        if (t.endsWith('.DE'))  return 'ETR:'  + t.slice(0, -3);
+        return t; // US stocks — Google resolves without exchange prefix
+      };
+
+      for (const ticker of missed) {
+        const sym = googleSym(ticker);
+        let got = false;
+
+        // Attempt 1: old Google Finance info API (returns "// [{...}]")
+        const infoUrl = `https://finance.google.com/finance/info?client=ig&q=${encodeURIComponent(sym)}`;
+        for (const makeProxy of proxies) {
+          try {
+            const resp = await fetch(makeProxy(infoUrl), { signal: AbortSignal.timeout(8000) });
+            if (!resp.ok) continue;
+            const text = await resp.text();
+            // Strip leading "// " comment before JSON
+            const jsonStr = text.replace(/^[^[{]*/, '').trim();
+            let data;
+            try { data = JSON.parse(jsonStr); } catch { continue; }
+            const item = Array.isArray(data) ? data[0] : data;
+            if (!item) continue;
+            const price = parseFloat((item.l || '').toString().replace(/,/g, ''));
+            if (price > 0) {
+              prices[ticker] = {
+                price,
+                changePct: parseFloat(item.cp || 0),
+                name:      item.t || ticker,
+                currency:  'USD',
+                source:    'google',
+              };
+              fetchedAny = true;
+              got = true;
+              break;
+            }
+          } catch (e) { /* try next proxy */ }
+        }
+
+        // Attempt 2: scrape Google Finance quote page HTML
+        if (!got) {
+          const pageUrl = `https://www.google.com/finance/quote/${encodeURIComponent(sym)}`;
+          for (const makeProxy of proxies) {
+            try {
+              const resp = await fetch(makeProxy(pageUrl), { signal: AbortSignal.timeout(10000) });
+              if (!resp.ok) continue;
+              const html = await resp.text();
+              // Try several patterns Google Finance uses for the price value
+              const m = html.match(/data-last-price="([0-9.]+)"/i)
+                     || html.match(/class="[^"]*YMlKec fxKbKc[^"]*"[^>]*>\$?([0-9,]+\.?[0-9]*)</i)
+                     || html.match(/class="[^"]*YMlKec[^"]*"[^>]*>([0-9,]+\.?[0-9]*)</i)
+                     || html.match(/"price"\s*:\s*"([0-9.]+)"/i);
+              if (m) {
+                const price = parseFloat(m[1].replace(/,/g, ''));
+                if (price > 0) {
+                  prices[ticker] = { price, changePct: 0, name: ticker, currency: 'USD', source: 'google-html' };
+                  fetchedAny = true;
+                  got = true;
+                  break;
+                }
+              }
+            } catch (e) { /* try next proxy */ }
+          }
+        }
+      }
+    }
+
+    // ── Status bar update ────────────────────────────────
+    if (fetchedAny) {
+      const total       = Object.keys(prices).length;
+      const stillMissed = tickers.filter(t => !prices[t]);
+      const missedStr   = stillMissed.length ? ` · ${stillMissed.length} no feed` : '';
+      const yahooCount  = Object.values(prices).filter(p => p.source === 'yahoo').length;
+      const gCount      = Object.values(prices).filter(p => p.source?.startsWith('google')).length;
+      const srcStr      = gCount > 0 ? ` (${yahooCount} Yahoo · ${gCount} Google)` : '';
+      if (statusEl) statusEl.textContent =
+        `${total} prices${srcStr} · ${new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' })}${missedStr}`;
+    } else {
+      if (statusEl) statusEl.textContent = '⚠ Live prices unavailable — showing cost basis values';
+    }
+
+    return prices;
   }
 
   // ── BUILD CHART DATA ─────────────────────────────────────
@@ -2194,12 +2388,23 @@
     const holdings = txs.length ? calcHoldings(txs) : [];
     const prices   = holdings.length ? await fetchLivePrices(holdings.map(h => h.ticker)) : {};
 
-    let liveTotal = 0, costTotal = 0;
+    let liveTotal = 0, costTotal = 0, partialPrices = false;
     holdings.forEach(h => {
-      const lp = prices[h.ticker]?.price || h.avgCost;
-      liveTotal += lp * h.qty;
       costTotal += h.totalCost;
+      if (prices[h.ticker]?.price) {
+        liveTotal += prices[h.ticker].price * h.qty;
+      } else {
+        // Fall back to cost basis for this position but flag it
+        liveTotal += h.totalCost;
+        partialPrices = true;
+      }
     });
+    if (partialPrices) {
+      const st = document.getElementById('prices-status');
+      if (st && !st.textContent.includes('⚠')) {
+        st.textContent += ' · some positions using cost basis';
+      }
+    }
 
     finData = { txs, watchlist, holdings, prices, liveTotal, costTotal };
     renderFinance();
@@ -2257,12 +2462,13 @@
         if (el) el.textContent = holdingsSortKey === k ? (holdingsSortDir === -1 ? ' ▼' : ' ▲') : '';
       });
       tbody.innerHTML = sorted.map(h => {
-        const livePrice = prices[h.ticker]?.price || h.avgCost;
+        const hasLive   = !!prices[h.ticker]?.price;
+        const livePrice = hasLive ? prices[h.ticker].price : null;
         const changePct = prices[h.ticker]?.changePct || 0;
-        const liveVal   = livePrice * h.qty;
-        const gainVal   = liveVal - h.totalCost;
-        const gainPct   = h.totalCost > 0 ? (gainVal / h.totalCost * 100) : 0;
-        const gc  = gainPct   >= 0 ? 'var(--green)' : 'var(--red)';
+        const liveVal   = hasLive ? livePrice * h.qty : null;
+        const gainVal   = hasLive ? liveVal - h.totalCost : null;
+        const gainPct   = (hasLive && h.totalCost > 0) ? (gainVal / h.totalCost * 100) : null;
+        const gc  = gainPct != null ? (gainPct >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
         const dc  = changePct >= 0 ? 'var(--green)' : 'var(--red)';
         const qtyFmt = h.qty < 1 ? h.qty.toFixed(6) : h.qty % 1 === 0 ? h.qty.toFixed(0) : h.qty.toFixed(4);
         return `<tr>
@@ -2273,13 +2479,21 @@
           <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${qtyFmt}</td>
           <td>${fmtMoney(h.avgCost)}</td>
           <td>
-            <div style="font-weight:500">${prices[h.ticker] ? fmtMoney(livePrice) : '—'}</div>
-            ${prices[h.ticker] ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:${dc}">${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today</div>` : ''}
+            ${hasLive
+              ? `<div style="font-weight:500">${fmtMoney(livePrice)}</div>
+                 <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:${dc}">${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today</div>`
+              : `<div style="color:var(--muted);font-size:10px">no feed</div>`}
           </td>
-          <td style="font-weight:500">${fmtMoney(liveVal)}</td>
+          <td style="font-weight:500">
+            ${hasLive
+              ? fmtMoney(liveVal)
+              : `<span style="color:var(--muted);font-size:10px">—</span>`}
+          </td>
           <td style="text-align:right;color:${gc}">
-            ${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(1)}%
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px">${gainVal >= 0 ? '+' : ''}${fmtMoney(Math.abs(gainVal))}</div>
+            ${gainPct != null
+              ? `${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(1)}%
+                 <div style="font-family:'JetBrains Mono',monospace;font-size:9px">${gainVal >= 0 ? '+' : ''}${fmtMoney(Math.abs(gainVal))}</div>`
+              : `<span style="color:var(--muted);font-size:10px">—</span>`}
           </td>
         </tr>`;
       }).join('');
@@ -2342,6 +2556,15 @@
 
   // ── TASK CATEGORIES ─────────────────────────────────────
   let taskCategories = ['Personal', 'Work', 'Benzo'];  // cache; starts with defaults
+  let categoryColors = JSON.parse(localStorage.getItem('omar_cat_colors') || '{}');
+  function saveCategoryColors() { localStorage.setItem('omar_cat_colors', JSON.stringify(categoryColors)); }
+  function getCatColor(name) { return categoryColors[name] || 'var(--muted)'; }
+  window.setCategoryColor = (name, color) => {
+    categoryColors[name] = color;
+    saveCategoryColors();
+    renderTasks();
+    renderCategoryFilters();
+  };
 
   async function loadTaskCategories() {
     try {
@@ -2357,7 +2580,7 @@
     if (!wrap) return;
     const btns = [{ label: 'ALL', filter: 'all' }, ...taskCategories.map(c => ({ label: c.toUpperCase(), filter: c }))];
     wrap.innerHTML = btns.map(b =>
-      `<button class="filter-btn${activeFilter === b.filter ? ' active' : ''}" data-filter="${b.filter}" onclick="setCatFilter('${b.filter}')">${b.label}</button>`
+      `<button class="filter-btn${activeFilter === b.filter ? ' active' : ''}" data-filter="${b.filter}" onclick="setCatFilter('${b.filter}')" style="${b.filter !== 'all' ? `border-left:3px solid ${getCatColor(b.filter)}` : ''}">${b.label}</button>`
     ).join('');
   }
 
@@ -2434,6 +2657,11 @@
       <div class="manage-cat-row" id="manage-cat-row-${idx}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:5px">
         <div class="manage-cat-view" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
           <span style="font-size:12px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cat}</span>
+          <input type="color" value="${categoryColors[cat] && categoryColors[cat].startsWith('#') ? categoryColors[cat] : '#888888'}"
+            onchange="setCategoryColor('${cat}', this.value)"
+            onclick="event.stopPropagation()"
+            style="width:22px;height:22px;border:none;background:none;cursor:pointer;padding:0;border-radius:3px;flex-shrink:0;vertical-align:middle"
+            title="Pick color for ${cat}">
           <button onclick="startEditCategory(${idx})" title="Rename" style="border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 5px;border-radius:3px;transition:color .15s" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">✎</button>
           <button onclick="deleteCategory('${cat}')" title="Delete" style="border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 5px;border-radius:3px;transition:color .15s" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">✕</button>
         </div>
@@ -2529,10 +2757,9 @@
         <div class="task-check ${t.completed ? 'checked' : ''}" onclick="toggleTask('${t.id}', ${t.completed})"></div>
         <div class="task-text" style="${t.completed ? 'text-decoration:line-through' : ''}">${t.task_text}</div>
         <div class="task-meta">
-          <span class="badge" style="background:var(--bg4);border:1px solid var(--border2);color:var(--muted)">${t.category}</span>
+          <span class="badge" style="background:var(--bg4);border:1px solid ${getCatColor(t.category)};color:${getCatColor(t.category)}">${t.category || '—'}</span>
           <span class="badge badge-${t.priority}">${t.priority}</span>
-          ${t.due_date ? `<span class="task-due">${t.due_date}</span>` : ''}
-          <span class="badge" style="background:var(--bg4);color:var(--muted);border:1px solid var(--border2)">${t.source}</span>
+          <span class="task-due" style="font-size:9px;text-align:center">${t.due_date || ''}</span>
         </div>
       </div>`).join('');
   }
@@ -2541,6 +2768,38 @@
     await sbPatch('tasks', id, { completed: !completed });
     const t = allTasks.find(t => t.id === id);
     if (t) t.completed = !completed;
+    renderTasks();
+  };
+
+  window.openInlineAddTask = () => {
+    const list = document.getElementById('tasks-list');
+    if (!list || list.querySelector('.task-inline-add')) return;
+    list.insertAdjacentHTML('afterbegin', `
+      <div class="task-inline-add" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border:1px dashed var(--gold-dim);border-radius:4px;margin-bottom:6px">
+        <div class="task-check"></div>
+        <input id="inline-task-inp" class="form-input" placeholder="Task description…"
+          style="flex:1;margin:0;height:28px;font-size:12px"
+          onclick="event.stopPropagation()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();window.confirmInlineTask();}if(event.key==='Escape')renderTasks();">
+        <select id="inline-task-pri" class="form-input" style="width:90px;height:28px;padding:0 6px;font-size:11px;margin:0">
+          <option value="high">High</option>
+          <option value="medium" selected>Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <button class="btn-save" onclick="window.confirmInlineTask()" style="height:28px;padding:0 10px">Add</button>
+        <button class="btn-cancel" onclick="renderTasks()" style="height:28px;padding:0 8px">✕</button>
+      </div>`);
+    document.getElementById('inline-task-inp')?.focus();
+  };
+
+  window.confirmInlineTask = async () => {
+    const inp = document.getElementById('inline-task-inp');
+    const text = (inp?.value || '').trim();
+    if (!text) { renderTasks(); return; }
+    const pri = document.getElementById('inline-task-pri')?.value || 'medium';
+    const cat = taskCategories[0] || 'Personal';
+    const newTask = await sbPost('tasks', { task_text: text, category: cat, priority: pri, due_date: null, source: 'manual' });
+    if (newTask?.[0]) allTasks.unshift(newTask[0]);
     renderTasks();
   };
 
@@ -3016,6 +3275,39 @@ Return raw JSON only.`,
     renderHabits();
   };
 
+  window.openInlineAddHabit = () => {
+    const grid = document.getElementById('habits-grid');
+    if (!grid || grid.querySelector('.habit-inline-add')) return;
+    grid.insertAdjacentHTML('afterbegin',
+      `<div class="habit-inline-add" style="grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg2);border:1px dashed var(--gold-dim);border-radius:6px;margin-bottom:4px">
+        <input id="inline-habit-inp" class="form-input" placeholder="Habit name…"
+          style="flex:1;margin:0;height:28px;font-size:12px"
+          onclick="event.stopPropagation()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();window.confirmInlineHabit();}if(event.key==='Escape')renderHabits();">
+        <button class="btn-save" onclick="window.confirmInlineHabit()" style="height:28px;padding:0 10px;flex-shrink:0">Add</button>
+        <button class="btn-cancel" onclick="renderHabits()" style="height:28px;padding:0 8px;flex-shrink:0">✕</button>
+      </div>`
+    );
+    document.getElementById('inline-habit-inp')?.focus();
+  };
+
+  window.confirmInlineHabit = async () => {
+    const inp = document.getElementById('inline-habit-inp');
+    const title = (inp?.value || '').trim();
+    if (!title) { renderHabits(); return; }
+    const newId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const newHabit = { id: newId, title, sub: '', sub_habits: [], sort_order: habitsData.length };
+    habitsData.push(newHabit);
+    renderHabits();
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/habits`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ id: newId, title, sub: '', sub_habits: [], sort_order: newHabit.sort_order }),
+      });
+    } catch(e) { console.warn('confirmInlineHabit error', e); }
+  };
+
   window.openAddHabit  = () => document.getElementById('habit-modal').classList.add('open');
   window.closeAddHabit = () => document.getElementById('habit-modal').classList.remove('open');
   window.saveHabit = async () => {
@@ -3257,6 +3549,174 @@ Return raw JSON only.`,
     renderHabits();
   };
 
+  // ── HABIT TITLE INLINE EDIT ──────────────────────────────
+  window.startEditHabitTitle = (e, id) => {
+    e.stopPropagation();
+    const h = habitsData.find(x => x.id === id);
+    if (!h) return;
+    const el = e.currentTarget;
+    const hasSubs = (h.sub_habits || h.subHabits || []).length > 0;
+    const expanded = hasSubs && expandedHabitId === id;
+    el.innerHTML = `<input class="habit-title-edit-inp" id="hte-${id}"
+      value="${h.title.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}"
+      onclick="event.stopPropagation()"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();window.saveHabitTitle('${id}',this.value);}if(event.key==='Escape')renderHabits();">`;
+    const inp = document.getElementById('hte-' + id);
+    if (inp) {
+      inp.focus(); inp.select();
+      inp.addEventListener('blur', () => window.saveHabitTitle(id, inp.value));
+    }
+  };
+
+  window.saveHabitTitle = async (id, value) => {
+    const title = (value || '').trim();
+    const h = habitsData.find(x => x.id === id);
+    if (!h) return;
+    if (!title || title === h.title) { renderHabits(); return; }
+    h.title = title;
+    renderHabits();
+    fetch(`${SUPABASE_URL}/rest/v1/habits?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ title }),
+    }).catch(e => console.warn('saveHabitTitle error', e));
+  };
+
+  window.startEditHabitSub = (e, id) => {
+    e.stopPropagation();
+    const h = habitsData.find(x => x.id === id);
+    if (!h) return;
+    const el = e.currentTarget;
+    el.innerHTML = `<input class="habit-title-edit-inp" id="hse-${id}"
+      value="${(h.sub || '').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}"
+      style="font-size:9px;font-weight:400"
+      placeholder="Subtitle…"
+      onclick="event.stopPropagation()"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();window.saveHabitSub('${id}',this.value);}if(event.key==='Escape')renderHabits();">`;
+    const inp = document.getElementById('hse-' + id);
+    if (inp) { inp.focus(); inp.select(); inp.addEventListener('blur', () => window.saveHabitSub(id, inp.value)); }
+  };
+
+  window.saveHabitSub = async (id, value) => {
+    const sub = (value || '').trim();
+    const h = habitsData.find(x => x.id === id);
+    if (!h || sub === (h.sub || '')) { renderHabits(); return; }
+    h.sub = sub;
+    renderHabits();
+    fetch(`${SUPABASE_URL}/rest/v1/habits?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ sub }),
+    }).catch(e => console.warn('saveHabitSub error', e));
+  };
+
+  // ── SUB-HABIT TITLE INLINE EDIT ──────────────────────────
+  window.startEditSubHabit = (e, habitId, subId) => {
+    e.stopPropagation();
+    const h = habitsData.find(x => x.id === habitId);
+    const subs = h ? (h.sub_habits || h.subHabits || []) : [];
+    const sh = subs.find(s => s.id === subId);
+    if (!sh) return;
+    const el = e.currentTarget;
+    el.innerHTML = `<input class="sub-title-edit-inp" id="shte-${subId}"
+      value="${sh.title.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}"
+      onclick="event.stopPropagation()"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();window.saveSubHabitTitle('${habitId}','${subId}',this.value);}if(event.key==='Escape')renderHabits();">`;
+    const inp = document.getElementById('shte-' + subId);
+    if (inp) {
+      inp.focus(); inp.select();
+      inp.addEventListener('blur', () => window.saveSubHabitTitle(habitId, subId, inp.value));
+    }
+  };
+
+  window.saveSubHabitTitle = async (habitId, subId, value) => {
+    const title = (value || '').trim();
+    const h = habitsData.find(x => x.id === habitId);
+    if (!h) return;
+    const subs = h.sub_habits || h.subHabits || [];
+    const sh = subs.find(s => s.id === subId);
+    if (!sh || !title || title === sh.title) { renderHabits(); return; }
+    sh.title = title;
+    h.sub_habits = subs;
+    renderHabits();
+    fetch(`${SUPABASE_URL}/rest/v1/habits?id=eq.${habitId}`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ sub_habits: subs }),
+    }).catch(e => console.warn('saveSubHabitTitle error', e));
+  };
+
+  // ── DELETE SUB-HABIT ─────────────────────────────────────
+  window.deleteSubHabit = async (e, habitId, subId) => {
+    e.stopPropagation();
+    const h = habitsData.find(x => x.id === habitId);
+    if (!h) return;
+    const subs = (h.sub_habits || h.subHabits || []).filter(s => s.id !== subId);
+    h.sub_habits = subs;
+    if (subs.length === 0) expandedHabitId = null;
+    renderHabits();
+    fetch(`${SUPABASE_URL}/rest/v1/habits?id=eq.${habitId}`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ sub_habits: subs }),
+    }).catch(e => console.warn('deleteSubHabit error', e));
+  };
+
+  // ── ADD SUB-HABIT (inline input row) ─────────────────────
+  window.addSubHabit = (e, habitId) => {
+    if (e) e.stopPropagation();
+    // If not expanded yet, expand first then trigger add UI
+    if (expandedHabitId !== habitId) {
+      expandedHabitId = habitId;
+      renderHabits();
+      setTimeout(() => _doAddSubHabitUI(habitId), 80);
+      return;
+    }
+    _doAddSubHabitUI(habitId);
+  };
+
+  function _doAddSubHabitUI(habitId) {
+    const container = document.getElementById('sub-items-' + habitId);
+    if (!container || container.querySelector('.sub-new-item')) return;
+    const tmpId = 'sub-new-inp-' + habitId;
+    container.insertAdjacentHTML('beforeend',
+      `<div class="sub-new-item">
+        <span style="font-size:11px;color:var(--gold);font-family:'JetBrains Mono',monospace">+</span>
+        <input class="sub-new-inp" id="${tmpId}" placeholder="Sub-task name…"
+          onclick="event.stopPropagation()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();window.confirmAddSubHabit('${habitId}',this.value);}if(event.key==='Escape')renderHabits();">
+      </div>`
+    );
+    const inp = document.getElementById(tmpId);
+    if (inp) {
+      inp.focus();
+      // Use a flag so Enter keydown and the resulting blur don't both fire confirmAddSubHabit
+      let submitted = false;
+      inp.addEventListener('keydown', () => { submitted = true; });
+      inp.addEventListener('blur', () => {
+        if (!submitted) window.confirmAddSubHabit(habitId, inp.value);
+        submitted = false;
+      });
+    }
+  }
+
+  window.confirmAddSubHabit = async (habitId, value) => {
+    const title = (value || '').trim();
+    const h = habitsData.find(x => x.id === habitId);
+    if (!h) return;
+    if (!title) { renderHabits(); return; }
+    const subs = [...(h.sub_habits || h.subHabits || [])];
+    const newSub = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title };
+    subs.push(newSub);
+    h.sub_habits = subs;
+    renderHabits();
+    fetch(`${SUPABASE_URL}/rest/v1/habits?id=eq.${habitId}`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ sub_habits: subs }),
+    }).catch(e => console.warn('addSubHabit error', e));
+  };
+
   // Patch renderHabits — row-based grid with full-width sub-tasks panel below expanded row
   const _origRenderHabits = renderHabits;
   renderHabits = function() {
@@ -3311,11 +3771,18 @@ Return raw JSON only.`,
             ondragleave="habitDragLeave(event)"
             ondrop="habitDrop(event,'${h.id}')"
             ${clickHandler}>
+            <button class="habit-del" onclick="event.stopPropagation();addSubHabit(event,'${h.id}')" title="Add sub-task"
+              style="position:absolute;top:4px;right:22px;width:16px;height:16px;border:none;background:var(--bg4);color:var(--gold);border-radius:2px;cursor:pointer;font-size:14px;line-height:1;display:none;align-items:center;justify-content:center;padding:0">+</button>
             <button class="habit-del" onclick="event.stopPropagation();deleteHabit('${h.id}')" title="Remove habit"
               style="position:absolute;top:4px;right:4px;width:16px;height:16px;border:none;background:var(--bg4);color:var(--red);border-radius:2px;cursor:pointer;font-size:10px;display:none;align-items:center;justify-content:center;line-height:1">✕</button>
-            <div class="habit-title" title="${h.title}">${h.title}${hasSubs ? ` <span style="font-size:9px;color:var(--muted)">${expanded ? '▲' : '▼'}</span>` : ''}</div>
-            ${h.sub ? `<div class="habit-sub" title="${h.sub}">${h.sub}</div>` : (hasSubs ? '' : '<div style="height:5px"></div>')}
-            ${hasSubs ? progressHtml : `<div class="habit-streak">🔥 ${streak}d</div>`}
+            <div class="habit-title" title="Click to edit name"
+              onclick="startEditHabitTitle(event,'${h.id}')"
+              style="cursor:text"
+            >${h.title}${hasSubs ? ` <span style="font-size:9px;color:var(--muted)">${expanded ? '▲' : '▼'}</span>` : ''}</div>
+            <div class="habit-sub" onclick="startEditHabitSub(event,'${h.id}')" style="cursor:text;min-height:13px" title="Click to edit subtitle">${h.sub ? h.sub : '<span style="color:var(--muted2);font-style:italic;font-size:8px">add subtitle…</span>'}</div>
+            ${hasSubs
+              ? `<div onclick="toggleHabitExpand(event,'${h.id}')" style="cursor:pointer" title="${expanded ? 'Click to collapse' : 'Click to expand'}">${progressHtml}</div>`
+              : `<div class="habit-streak">🔥 ${streak}d</div>`}
           </div>`;
         };
 
@@ -3330,16 +3797,19 @@ Return raw JSON only.`,
             const subs = expandedHabit.sub_habits || expandedHabit.subHabits || [];
             const subItems = subs.map((sh, idx) => {
               const shDone = checkins[tk] && checkins[tk].includes(expandedHabit.id + ':' + sh.id);
-              return `<div class="habit-sub-item ${shDone ? 'done' : ''}"
-                onclick="toggleSubHabit(event,'${expandedHabit.id}','${sh.id}')">
-                <span class="habit-sub-item-num">${String(idx + 1).padStart(2, '0')}</span>
-                <div class="habit-sub-item-chk ${shDone ? 'done' : ''}">${shDone ? '✓' : ''}</div>
-                <span class="habit-sub-item-title">${sh.title}</span>
+              return `<div class="habit-sub-item ${shDone ? 'done' : ''}">
+                <button class="sub-del-btn" onclick="deleteSubHabit(event,'${expandedHabit.id}','${sh.id}')" title="Remove sub-task">✕</button>
+                <span class="habit-sub-item-num" onclick="toggleSubHabit(event,'${expandedHabit.id}','${sh.id}')">${String(idx + 1).padStart(2, '0')}</span>
+                <div class="habit-sub-item-chk ${shDone ? 'done' : ''}" onclick="toggleSubHabit(event,'${expandedHabit.id}','${sh.id}')">${shDone ? '✓' : ''}</div>
+                <span class="habit-sub-item-title" onclick="startEditSubHabit(event,'${expandedHabit.id}','${sh.id}')" style="cursor:text" title="Click to rename">${sh.title}</span>
               </div>`;
             }).join('');
             pieces.push(`<div class="habit-subtasks-panel">
-              <div class="habit-subtasks-header">SUB-TASKS · ALL REQUIRED TO COMPLETE</div>
-              <div class="habit-subtasks-items">${subItems}</div>
+              <div class="habit-subtasks-header" style="display:flex;align-items:center;justify-content:space-between">
+                <span>SUB-TASKS · ALL REQUIRED TO COMPLETE</span>
+                <button class="sub-add-btn" onclick="addSubHabit(event,'${expandedHabit.id}')" title="Add sub-task">+</button>
+              </div>
+              <div class="habit-subtasks-items" id="sub-items-${expandedHabit.id}">${subItems}</div>
             </div>`);
           }
         }
@@ -3347,8 +3817,8 @@ Return raw JSON only.`,
         grid.innerHTML = pieces.join('');
         // Show delete button on hover via JS
         grid.querySelectorAll('.habit-item').forEach(el => {
-          el.addEventListener('mouseenter', () => { const b = el.querySelector('.habit-del'); if (b) b.style.display = 'flex'; });
-          el.addEventListener('mouseleave', () => { const b = el.querySelector('.habit-del'); if (b) b.style.display = 'none'; });
+          el.addEventListener('mouseenter', () => { el.querySelectorAll('.habit-del').forEach(b => b.style.display = 'flex'); });
+          el.addEventListener('mouseleave', () => { el.querySelectorAll('.habit-del').forEach(b => b.style.display = 'none'); });
         });
       }
     }
