@@ -1081,8 +1081,27 @@
         <button class="fin-icon-btn" onclick="openAddTrade()">+ LOG TRADE</button>
         <button class="fin-icon-btn active" id="fin-priv-btn" onclick="togglePrivacy()" title="Hide amounts">◉ HIDE</button>
         <button class="fin-icon-btn" onclick="refreshFinance()">↺ REFRESH</button>
+        <button class="fin-icon-btn" onclick="togglePriceSettings()" title="Price source settings" id="price-settings-btn">⚙</button>
         <span id="prices-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.06em">—</span>
       </div>
+    </div>
+
+    <!-- Price source settings panel -->
+    <div id="price-settings-panel" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;margin-bottom:8px">PRICE SOURCE · APPS SCRIPT PROXY</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+        Paste the URL of your deployed <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-size:11px">omar_os_prices.gs</code> web app.<br>
+        When set, live prices are fetched server-side via Yahoo Finance (no CORS issues).
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="price-url-input" type="url" placeholder="https://script.google.com/macros/s/…/exec"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text);font-family:'JetBrains Mono',monospace;outline:none"
+          oninput="this.style.borderColor='var(--border)'"
+          value="">
+        <button class="fin-icon-btn active" onclick="savePriceUrl()" style="white-space:nowrap">SAVE &amp; REFRESH</button>
+        <button class="fin-icon-btn" onclick="clearPriceUrl()" style="white-space:nowrap">CLEAR</button>
+      </div>
+      <div id="price-url-status" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px"></div>
     </div>
 
     <div class="section-label">PORTFOLIO OVERVIEW · LIVE</div>
@@ -1704,6 +1723,7 @@
   let holdingsSortKey = 'value';   // ticker | shares | value | gain
   let holdingsSortDir = -1;        // -1 = desc, 1 = asc
   let portfolioChart  = null;
+  let pricesWebAppUrl = localStorage.getItem('omar_prices_url') || '';
   let homeSparkChart  = null;
   // ── Habit in-memory cache (loaded from Supabase) ──────────
   let habitsData      = [];   // array of habit rows
@@ -2096,12 +2116,47 @@
   }
 
   // ── LIVE PRICES ──────────────────────────────────────────
-  // Three independent sources tried in parallel per ticker.
-  // raceFetch() fires all CORS proxies simultaneously and takes first winner.
+  // Primary: Apps Script web app (server-side Yahoo Finance, no CORS).
+  // Fallback: CORS proxy waterfall → Stooq CSV → Yahoo chart endpoint.
   async function fetchLivePrices(tickers) {
     const statusEl = document.getElementById('prices-status');
     if (statusEl) statusEl.textContent = 'Fetching live prices…';
 
+    const prices = {};
+
+    // ── Source 0: Apps Script proxy (set via ⚙ button) ───
+    if (pricesWebAppUrl) {
+      try {
+        // The Apps Script web app accepts ?symbols=AAPL,BTC-USD,RY.TO
+        // and returns { AAPL: { price, changePct, name, currency }, … }
+        const toYahooSym = t => CRYPTO_TICKERS.has(t) ? t + '-USD' : t;
+        const syms = tickers.map(toYahooSym).join(',');
+        const url  = `${pricesWebAppUrl}?symbols=${encodeURIComponent(syms)}`;
+        const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
+        if (resp.ok) {
+          const data = await resp.json();
+          Object.entries(data).forEach(([ticker, entry]) => {
+            if (entry && entry.price > 0) {
+              // ticker already has -USD stripped by cleanSym in Apps Script
+              prices[ticker] = { ...entry, source: 'apps-script' };
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('[Omar OS] Apps Script proxy failed:', err.message);
+      }
+
+      // If Apps Script returned prices for all tickers, skip CORS fallbacks
+      const stillMissing = tickers.filter(t => !prices[t]);
+      if (stillMissing.length === 0) {
+        const count   = Object.keys(prices).length;
+        const timeStr = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
+        if (statusEl) statusEl.textContent = `${count} prices via apps-script · ${timeStr}`;
+        return prices;
+      }
+    }
+
+    // ── CORS proxy waterfall (fallback when no Apps Script URL set) ──
     const PROXIES = [
       u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
       u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -2109,7 +2164,7 @@
       u => `https://thingproxy.freeboard.io/fetch/${u}`,
     ];
 
-    // Fire all proxies at once — first valid text response wins
+    // Fire all proxies simultaneously — first valid text response wins
     const raceFetch = (url, ms = 9000) => new Promise(resolve => {
       let done = false;
       let left = PROXIES.length;
@@ -2122,12 +2177,13 @@
       });
     });
 
-    const prices = {};
+    // Only fetch tickers not already covered by Apps Script
+    const remaining = tickers.filter(t => !prices[t]);
 
     // ── Source A: Yahoo Finance v8 batch (20 at a time) ──
     const toYahooSym = t => CRYPTO_TICKERS.has(t) ? t + '-USD' : t;
     const yBatches = [];
-    for (let i = 0; i < tickers.length; i += 20) yBatches.push(tickers.slice(i, i + 20));
+    for (let i = 0; i < remaining.length; i += 20) yBatches.push(remaining.slice(i, i + 20));
 
     await Promise.all(yBatches.map(async batch => {
       const syms = batch.map(toYahooSym).join(',');
@@ -2143,8 +2199,6 @@
     }));
 
     // ── Source B: Stooq CSV — parallel per ticker ─────────
-    // Stooq is a different server from Yahoo, so if Yahoo is blocked it often isn't.
-    // Symbols: US = lowercase ticker, Canada .TO → .ca, crypto → .v suffix
     const toStooq = t => {
       if (CRYPTO_TICKERS.has(t)) return t.toLowerCase() + '.v';
       if (t.endsWith('.TO'))     return t.slice(0, -3).toLowerCase() + '.ca';
@@ -2160,7 +2214,6 @@
         const url  = `https://stooq.com/q/l/?s=${toStooq(t)}&f=sd2t2ohlcv&h&e=csv`;
         const text = await raceFetch(url, 8000);
         if (!text) return;
-        // Response: header row + data row, comma separated
         const rows = text.trim().split('\n');
         if (rows.length < 2) return;
         const cols  = rows[1].split(',');
@@ -2172,7 +2225,6 @@
     }
 
     // ── Source C: Yahoo per-ticker chart endpoint ─────────
-    // Different endpoint from Source A — sometimes works when batch is blocked
     const missedB = tickers.filter(t => !prices[t] && !CRYPTO_TICKERS.has(t));
     if (missedB.length > 0) {
       await Promise.all(missedB.map(async t => {
@@ -2194,9 +2246,63 @@
       if (statusEl) statusEl.textContent =
         `${count} prices via ${sources} · ${timeStr}${noFeed ? ` · ${noFeed} no feed` : ''}`;
     } else {
-      if (statusEl) statusEl.textContent = '⚠ Live prices unavailable — showing cost basis';
+      if (statusEl) statusEl.textContent = '⚠ Live prices unavailable — set a price source via ⚙';
     }
     return prices;
+  }
+
+  // ── PRICE SETTINGS UI ────────────────────────────────────
+  function togglePriceSettings() {
+    const panel = document.getElementById('price-settings-panel');
+    const btn   = document.getElementById('price-settings-btn');
+    const input = document.getElementById('price-url-input');
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'block';
+    btn.classList.toggle('active', !isOpen);
+    if (!isOpen) {
+      input.value = pricesWebAppUrl;
+      const st = document.getElementById('price-url-status');
+      st.textContent = pricesWebAppUrl ? '✅ Apps Script proxy is active' : 'No proxy configured — using CORS fallbacks';
+      st.style.color  = pricesWebAppUrl ? '#22c55e' : 'var(--muted)';
+    }
+  }
+
+  function savePriceUrl() {
+    const input = document.getElementById('price-url-input');
+    const url   = (input.value || '').trim();
+    const st    = document.getElementById('price-url-status');
+
+    if (url && !url.startsWith('https://script.google.com/')) {
+      input.style.borderColor = '#ef4444';
+      st.textContent = '⚠ URL should start with https://script.google.com/…';
+      st.style.color  = '#ef4444';
+      return;
+    }
+
+    pricesWebAppUrl = url;
+    if (url) localStorage.setItem('omar_prices_url', url);
+    else     localStorage.removeItem('omar_prices_url');
+
+    st.textContent = url ? '✅ Saved! Refreshing prices…' : 'Cleared. Using CORS fallbacks.';
+    st.style.color  = url ? '#22c55e' : 'var(--muted)';
+    input.style.borderColor = 'var(--border)';
+
+    if (url) {
+      setTimeout(() => {
+        document.getElementById('price-settings-panel').style.display = 'none';
+        document.getElementById('price-settings-btn').classList.remove('active');
+        refreshFinance();
+      }, 800);
+    }
+  }
+
+  function clearPriceUrl() {
+    document.getElementById('price-url-input').value = '';
+    pricesWebAppUrl = '';
+    localStorage.removeItem('omar_prices_url');
+    const st = document.getElementById('price-url-status');
+    st.textContent = 'Cleared. Prices will use CORS fallbacks.';
+    st.style.color  = 'var(--muted)';
   }
 
   // ── BUILD CHART DATA ─────────────────────────────────────
