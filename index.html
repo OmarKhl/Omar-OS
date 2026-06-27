@@ -1086,26 +1086,6 @@
       </div>
     </div>
 
-    <!-- Price source settings panel -->
-    <div id="price-settings-panel" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;margin-bottom:8px">PRICE SOURCE · APPS SCRIPT PROXY</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">
-        Paste the URL of your deployed <code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-size:11px">omar_os_prices.gs</code> web app.<br>
-        When set, live prices are fetched server-side via Yahoo Finance (no CORS issues).
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input id="price-url-input" type="url" placeholder="https://script.google.com/macros/s/…/exec"
-          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text);font-family:'JetBrains Mono',monospace;outline:none"
-          oninput="this.style.borderColor='var(--border)'"
-          value="">
-        <button class="fin-icon-btn active" onclick="savePriceUrl()" style="white-space:nowrap">SAVE &amp; REFRESH</button>
-        <button class="fin-icon-btn" onclick="testPriceUrl()" style="white-space:nowrap">TEST</button>
-        <button class="fin-icon-btn" onclick="clearPriceUrl()" style="white-space:nowrap">CLEAR</button>
-      </div>
-      <div id="price-url-status" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px"></div>
-      <div id="price-url-raw" style="display:none;margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto"></div>
-    </div>
-
     <div class="section-label">PORTFOLIO OVERVIEW · LIVE</div>
     <div class="big-value" id="fin-total">—</div>
     <div id="fin-delta" style="margin-top:4px;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
@@ -1291,6 +1271,30 @@
 </div>
 
 </div><!-- /app -->
+
+<!-- PRICE SETTINGS MODAL -->
+<div class="modal-overlay" id="price-settings-modal" onclick="if(event.target===this)closePriceSettings()">
+  <div class="modal" style="width:500px">
+    <h3 style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em">⚙ PRICE SOURCE · APPS SCRIPT PROXY</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+      Paste the URL of your deployed <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:11px">omar_os_prices.gs</code> web app.
+      Once set, live prices are fetched server-side through Yahoo Finance — no CORS issues.
+    </p>
+    <div class="form-group">
+      <label class="form-label">Apps Script Web App URL</label>
+      <input class="form-input" id="price-url-input" type="url"
+        placeholder="https://script.google.com/macros/s/…/exec"
+        oninput="this.style.borderColor=''" />
+    </div>
+    <div id="price-url-status" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;min-height:14px"></div>
+    <div id="price-url-raw" style="display:none;margin-bottom:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="clearPriceUrl()">CLEAR</button>
+      <button class="btn-cancel" onclick="testPriceUrl()">TEST CONNECTION</button>
+      <button class="btn-save" onclick="savePriceUrl()">SAVE &amp; REFRESH</button>
+    </div>
+  </div>
+</div>
 
 <!-- ADD HABIT MODAL -->
 <div class="modal-overlay" id="habit-modal">
@@ -2265,20 +2269,23 @@
     return prices;
   }
 
-  // ── PRICE SETTINGS UI ────────────────────────────────────
+  // ── PRICE SETTINGS MODAL ─────────────────────────────────
   window.togglePriceSettings = function togglePriceSettings() {
-    const panel = document.getElementById('price-settings-panel');
-    const btn   = document.getElementById('price-settings-btn');
+    const modal = document.getElementById('price-settings-modal');
     const input = document.getElementById('price-url-input');
-    const isOpen = panel.style.display !== 'none';
-    panel.style.display = isOpen ? 'none' : 'block';
-    btn.classList.toggle('active', !isOpen);
-    if (!isOpen) {
-      input.value = pricesWebAppUrl;
-      const st = document.getElementById('price-url-status');
-      st.textContent = pricesWebAppUrl ? '✅ Apps Script proxy is active' : 'No proxy configured — using CORS fallbacks';
-      st.style.color  = pricesWebAppUrl ? '#22c55e' : 'var(--muted)';
-    }
+    const st    = document.getElementById('price-url-status');
+    const raw   = document.getElementById('price-url-raw');
+    input.value    = pricesWebAppUrl;
+    raw.style.display = 'none';
+    st.textContent = pricesWebAppUrl
+      ? '✅ Apps Script proxy is active — you can test it or paste a new URL'
+      : 'No proxy configured yet — paste your web app URL above';
+    st.style.color = pricesWebAppUrl ? '#22c55e' : 'var(--muted)';
+    modal.classList.add('open');
+  }
+
+  window.closePriceSettings = function closePriceSettings() {
+    document.getElementById('price-settings-modal').classList.remove('open');
   }
 
   window.savePriceUrl = function savePriceUrl() {
@@ -2299,12 +2306,11 @@
 
     st.textContent = url ? '✅ Saved! Refreshing prices…' : 'Cleared. Using CORS fallbacks.';
     st.style.color  = url ? '#22c55e' : 'var(--muted)';
-    input.style.borderColor = 'var(--border)';
+    input.style.borderColor = '';
 
     if (url) {
       setTimeout(() => {
-        document.getElementById('price-settings-panel').style.display = 'none';
-        document.getElementById('price-settings-btn').classList.remove('active');
+        document.getElementById('price-settings-modal').classList.remove('open');
         refreshFinance();
       }, 800);
     }
@@ -2315,7 +2321,7 @@
     pricesWebAppUrl = '';
     localStorage.removeItem('omar_prices_url');
     const st = document.getElementById('price-url-status');
-    st.textContent = 'Cleared. Prices will use CORS fallbacks.';
+    st.textContent = 'Cleared. Using CORS fallbacks.';
     st.style.color  = 'var(--muted)';
     document.getElementById('price-url-raw').style.display = 'none';
   }
