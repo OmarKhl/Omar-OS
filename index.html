@@ -486,6 +486,119 @@
     .goal-check.done { background: var(--green); border-color: var(--green); }
     .goal-title { flex: 1; font-size: 13px; }
     .goal-cat { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); padding: 2px 6px; border: 1px solid var(--border2); border-radius: 2px; }
+
+    /* ── OPERATOR PHOTO + EDITABLE ── */
+    .op-photo-wrap {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--bg4); border: 2px solid var(--border2);
+      cursor: pointer; flex-shrink: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color .2s; position: relative;
+    }
+    .op-photo-wrap:hover { border-color: var(--gold-dim); }
+    .op-photo-wrap::after {
+      content: '✎'; position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.55); color: var(--gold); font-size: 16px;
+      opacity: 0; transition: opacity .2s;
+    }
+    .op-photo-wrap:hover::after { opacity: 1; }
+    .op-photo-init { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--gold); pointer-events: none; }
+    .op-photo-img  { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .op-role-disp  { cursor: pointer; }
+    .op-role-disp:hover { color: var(--text); }
+    .op-role-inp   {
+      background: transparent; border: none; border-bottom: 1px solid var(--gold-dim);
+      color: var(--text); font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; letter-spacing: .1em; text-transform: uppercase; width: 100%; outline: none;
+    }
+    .op-focus {
+      width: 100%; background: transparent; border: none;
+      border-bottom: 1px solid var(--border); color: var(--muted);
+      font-size: 11px; padding: 5px 0; outline: none; resize: none;
+      font-family: inherit; line-height: 1.5; min-height: 36px;
+    }
+    .op-focus::placeholder { color: var(--muted2); }
+    .op-focus:focus { border-bottom-color: var(--gold-dim); color: var(--text); }
+
+    /* ── SESSION CARD REDESIGN ── */
+    .sess-top-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+    .sess-time-corner { text-align: right; flex-shrink: 0; padding-left: 12px; }
+    .sess-time-big { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 300; letter-spacing: -.02em; color: var(--text); line-height: 1; }
+    .sess-tz { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--muted2); letter-spacing: .1em; margin-top: 3px; }
+    .sess-greeting { font-size: 22px; font-weight: 300; line-height: 1.2; letter-spacing: -.01em; }
+    .sess-greeting em { font-style: italic; color: var(--gold); }
+    .sess-date { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .07em; margin: 4px 0 14px; }
+    .home-qi-wrap { display: flex; gap: 5px; margin-top: 12px; }
+    .home-qi {
+      flex: 1; background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text); padding: 7px 10px; border-radius: 4px;
+      font-size: 11px; outline: none; font-family: inherit;
+    }
+    .home-qi::placeholder { color: var(--muted2); }
+    .home-qi:focus { border-color: var(--gold-dim); }
+    .home-qi-btn {
+      padding: 7px 11px; background: transparent; border: 1px solid var(--border2);
+      color: var(--muted); border-radius: 4px; cursor: pointer;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; transition: all .15s;
+    }
+    .home-qi-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+    .home-qi-hint { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--green); letter-spacing: .05em; margin-top: 5px; min-height: 14px; }
+
+    /* ── HABITS ── */
+    .habit-score-ring {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; cursor: default;
+    }
+    .habit-score-ring::before {
+      content: ''; position: absolute; inset: 5px;
+      background: var(--bg2); border-radius: 50%; z-index: 1;
+    }
+    .habit-score-inner {
+      position: relative; z-index: 2;
+      font-family: 'JetBrains Mono', monospace; font-size: 8px;
+      font-weight: 500; color: var(--text); white-space: nowrap;
+    }
+    .habits-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 5px; margin-bottom: 10px;
+    }
+    .habit-item {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 4px; padding: 8px 8px; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .habit-item:hover { border-color: var(--border2); }
+    .habit-item.done  { border-color: var(--green); background: rgba(34,197,94,.05); }
+    .habit-title { font-size: 10px; font-weight: 500; line-height: 1.2; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .habit-sub   { font-size: 8.5px; color: var(--muted); margin-bottom: 5px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .habit-streak { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--gold); }
+    .habit-cal-wrap { }
+    .habit-cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      gap: 4px; margin-top: 6px;
+    }
+    .habit-cal-cell { text-align: center; }
+    .habit-cal-dot  { width: 100%; aspect-ratio: 1; border-radius: 3px; background: var(--bg4); margin-bottom: 2px; }
+    .habit-cal-dot.full    { background: var(--green); }
+    .habit-cal-dot.partial { background: var(--gold-dim); }
+    .habit-cal-lbl { font-family: 'JetBrains Mono', monospace; font-size: 7px; color: var(--muted2); text-transform: uppercase; }
+
+    /* ── RIGHT-COL TODO ── */
+    .todo-row {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 11px;
+    }
+    .todo-row:last-child { border-bottom: none; }
+    .todo-check {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 1.5px solid var(--border2); flex-shrink: 0; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: all .15s;
+    }
+    .todo-check:hover { border-color: var(--green); }
+    .todo-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .todo-text { flex: 1; line-height: 1.3; }
   </style>
 </head>
 <body>
@@ -551,8 +664,22 @@
             <span class="online-lbl">ONLINE</span>
           </span>
         </div>
-        <div class="op-name">Omar <em>Khlaiwi</em></div>
-        <div class="op-role" style="margin-bottom:12px">FOUNDER · DUBAI</div>
+        <!-- Photo + Name row -->
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:12px">
+          <div class="op-photo-wrap" id="op-photo-wrap" onclick="document.getElementById('op-photo-input').click()" title="Click to change photo">
+            <img class="op-photo-img" id="op-photo-img" style="display:none" />
+            <span class="op-photo-init" id="op-photo-init">OB</span>
+          </div>
+          <input type="file" id="op-photo-input" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)" />
+          <div style="min-width:0">
+            <div class="op-name">Omar <em>Khlaiwi</em></div>
+            <div class="op-role op-role-disp" id="op-role-disp" onclick="editOpRole()" title="Click to edit">FOUNDER · DUBAI</div>
+            <input class="op-role-inp" id="op-role-inp" style="display:none" onblur="saveOpRole()" onkeydown="if(event.key==='Enter')saveOpRole()" />
+          </div>
+        </div>
+        <!-- Focus -->
+        <div class="os-sub-lbl">TODAY'S FOCUS</div>
+        <textarea class="op-focus" id="op-focus" rows="2" placeholder="What's your focus for today…" oninput="saveOpFocus()"></textarea>
         <hr class="os-divider" />
         <div class="home-stat-grid">
           <div class="home-stat-cell">
@@ -575,16 +702,17 @@
       </div>
 
       <!-- 02 FINANCE PULSE -->
-      <div class="os-card">
+      <div class="os-card" style="flex-shrink:0">
         <div class="os-card-hdr">
           <span class="os-num">02 //</span> FINANCE PULSE
           <button class="os-eye-btn" id="home-eye-btn" onclick="toggleHomePrivacy()" title="Hide amounts">◉</button>
         </div>
-        <div class="os-micro-lbl">INVESTED CAPITAL</div>
+        <div class="os-micro-lbl">NET WORTH</div>
         <div class="home-nw-val" id="home-nw">—</div>
-        <div class="home-nw-sub" id="home-nw-sub"></div>
-        <canvas id="home-sparkline" height="48"></canvas>
-        <div class="home-stat-grid" style="margin-top:10px">
+        <div style="height:42px;margin:6px 0 0;overflow:hidden">
+          <canvas id="home-sparkline" style="display:block;width:100%;height:42px"></canvas>
+        </div>
+        <div class="home-stat-grid" style="margin-top:8px">
           <div class="home-stat-cell">
             <div class="k">POSITIONS</div>
             <div class="v" id="hs-holdings" style="cursor:pointer" onclick="switchTab('finance')">—</div>
@@ -600,7 +728,6 @@
       <div class="os-card os-card-grow">
         <div class="os-card-hdr">
           <span class="os-num">03 //</span> TODAY · KEY
-          <span id="home-task-badge" class="os-badge" style="margin-left:6px">0</span>
           <button class="os-icon-btn" style="margin-left:auto" onclick="switchTab('tasks')" title="All tasks">↗</button>
         </div>
         <div id="home-key-tasks"><div class="loading">Loading…</div></div>
@@ -614,28 +741,44 @@
       <!-- 04 SESSION -->
       <div class="os-card os-session-card">
         <div class="os-card-hdr"><span class="os-num">04 //</span> SESSION</div>
-        <div class="session-greeting" id="home-greeting">Good morning, <em>Omar.</em></div>
-        <div class="session-time-row">
-          <div class="session-big-time" id="session-clock">--:--</div>
-          <div class="session-time-aside">
-            <div class="session-date" id="session-date"></div>
-            <div class="session-tz">LOCAL TIME</div>
+        <div class="sess-top-row">
+          <div>
+            <div class="sess-greeting" id="home-greeting">Good morning, <em>Omar.</em></div>
+            <div class="sess-date" id="session-date"></div>
+          </div>
+          <div class="sess-time-corner">
+            <div class="sess-time-big" id="session-clock">--:--</div>
+            <div class="sess-tz">LOCAL</div>
           </div>
         </div>
+        <div class="os-sub-lbl" style="margin-bottom:5px">QUICK INPUT</div>
+        <div class="home-qi-wrap">
+          <input class="home-qi" id="home-qi" placeholder="Add task, goal, or note — I'll route it…"
+            onkeydown="if(event.key==='Enter')processQuickInput()" />
+          <button class="home-qi-btn" onclick="processQuickInput()">→</button>
+        </div>
+        <div class="home-qi-hint" id="home-qi-hint"></div>
       </div>
 
-      <!-- 05 GOALS -->
-      <div class="os-card os-card-grow">
+      <!-- 05 HABITS -->
+      <div class="os-card">
         <div class="os-card-hdr" style="justify-content:space-between">
-          <span><span class="os-num">05 //</span> GOALS</span>
-          <button class="os-icon-btn" onclick="openAddGoal()">+</button>
+          <span><span class="os-num">05 //</span> HABITS</span>
+          <div style="display:flex;align-items:center;gap:7px">
+            <div class="habit-score-ring" id="habit-score-ring">
+              <span class="habit-score-inner" id="habit-score-txt">—</span>
+            </div>
+            <button class="os-icon-btn" onclick="openAddHabit()">+</button>
+          </div>
         </div>
-
-        <div class="os-sub-lbl">THIS WEEK</div>
-        <div id="home-goals-week"><div class="loading">Loading…</div></div>
-
-        <div class="os-sub-lbl" style="margin-top:16px">THIS MONTH</div>
-        <div id="home-goals-month"></div>
+        <div class="habits-grid" id="habits-grid">
+          <div class="empty" style="grid-column:1/-1;font-size:10px">No habits yet — tap + to add</div>
+        </div>
+        <hr class="os-divider" />
+        <div class="os-sub-lbl">STREAK CALENDAR</div>
+        <div class="habit-cal-wrap">
+          <div class="habit-cal-grid" id="habit-cal-grid"></div>
+        </div>
       </div>
 
     </div><!-- /center col -->
@@ -643,27 +786,39 @@
     <!-- ── RIGHT COL ── -->
     <div class="home-col">
 
-      <!-- 06 FLEET -->
+      <!-- 06 GOALS -->
       <div class="os-card">
-        <div class="os-card-hdr">
-          <span class="os-num">06 //</span> FLEET
-          <button class="os-icon-btn" style="margin-left:auto" onclick="switchTab('benzo')" title="Benzo tab">↗</button>
+        <div class="os-card-hdr" style="justify-content:space-between">
+          <span><span class="os-num">06 //</span> GOALS</span>
+          <button class="os-icon-btn" onclick="openAddGoal()">+</button>
         </div>
-        <div id="home-fleet-status"><div class="loading">Loading…</div></div>
+        <div class="os-sub-lbl">THIS WEEK</div>
+        <div id="home-goals-week"><div class="loading">Loading…</div></div>
+        <div class="os-sub-lbl" style="margin-top:14px">THIS MONTH</div>
+        <div id="home-goals-month"></div>
       </div>
 
-      <!-- 07 ACTIVE RENTALS -->
+      <!-- 07 TO-DO TODAY -->
+      <div class="os-card">
+        <div class="os-card-hdr" style="justify-content:space-between">
+          <span><span class="os-num">07 //</span> TO-DO</span>
+          <span id="home-task-badge" class="os-badge">0</span>
+        </div>
+        <div id="home-todo-list"><div class="loading">Loading…</div></div>
+      </div>
+
+      <!-- 08 ACTIVE RENTALS -->
       <div class="os-card">
         <div class="os-card-hdr">
-          <span class="os-num">07 //</span> RENTALS
+          <span class="os-num">08 //</span> RENTALS
           <span id="home-rentals-badge" class="os-badge" style="margin-left:6px">0</span>
         </div>
         <div id="home-active-rentals"><div class="loading">Loading…</div></div>
       </div>
 
-      <!-- 08 VOICE NOTES -->
+      <!-- 09 VOICE NOTES -->
       <div class="os-card os-card-grow">
-        <div class="os-card-hdr"><span class="os-num">08 //</span> VOICE NOTES</div>
+        <div class="os-card-hdr"><span class="os-num">09 //</span> VOICE NOTES</div>
         <div id="home-voice-notes"><div class="loading">Loading…</div></div>
       </div>
 
@@ -832,6 +987,25 @@
 </div>
 
 </div><!-- /app -->
+
+<!-- ADD HABIT MODAL -->
+<div class="modal-overlay" id="habit-modal">
+  <div class="modal">
+    <h3>New Habit</h3>
+    <div class="form-group">
+      <label class="form-label">Habit Name</label>
+      <input class="form-input" id="new-habit-title" placeholder="Morning workout, Read 30 mins…" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Subtitle (optional)</label>
+      <input class="form-input" id="new-habit-sub" placeholder="e.g. Chest &amp; shoulders, 30 pages" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddHabit()">Cancel</button>
+      <button class="btn-save" onclick="saveHabit()">Add Habit</button>
+    </div>
+  </div>
+</div>
 
 <!-- ADD GOAL MODAL -->
 <div class="modal-overlay" id="goal-modal">
@@ -1003,6 +1177,8 @@
   // ── INIT ─────────────────────────────────────────────────
   function initDashboard() {
     updateClock();
+    loadOpProfile();
+    renderHabits();
     loadHome();
     loaders['home'] = true;
   }
@@ -1010,24 +1186,20 @@
   // ── CLOCK + GREETING ────────────────────────────────────
   function updateClock() {
     const now = new Date();
-    const h = now.getHours();
+    const h   = now.getHours();
     const t   = now.toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit', hour12: false });
     const d   = now.toLocaleDateString('en-CA', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase();
     const dShort = now.toLocaleDateString('en-CA', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
 
-    const navClock = document.getElementById('nav-clock');
-    const navDate  = document.getElementById('nav-date');
-    const sessClock = document.getElementById('session-clock');
-    const sessDate  = document.getElementById('session-date');
-    const greeting  = document.getElementById('home-greeting');
-
-    if (navClock)  navClock.textContent  = t;
-    if (navDate)   navDate.textContent   = dShort;
-    if (sessClock) sessClock.textContent = t;
-    if (sessDate)  sessDate.textContent  = d;
-    if (greeting) {
+    const s = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    s('nav-clock',    t);
+    s('nav-date',     dShort);
+    s('session-clock', t);
+    s('session-date',  d);
+    const greetEl = document.getElementById('home-greeting');
+    if (greetEl) {
       const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-      greeting.innerHTML = `${greet}, <em>Omar.</em>`;
+      greetEl.innerHTML = `${greet}, <em>Omar.</em>`;
     }
   }
   setInterval(updateClock, 1000);
@@ -1062,109 +1234,119 @@
 
   // ── HOME ─────────────────────────────────────────────────
   async function loadHome() {
+    const safe = async (fn) => { try { return await fn(); } catch(e) { return []; } };
     const [tasks, rentals, fleet, goals, notes, txs] = await Promise.all([
-      sb('tasks',       '?select=id,completed,due_date,task_text,category,priority'),
-      sb('rentals',     '?select=id,status,customer_name,vehicle_id,end_date,daily_rate'),
-      sb('fleet',       '?select=id,vehicle_name,status'),
-      sb('goals',       '?select=id,title,category,completed,target_date'),
-      sb('voice_notes', '?select=id,transcript,processed&processed=eq.false'),
-      sb('transactions','?order=trade_date.asc'),
+      safe(() => sb('tasks',       '?select=id,completed,due_date,task_text,category,priority')),
+      safe(() => sb('rentals',     '?select=id,status,customer_name,vehicle_id,end_date,daily_rate')),
+      safe(() => sb('fleet',       '?select=id,vehicle_name,status')),
+      safe(() => sb('goals',       '?select=id,title,category,completed,target_date')),
+      safe(() => sb('voice_notes', '?select=id,transcript,processed&processed=eq.false')),
+      safe(() => sb('transactions','?order=trade_date.asc')),
     ]);
 
-    const today   = new Date().toISOString().slice(0, 10);
-    const openToday     = tasks.filter(t => !t.completed && t.due_date && t.due_date <= today).length;
+    const today         = new Date().toISOString().slice(0, 10);
+    const openToday     = tasks.filter(t => !t.completed && t.due_date && t.due_date <= today);
     const activeRentals = rentals.filter(r => r.status === 'active');
     const weeklyGoals   = goals.filter(g => g.category === 'weekly' && !g.completed).length;
 
-    // Stats
     const setT = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    setT('hs-tasks',    openToday);
-    setT('hs-rentals',  activeRentals.length);
-    setT('hs-fleet',    fleet.length);
-    setT('hs-goals',    weeklyGoals);
-    setT('hs-notes',    notes.length);
+    setT('hs-tasks',   openToday.length);
+    setT('hs-rentals', activeRentals.length);
+    setT('hs-fleet',   fleet.length);
+    setT('hs-goals',   weeklyGoals);
+    setT('hs-notes',   notes.length);
 
-    // Finance pulse (invested capital from txs, no live price API call)
-    if (txs.length) {
+    // Finance pulse — net worth from cost basis (no live price call on home)
+    if (txs && txs.length) {
       const holdings  = calcHoldings(txs);
       const costTotal = holdings.reduce((s, h) => s + h.totalCost, 0);
       setT('hs-holdings', holdings.length);
-      document.getElementById('home-nw').textContent   = fmtMoneyHome(costTotal);
-      document.getElementById('home-nw-sub').textContent = holdings.length + ' positions tracked';
+      const nwEl = document.getElementById('home-nw');
+      if (nwEl) nwEl.textContent = fmtMoneyHome(costTotal);
       renderHomeSparkline(txs, costTotal);
-
-      // Store for privacy toggle
       if (!finData) finData = { txs, liveTotal: costTotal, costTotal, holdings, prices: {}, watchlist: [] };
     } else {
       setT('hs-holdings', '0');
-      document.getElementById('home-nw').textContent    = '—';
-      document.getElementById('home-nw-sub').textContent = 'No transactions yet';
+      const nwEl = document.getElementById('home-nw');
+      if (nwEl) nwEl.textContent = '—';
     }
 
-    // Today's key tasks
-    const keyTasks = tasks
-      .filter(t => !t.completed && t.due_date && t.due_date <= today)
+    // Left col: key tasks list
+    const dotColors = { high: 'var(--red)', medium: 'var(--gold)', low: 'var(--green)' };
+    const keyTasks = [...openToday]
       .sort((a, b) => { const p = {high:0,medium:1,low:2}; return (p[a.priority]||1) - (p[b.priority]||1); })
       .slice(0, 8);
-    const taskBadge = document.getElementById('home-task-badge');
-    if (taskBadge) taskBadge.textContent = keyTasks.length;
-    const dotColors = { high: 'var(--red)', medium: 'var(--gold)', low: 'var(--green)' };
-    document.getElementById('home-key-tasks').innerHTML = keyTasks.length
+    const ktEl = document.getElementById('home-key-tasks');
+    if (ktEl) ktEl.innerHTML = keyTasks.length
       ? keyTasks.map(t => `
         <div class="key-task-row">
-          <div class="key-task-dot" style="background:${dotColors[t.priority] || 'var(--muted)'}"></div>
+          <div class="key-task-dot" style="background:${dotColors[t.priority]||'var(--muted)'}"></div>
           <div class="key-task-text">${t.task_text}</div>
           <div class="key-task-cat">${t.category}</div>
         </div>`).join('')
       : '<div class="empty">No urgent tasks today ✓</div>';
 
-    // Goals split
+    // Right col: Goals
     const activeGoals = goals.filter(g => !g.completed);
     const weekGoals   = activeGoals.filter(g => g.category === 'weekly');
     const monthGoals  = activeGoals.filter(g => g.category === 'monthly');
     const renderGoalList = (arr) => arr.length
-      ? arr.slice(0, 6).map(g => `
+      ? arr.slice(0, 5).map(g => `
         <div class="home-goal-row" onclick="toggleGoal('${g.id}', ${g.completed})">
           <div class="home-goal-check ${g.completed ? 'done' : ''}"></div>
           <div class="home-goal-text">${g.title}</div>
           ${g.target_date ? `<div class="home-goal-date">${g.target_date.slice(5)}</div>` : ''}
         </div>`).join('')
-      : '<div class="empty">—</div>';
-    document.getElementById('home-goals-week').innerHTML  = renderGoalList(weekGoals);
-    document.getElementById('home-goals-month').innerHTML = renderGoalList(monthGoals);
+      : '<div class="empty" style="font-size:10px">—</div>';
+    const gwEl = document.getElementById('home-goals-week');
+    const gmEl = document.getElementById('home-goals-month');
+    if (gwEl) gwEl.innerHTML = renderGoalList(weekGoals);
+    if (gmEl) gmEl.innerHTML = renderGoalList(monthGoals);
 
-    // Fleet status
-    const fleetMap = {};
-    fleet.forEach(v => { fleetMap[v.status] = (fleetMap[v.status] || 0) + 1; });
-    const statusColors = { available: 'var(--green)', rented: 'var(--blue)', maintenance: 'var(--gold)' };
-    document.getElementById('home-fleet-status').innerHTML = ['available','rented','maintenance'].map(s => `
-      <div class="fleet-stat-row">
-        <span class="fleet-stat-label">${s.charAt(0).toUpperCase() + s.slice(1)}</span>
-        <span class="fleet-stat-count" style="color:${statusColors[s]}">${fleetMap[s] || 0}</span>
-      </div>`).join('');
+    // Right col: To-do list (all incomplete tasks, sorted by priority then due)
+    const allOpen = tasks.filter(t => !t.completed)
+      .sort((a, b) => {
+        const p = {high:0,medium:1,low:2};
+        const pd = (p[a.priority]||1) - (p[b.priority]||1);
+        if (pd !== 0) return pd;
+        return (a.due_date || '9999') < (b.due_date || '9999') ? -1 : 1;
+      }).slice(0, 10);
+    const tdBadge = document.getElementById('home-task-badge');
+    if (tdBadge) tdBadge.textContent = tasks.filter(t => !t.completed).length;
+    const tdEl = document.getElementById('home-todo-list');
+    if (tdEl) tdEl.innerHTML = allOpen.length
+      ? allOpen.map(t => `
+        <div class="todo-row">
+          <div class="todo-dot" style="background:${dotColors[t.priority]||'var(--muted)'}"></div>
+          <div class="todo-text">${t.task_text}</div>
+          ${t.due_date === today ? `<span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--red)">TODAY</span>` : (t.due_date ? `<span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted)">${t.due_date.slice(5)}</span>` : '')}
+        </div>`).join('')
+      : '<div class="empty" style="font-size:10px">All clear ✓</div>';
 
-    // Active rentals
+    // Right col: Active rentals
     const fleetNameMap = {};
     fleet.forEach(v => { fleetNameMap[v.id] = v.vehicle_name; });
     const rentalsToShow = rentals.filter(r => r.status === 'active' || r.status === 'upcoming').slice(0, 5);
     const rentalsBadge = document.getElementById('home-rentals-badge');
     if (rentalsBadge) rentalsBadge.textContent = activeRentals.length;
-    document.getElementById('home-active-rentals').innerHTML = rentalsToShow.length
+    const arEl = document.getElementById('home-active-rentals');
+    if (arEl) arEl.innerHTML = rentalsToShow.length
       ? rentalsToShow.map(r => `
         <div class="rental-mini-row">
           <div class="rental-mini-customer">${r.customer_name}</div>
-          <div class="rental-mini-sub">${fleetNameMap[r.vehicle_id] || '—'} · ends ${r.end_date}</div>
+          <div class="rental-mini-sub">${fleetNameMap[r.vehicle_id]||'—'} · ends ${r.end_date}</div>
         </div>`).join('')
-      : '<div class="empty">No active rentals</div>';
+      : '<div class="empty" style="font-size:10px">No active rentals</div>';
 
-    // Voice notes
-    document.getElementById('home-voice-notes').innerHTML = notes.length
+    // Right col: Voice notes
+    const vnEl = document.getElementById('home-voice-notes');
+    if (vnEl) vnEl.innerHTML = notes.length
       ? notes.slice(0, 5).map(n => `
         <div class="key-task-row">
           <div class="key-task-dot" style="background:var(--blue)"></div>
-          <div class="key-task-text">${n.transcript.slice(0, 60)}${n.transcript.length > 60 ? '…' : ''}</div>
+          <div class="key-task-text">${n.transcript.slice(0,60)}${n.transcript.length>60?'…':''}</div>
         </div>`).join('')
-      : '<div class="empty">No unprocessed notes ✓</div>';
+      : '<div class="empty" style="font-size:10px">No unprocessed notes ✓</div>';
   }
 
   // ── HOME SPARKLINE ──────────────────────────────────────
@@ -1657,6 +1839,195 @@
       </tr>`;
     }).join('');
   }
+
+  // ── OPERATOR PROFILE (localStorage) ─────────────────────
+  function loadOpProfile() {
+    const photo = localStorage.getItem('op_photo');
+    const role  = localStorage.getItem('op_role') || 'FOUNDER · DUBAI';
+    const focus = localStorage.getItem('op_focus') || '';
+    const roleDisp = document.getElementById('op-role-disp');
+    const roleInp  = document.getElementById('op-role-inp');
+    const focusEl  = document.getElementById('op-focus');
+    if (roleDisp) roleDisp.textContent = role;
+    if (roleInp)  roleInp.value = role;
+    if (focusEl)  focusEl.value = focus;
+    if (photo) {
+      const img  = document.getElementById('op-photo-img');
+      const init = document.getElementById('op-photo-init');
+      if (img)  { img.src = photo; img.style.display = 'block'; }
+      if (init) init.style.display = 'none';
+    }
+  }
+  window.handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const data = ev.target.result;
+      localStorage.setItem('op_photo', data);
+      const img  = document.getElementById('op-photo-img');
+      const init = document.getElementById('op-photo-init');
+      if (img)  { img.src = data; img.style.display = 'block'; }
+      if (init) init.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  };
+  window.editOpRole = () => {
+    const disp = document.getElementById('op-role-disp');
+    const inp  = document.getElementById('op-role-inp');
+    if (!disp || !inp) return;
+    inp.value = disp.textContent;
+    disp.style.display = 'none';
+    inp.style.display  = 'block';
+    inp.focus(); inp.select();
+  };
+  window.saveOpRole = () => {
+    const disp = document.getElementById('op-role-disp');
+    const inp  = document.getElementById('op-role-inp');
+    if (!disp || !inp) return;
+    const val = inp.value.trim() || 'FOUNDER · DUBAI';
+    localStorage.setItem('op_role', val);
+    disp.textContent   = val;
+    disp.style.display = '';
+    inp.style.display  = 'none';
+  };
+  window.saveOpFocus = () => {
+    const el = document.getElementById('op-focus');
+    if (el) localStorage.setItem('op_focus', el.value);
+  };
+
+  // ── QUICK INPUT ROUTER ───────────────────────────────────
+  window.processQuickInput = async () => {
+    const inp  = document.getElementById('home-qi');
+    const hint = document.getElementById('home-qi-hint');
+    const text = inp.value.trim();
+    if (!text) return;
+    inp.disabled = true;
+    const lower = text.toLowerCase();
+    let msg = '';
+    try {
+      if (/^goal[:\s]|this (week|month)|want to|achieve|target/i.test(text)) {
+        await sbPost('goals', { title: text.replace(/^goal[:\s]*/i,''), category: 'weekly', completed: false });
+        msg = '✓ Added as weekly goal';
+      } else if (/^task[:\s]|remind|buy |call |send |email |fix |finish |schedule |book |check /i.test(text)) {
+        await sbPost('tasks', { task_text: text.replace(/^task[:\s]*/i,''), category: 'Personal', priority: 'medium', source: 'manual' });
+        msg = '✓ Added as task';
+      } else if (/^note[:\s]/i.test(text)) {
+        await sbPost('voice_notes', { transcript: text.replace(/^note[:\s]*/i,''), source: 'in-app', routed_to: 'ignored', processed: false });
+        msg = '✓ Saved as note';
+      } else {
+        // Default: task
+        await sbPost('tasks', { task_text: text, category: 'Personal', priority: 'medium', source: 'manual' });
+        msg = '✓ Added as task  ·  prefix "goal:" or "note:" to route differently';
+      }
+      inp.value = '';
+      loaders['home'] = false; await loadHome(); loaders['home'] = true;
+    } catch(e) { msg = '⚠ Error — check connection'; }
+    inp.disabled = false;
+    if (hint) { hint.textContent = msg; setTimeout(() => hint.textContent = '', 4000); }
+  };
+
+  // ── HABITS (localStorage) ────────────────────────────────
+  function getHabits()   { return JSON.parse(localStorage.getItem('omar_habits')   || '[]'); }
+  function getCheckins() { return JSON.parse(localStorage.getItem('omar_checkins') || '{}'); }
+  function saveHabits(h) { localStorage.setItem('omar_habits',   JSON.stringify(h)); }
+  function saveCkins(c)  { localStorage.setItem('omar_checkins', JSON.stringify(c)); }
+  function todayKey()    { return new Date().toISOString().slice(0, 10); }
+
+  function habitStreak(id) {
+    const c = getCheckins();
+    let streak = 0, d = new Date();
+    d.setHours(0,0,0,0);
+    // If today not yet checked, start counting from yesterday
+    const tk = d.toISOString().slice(0,10);
+    if (!(c[tk] && c[tk].includes(id))) d.setDate(d.getDate() - 1);
+    for (let i = 0; i < 365; i++) {
+      const k = d.toISOString().slice(0,10);
+      if (c[k] && c[k].includes(id)) { streak++; d.setDate(d.getDate() - 1); } else break;
+    }
+    return streak;
+  }
+
+  function renderHabits() {
+    const habits   = getHabits();
+    const checkins = getCheckins();
+    const tk       = todayKey();
+    const todayDone = habits.filter(h => checkins[tk] && checkins[tk].includes(h.id)).length;
+    const score    = habits.length ? Math.round((todayDone / habits.length) * 100) : 0;
+
+    // Score ring
+    const ring = document.getElementById('habit-score-ring');
+    const txt  = document.getElementById('habit-score-txt');
+    if (ring) ring.style.background = `conic-gradient(var(--green) 0% ${score}%, var(--bg4) ${score}% 100%)`;
+    if (txt)  txt.textContent = habits.length ? score + '%' : '—';
+
+    // Habit grid
+    const grid = document.getElementById('habits-grid');
+    if (grid) {
+      if (!habits.length) {
+        grid.innerHTML = '<div class="empty" style="grid-column:1/-1;font-size:10px">No habits yet — tap + to add</div>';
+      } else {
+        grid.innerHTML = habits.map(h => {
+          const done   = checkins[tk] && checkins[tk].includes(h.id);
+          const streak = habitStreak(h.id);
+          return `<div class="habit-item ${done ? 'done' : ''}" onclick="toggleCheckin('${h.id}')">
+            <div class="habit-title" title="${h.title}">${h.title}</div>
+            ${h.sub ? `<div class="habit-sub" title="${h.sub}">${h.sub}</div>` : '<div style="height:5px"></div>'}
+            <div class="habit-streak">🔥 ${streak}d</div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    // Calendar — last 7 days
+    const calGrid = document.getElementById('habit-cal-grid');
+    if (calGrid) {
+      const days = [];
+      const now = new Date(); now.setHours(0,0,0,0);
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now); d.setDate(now.getDate() - i);
+        const k = d.toISOString().slice(0,10);
+        const done  = habits.filter(h => checkins[k] && checkins[k].includes(h.id)).length;
+        const total = habits.length;
+        const label = d.toLocaleDateString('en-CA', { weekday: 'narrow' }).toUpperCase();
+        let cls = 'habit-cal-dot';
+        if (total > 0) {
+          if (done === total && done > 0) cls += ' full';
+          else if (done > 0) cls += ' partial';
+        }
+        days.push(`<div class="habit-cal-cell" title="${k}: ${done}/${total}">
+          <div class="${cls}"></div>
+          <div class="habit-cal-lbl">${label}</div>
+        </div>`);
+      }
+      calGrid.innerHTML = days.join('');
+    }
+  }
+
+  window.toggleCheckin = (id) => {
+    const c  = getCheckins();
+    const tk = todayKey();
+    if (!c[tk]) c[tk] = [];
+    const idx = c[tk].indexOf(id);
+    if (idx >= 0) c[tk].splice(idx, 1); else c[tk].push(id);
+    saveCkins(c);
+    renderHabits();
+  };
+
+  window.openAddHabit  = () => document.getElementById('habit-modal').classList.add('open');
+  window.closeAddHabit = () => document.getElementById('habit-modal').classList.remove('open');
+  window.saveHabit = () => {
+    const title = document.getElementById('new-habit-title').value.trim();
+    if (!title) return;
+    const sub  = document.getElementById('new-habit-sub').value.trim();
+    const habits = getHabits();
+    habits.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), title, sub });
+    saveHabits(habits);
+    document.getElementById('new-habit-title').value = '';
+    document.getElementById('new-habit-sub').value   = '';
+    closeAddHabit();
+    renderHabits();
+  };
 
   // ── UTILS ────────────────────────────────────────────────
   function fmt(n) { return Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
