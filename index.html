@@ -642,7 +642,22 @@
     .habit-item { position: relative; }
     .habit-item.dragging { opacity: .4; }
     .habit-item.drag-over { border-color: var(--gold); background: rgba(200,168,75,.08); }
-    .habit-item.expanded { grid-column: 1 / -1; border-color: var(--gold-dim); background: rgba(200,168,75,.04); }
+    .habit-item.expanded { border-color: var(--gold-dim); background: rgba(200,168,75,.04); }
+    .habit-sub-card {
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: 4px; padding: 7px 8px; cursor: pointer;
+      transition: border-color .15s, background .15s;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .habit-sub-card:hover { border-color: var(--gold-dim); }
+    .habit-sub-card.done  { border-color: var(--green); background: rgba(34,197,94,.05); }
+    .habit-sub-card .sub-chk {
+      width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: #fff; flex-shrink: 0;
+    }
+    .habit-sub-card .sub-chk.done { background: var(--green); border-color: var(--green); }
+    .habit-sub-card .sub-title { font-size: 10px; font-weight: 500; line-height: 1.2; }
     .habit-del {
       position: absolute; top: 4px; right: 4px;
       width: 15px; height: 15px; display: none; align-items: center; justify-content: center;
@@ -1041,10 +1056,8 @@
   <!-- Filters -->
   <div class="filter-row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <button class="filter-btn active" data-filter="all">ALL</button>
-      <button class="filter-btn" data-filter="Work">WORK</button>
-      <button class="filter-btn" data-filter="Personal">PERSONAL</button>
-      <button class="filter-btn" data-filter="Benzo">BENZO</button>
+      <div id="cat-filter-btns" style="display:contents"></div>
+      <button class="filter-btn" onclick="promptNewCategory()" title="Add new category" style="padding:3px 8px;font-size:13px;line-height:1">+</button>
       <span style="color:var(--muted2);font-size:11px;margin:0 4px">|</span>
       <div class="sort-group">
         <button class="sort-btn active" data-sort="created">NEWEST</button>
@@ -1180,9 +1193,8 @@
     </div>
     <div class="form-group">
       <label class="form-label">Category</label>
-      <select class="form-select" id="new-task-cat">
-        <option>Personal</option><option>Work</option><option>Benzo</option>
-      </select>
+      <input class="form-input" id="new-task-cat" list="task-cat-list" placeholder="Personal, Work, Benzo…" autocomplete="off" />
+      <datalist id="task-cat-list"></datalist>
     </div>
     <div class="form-group">
       <label class="form-label">Priority</label>
@@ -1287,9 +1299,7 @@
     </div>
     <div class="form-group">
       <label class="form-label">Category</label>
-      <select class="form-select" id="edit-task-cat">
-        <option>Personal</option><option>Work</option><option>Benzo</option>
-      </select>
+      <input class="form-input" id="edit-task-cat" list="task-cat-list" placeholder="Personal, Work, Benzo…" autocomplete="off" />
     </div>
     <div class="form-group">
       <label class="form-label">Priority</label>
@@ -2065,7 +2075,61 @@
     renderTasks();
   };
 
+  // ── TASK CATEGORIES ─────────────────────────────────────
+  let taskCategories = ['Personal', 'Work', 'Benzo'];  // cache; starts with defaults
+
+  async function loadTaskCategories() {
+    try {
+      const rows = await sb('task_categories', '?order=created_at.asc');
+      if (rows && rows.length) taskCategories = rows.map(r => r.name);
+    } catch(e) { console.warn('loadTaskCategories error', e); }
+    renderCategoryFilters();
+    populateCatDatalist();
+  }
+
+  function renderCategoryFilters() {
+    const wrap = document.getElementById('cat-filter-btns');
+    if (!wrap) return;
+    const btns = [{ label: 'ALL', filter: 'all' }, ...taskCategories.map(c => ({ label: c.toUpperCase(), filter: c }))];
+    wrap.innerHTML = btns.map(b =>
+      `<button class="filter-btn${activeFilter === b.filter ? ' active' : ''}" data-filter="${b.filter}" onclick="setCatFilter('${b.filter}')">${b.label}</button>`
+    ).join('');
+  }
+
+  window.setCatFilter = (filter) => {
+    activeFilter = filter;
+    renderCategoryFilters();
+    renderTasks();
+  };
+
+  function populateCatDatalist() {
+    document.querySelectorAll('#task-cat-list').forEach(dl => {
+      dl.innerHTML = taskCategories.map(c => `<option value="${c}">`).join('');
+    });
+  }
+
+  async function ensureCategoryExists(name) {
+    if (!name || taskCategories.includes(name)) return;
+    taskCategories.push(name);
+    renderCategoryFilters();
+    populateCatDatalist();
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/task_categories`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ name }),
+      });
+    } catch(e) { console.warn('ensureCategoryExists error', e); }
+  }
+
+  window.promptNewCategory = () => {
+    const name = prompt('New category name:');
+    if (!name || !name.trim()) return;
+    ensureCategoryExists(name.trim());
+  };
+
   async function loadTasks() {
+    await loadTaskCategories();
     allTasks = await sb('tasks', '?order=created_at.desc');
     // Populate keyTaskIds from is_starred column
     keyTaskIds = new Set(allTasks.filter(t => t.is_starred).map(t => t.id));
@@ -2074,7 +2138,7 @@
 
   function renderTasks() {
     let filtered = allTasks;
-    if (['Work','Personal','Benzo'].includes(activeFilter)) filtered = allTasks.filter(t => t.category === activeFilter);
+    if (activeFilter !== 'all') filtered = allTasks.filter(t => t.category === activeFilter);
     if (!showDone) filtered = filtered.filter(t => !t.completed);
     const list = document.getElementById('tasks-list');
     if (!filtered.length) { list.innerHTML = '<div class="empty">No tasks found.</div>'; return; }
@@ -2083,22 +2147,13 @@
         <div class="task-check ${t.completed ? 'checked' : ''}" onclick="toggleTask('${t.id}', ${t.completed})"></div>
         <div class="task-text" style="${t.completed ? 'text-decoration:line-through' : ''}">${t.task_text}</div>
         <div class="task-meta">
-          <span class="badge badge-${t.category.toLowerCase()}">${t.category}</span>
+          <span class="badge" style="background:var(--bg4);border:1px solid var(--border2);color:var(--muted)">${t.category}</span>
           <span class="badge badge-${t.priority}">${t.priority}</span>
           ${t.due_date ? `<span class="task-due">${t.due_date}</span>` : ''}
           <span class="badge" style="background:var(--bg4);color:var(--muted);border:1px solid var(--border2)">${t.source}</span>
         </div>
       </div>`).join('');
   }
-
-  document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeFilter = btn.dataset.filter;
-      renderTasks();
-    });
-  });
 
   window.toggleTask = async (id, completed) => {
     await sbPatch('tasks', id, { completed: !completed });
@@ -2107,13 +2162,20 @@
     renderTasks();
   };
 
-  window.openAddTask  = () => { document.getElementById('task-modal').classList.add('open'); document.getElementById('new-task-due').value = new Date().toISOString().slice(0,10); };
+  window.openAddTask  = () => {
+    document.getElementById('task-modal').classList.add('open');
+    document.getElementById('new-task-due').value = new Date().toISOString().slice(0,10);
+    document.getElementById('new-task-cat').value = taskCategories[0] || 'Personal';
+    populateCatDatalist();
+  };
   window.closeAddTask = () => document.getElementById('task-modal').classList.remove('open');
   window.saveTask = async () => {
     const text = document.getElementById('new-task-text').value.trim();
     if (!text) return;
+    const cat = (document.getElementById('new-task-cat').value || 'Personal').trim();
+    await ensureCategoryExists(cat);
     const newTask = await sbPost('tasks', {
-      task_text: text, category: document.getElementById('new-task-cat').value,
+      task_text: text, category: cat,
       priority:  document.getElementById('new-task-pri').value,
       due_date:  document.getElementById('new-task-due').value || null, source: 'manual'
     });
@@ -2670,7 +2732,7 @@ Return raw JSON only.`,
     renderHabits();
   };
 
-  // Patch renderHabits to include drag + delete + collapsible sub-habits
+  // Patch renderHabits to include drag + delete + collapsible sub-habits as grid cards
   const _origRenderHabits = renderHabits;
   renderHabits = function() {
     const habits   = getHabits();
@@ -2689,40 +2751,30 @@ Return raw JSON only.`,
       if (!habits.length) {
         grid.innerHTML = '<div class="empty" style="grid-column:1/-1;font-size:10px">No habits yet — tap + to add</div>';
       } else {
-        grid.innerHTML = habits.map(h => {
+        const pieces = [];
+        habits.forEach(h => {
           const done    = checkins[tk] && checkins[tk].includes(h.id);
           const streak  = habitStreak(h.id);
           const subs    = h.sub_habits || h.subHabits || [];
           const hasSubs = subs.length > 0;
           const expanded = hasSubs && expandedHabitId === h.id;
 
-          // Progress bar shown on collapsed card when there are sub-habits
-          let collapsedExtra = '';
-          let expandedPanel  = '';
+          // Progress bar + count shown on the parent card when it has sub-habits
+          let progressHtml = '';
           if (hasSubs) {
             const subsDone = subs.filter(sh => checkins[tk] && checkins[tk].includes(h.id + ':' + sh.id)).length;
             const pct = Math.round((subsDone / subs.length) * 100);
-            collapsedExtra = `
+            progressHtml = `
               <div class="habit-prog"><div class="habit-prog-fill" style="width:${pct}%"></div></div>
               <div class="habit-count-lbl">${subsDone}/${subs.length}</div>`;
-            if (expanded) {
-              expandedPanel = `<div class="habit-subs">
-                ${subs.map(sh => {
-                  const shDone = checkins[tk] && checkins[tk].includes(h.id + ':' + sh.id);
-                  return `<div class="habit-sub-row" onclick="toggleSubHabit(event,'${h.id}','${sh.id}')">
-                    <div class="habit-sub-chk ${shDone ? 'done' : ''}">${shDone ? '✓' : ''}</div>
-                    <span>${sh.title}</span>
-                  </div>`;
-                }).join('')}
-              </div>`;
-            }
           }
 
           const clickHandler = hasSubs
             ? `onclick="toggleHabitExpand(event,'${h.id}')"`
             : `onclick="toggleCheckin('${h.id}')"`;
 
-          return `<div class="habit-item ${done ? 'done' : ''} ${expanded ? 'expanded' : ''}" style="position:relative"
+          // Parent habit card
+          pieces.push(`<div class="habit-item ${done ? 'done' : ''} ${expanded ? 'expanded' : ''}" style="position:relative"
             draggable="true"
             ondragstart="habitDragStart(event,'${h.id}')"
             ondragend="habitDragEnd(event)"
@@ -2734,10 +2786,23 @@ Return raw JSON only.`,
               style="position:absolute;top:4px;right:4px;width:16px;height:16px;border:none;background:var(--bg4);color:var(--red);border-radius:2px;cursor:pointer;font-size:10px;display:none;align-items:center;justify-content:center;line-height:1">✕</button>
             <div class="habit-title" title="${h.title}">${h.title}${hasSubs ? ` <span style="font-size:9px;color:var(--muted)">${expanded ? '▲' : '▼'}</span>` : ''}</div>
             ${h.sub ? `<div class="habit-sub" title="${h.sub}">${h.sub}</div>` : (hasSubs ? '' : '<div style="height:5px"></div>')}
-            ${hasSubs ? collapsedExtra : `<div class="habit-streak">🔥 ${streak}d</div>`}
-            ${expandedPanel}
-          </div>`;
-        }).join('');
+            ${hasSubs ? progressHtml : `<div class="habit-streak">🔥 ${streak}d</div>`}
+          </div>`);
+
+          // If expanded: inject each sub-habit as its own grid card immediately after
+          if (expanded) {
+            subs.forEach(sh => {
+              const shDone = checkins[tk] && checkins[tk].includes(h.id + ':' + sh.id);
+              pieces.push(`<div class="habit-sub-card ${shDone ? 'done' : ''}"
+                onclick="toggleSubHabit(event,'${h.id}','${sh.id}')">
+                <div class="sub-chk ${shDone ? 'done' : ''}">${shDone ? '✓' : ''}</div>
+                <div class="sub-title" style="${shDone ? 'text-decoration:line-through;color:var(--muted)' : ''}">${sh.title}</div>
+              </div>`);
+            });
+          }
+        });
+
+        grid.innerHTML = pieces.join('');
         // Show delete button on hover via JS
         grid.querySelectorAll('.habit-item').forEach(el => {
           el.addEventListener('mouseenter', () => { const b = el.querySelector('.habit-del'); if (b) b.style.display = 'flex'; });
@@ -2870,7 +2935,7 @@ Return raw JSON only.`,
     const searchVal = (document.getElementById('task-search')?.value || '').toLowerCase().trim();
 
     let filtered = allTasks;
-    if (['Work','Personal','Benzo'].includes(activeFilter)) filtered = allTasks.filter(t => t.category === activeFilter);
+    if (activeFilter !== 'all') filtered = allTasks.filter(t => t.category === activeFilter);
     if (!showDone) filtered = filtered.filter(t => !t.completed);
     if (searchVal) filtered = filtered.filter(t =>
       (t.task_text || '').toLowerCase().includes(searchVal) ||
@@ -2952,6 +3017,7 @@ Return raw JSON only.`,
     document.getElementById('edit-task-cat').value  = task.category  || 'Personal';
     document.getElementById('edit-task-pri').value  = task.priority  || 'medium';
     document.getElementById('edit-task-due').value  = task.due_date  || '';
+    populateCatDatalist();
     document.getElementById('edit-task-modal').classList.add('open');
   };
   window.closeEditTask = () => document.getElementById('edit-task-modal').classList.remove('open');
@@ -2965,9 +3031,11 @@ Return raw JSON only.`,
   };
   window.updateTask = async () => {
     const id = document.getElementById('edit-task-id').value;
+    const cat = (document.getElementById('edit-task-cat').value || 'Personal').trim();
+    await ensureCategoryExists(cat);
     const patch = {
       task_text: document.getElementById('edit-task-text').value.trim(),
-      category:  document.getElementById('edit-task-cat').value,
+      category:  cat,
       priority:  document.getElementById('edit-task-pri').value,
       due_date:  document.getElementById('edit-task-due').value || null
     };
