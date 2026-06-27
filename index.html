@@ -233,6 +233,14 @@
     .key-task-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
     .key-task-text { flex: 1; line-height: 1.3; }
     .key-task-cat { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .05em; }
+    .home-chk {
+      width: 14px; height: 14px; border: 1.5px solid var(--border2);
+      border-radius: 3px; flex-shrink: 0; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: #fff; transition: all .15s;
+    }
+    .home-chk:hover { border-color: var(--green); }
+    .home-chk.done  { background: var(--green); border-color: var(--green); }
 
     /* ── HOME GOALS ── */
     .home-goal-row {
@@ -332,8 +340,11 @@
       font-size: 9px; color: var(--muted); letter-spacing: .12em;
       text-transform: uppercase; text-align: left;
       padding: 0 0 10px; border-bottom: 1px solid var(--border);
+      transition: color .15s;
     }
     thead th:last-child { text-align: right; }
+    thead th[onclick]:hover { color: var(--gold); }
+    .sort-arrow { color: var(--gold); font-size: 9px; }
     tbody tr { border-bottom: 1px solid var(--border); }
     tbody tr:last-child { border-bottom: none; }
     tbody td { padding: 10px 0; font-size: 13px; }
@@ -877,7 +888,6 @@
       <div class="os-card" style="flex-shrink:0;cursor:pointer" onclick="switchTab('finance')">
         <div class="os-card-hdr">
           <span class="os-num">02 //</span> FINANCE PULSE
-          <span id="home-fp-badge" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:20px;padding:2px 8px;display:none"></span>
           <button class="fp-monkey-btn" id="home-eye-btn" onclick="event.stopPropagation();toggleHomePrivacy()" title="Hide amounts">🙈</button>
         </div>
         <div class="fp-blur-wrap blurred" id="fp-blur-wrap">
@@ -1076,12 +1086,12 @@
     <table>
       <thead>
         <tr>
-          <th>TICKER</th>
-          <th>SHARES</th>
+          <th onclick="sortHoldings('ticker')" id="sh-ticker" style="cursor:pointer;user-select:none">TICKER <span class="sort-arrow" id="sa-ticker"></span></th>
+          <th onclick="sortHoldings('shares')" id="sh-shares" style="cursor:pointer;user-select:none">SHARES <span class="sort-arrow" id="sa-shares"></span></th>
           <th>AVG COST</th>
           <th>LIVE PRICE</th>
-          <th>VALUE</th>
-          <th style="text-align:right">GAIN / LOSS</th>
+          <th onclick="sortHoldings('value')" id="sh-value" style="cursor:pointer;user-select:none">VALUE <span class="sort-arrow" id="sa-value"></span></th>
+          <th onclick="sortHoldings('gain')" id="sh-gain" style="text-align:right;cursor:pointer;user-select:none">GAIN / LOSS <span class="sort-arrow" id="sa-gain"></span></th>
         </tr>
       </thead>
       <tbody id="holdings-body">
@@ -1648,6 +1658,8 @@
   let keyTaskIds      = new Set();   // populated from tasks.is_starred on load
   let activeTimeframe = '1M';
   let finData         = null;  // cached finance data
+  let holdingsSortKey = 'value';   // ticker | shares | value | gain
+  let holdingsSortDir = -1;        // -1 = desc, 1 = asc
   let portfolioChart  = null;
   let homeSparkChart  = null;
   // ── Habit in-memory cache (loaded from Supabase) ──────────
@@ -1691,6 +1703,16 @@
     const btn  = document.getElementById('home-eye-btn');
     if (wrap) wrap.classList.toggle('blurred', homePrivacyMode);
     if (btn)  btn.textContent = homePrivacyMode ? '🙈' : '🙉';
+  };
+
+  window.sortHoldings = (key) => {
+    if (holdingsSortKey === key) {
+      holdingsSortDir *= -1;          // same column → flip direction
+    } else {
+      holdingsSortKey = key;
+      holdingsSortDir = key === 'ticker' ? 1 : -1; // ticker defaults asc, others desc
+    }
+    renderFinance();
   };
 
   window.setTimeframe = (tf) => {
@@ -1893,6 +1915,7 @@
     if (tdEl) tdEl.innerHTML = allOpen.length
       ? allOpen.map(t => `
         <div class="todo-row">
+          <div class="home-chk" onclick="homeCompleteTask('${t.id}')" title="Mark complete"></div>
           <div class="todo-dot" style="background:${dotColors[t.priority]||'var(--muted)'}"></div>
           <div class="todo-text">${t.task_text}</div>
           ${t.due_date === today ? `<span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--red)">TODAY</span>` : (t.due_date ? `<span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted)">${t.due_date.slice(5)}</span>` : '')}
@@ -1969,14 +1992,6 @@
       setEl('hfp-monthly-val', fmtPnl(monthAbs), col(monthAbs));
       setEl('hfp-monthly-pct', fmtPct(monthPct), col(monthPct));
 
-      // Update badge
-      const badge = document.getElementById('home-fp-badge');
-      if (badge) {
-        const sign = monthAbs >= 0 ? '▲' : '▼';
-        badge.textContent = sign + ' ' + fmtPct(monthPct) + ' · 30D';
-        badge.style.color = col(monthAbs);
-        badge.style.display = '';
-      }
     }
   }
 
@@ -2218,10 +2233,28 @@
     if (!holdings.length) {
       tbody.innerHTML = `<tr><td colspan="6" class="empty">No transactions yet.</td></tr>`;
     } else {
+      // Apply current sort
       const sorted = [...holdings].sort((a, b) => {
-        const av = (prices[a.ticker]?.price || a.avgCost) * a.qty;
-        const bv = (prices[b.ticker]?.price || b.avgCost) * b.qty;
-        return bv - av;
+        let av, bv;
+        if (holdingsSortKey === 'ticker') {
+          return holdingsSortDir * a.ticker.localeCompare(b.ticker);
+        } else if (holdingsSortKey === 'shares') {
+          av = a.qty; bv = b.qty;
+        } else if (holdingsSortKey === 'gain') {
+          const alv = (prices[a.ticker]?.price || a.avgCost) * a.qty;
+          const blv = (prices[b.ticker]?.price || b.avgCost) * b.qty;
+          av = a.totalCost > 0 ? (alv - a.totalCost) / a.totalCost : 0;
+          bv = b.totalCost > 0 ? (blv - b.totalCost) / b.totalCost : 0;
+        } else { // value (default)
+          av = (prices[a.ticker]?.price || a.avgCost) * a.qty;
+          bv = (prices[b.ticker]?.price || b.avgCost) * b.qty;
+        }
+        return holdingsSortDir * (bv - av);
+      });
+      // Update sort arrow indicators
+      ['ticker','shares','value','gain'].forEach(k => {
+        const el = document.getElementById('sa-' + k);
+        if (el) el.textContent = holdingsSortKey === k ? (holdingsSortDir === -1 ? ' ▼' : ' ▲') : '';
       });
       tbody.innerHTML = sorted.map(h => {
         const livePrice = prices[h.ticker]?.price || h.avgCost;
@@ -3133,12 +3166,13 @@ Return raw JSON only.`,
   };
 
   window.cancelThemeChanges = () => {
-    // Restore snapshot
     if (_themeSnapshot) applyThemeVars(_themeSnapshot);
     _themeSnapshot = null;
-    // Restore font size snapshot
+    // Restore zoom from snapshot
     if (_fontSizeSnapshot) {
-      document.documentElement.style.fontSize = _fontSizeSnapshot + 'px';
+      const zoom = (_fontSizeSnapshot / 14).toFixed(3);
+      const app = document.getElementById('app');
+      if (app) app.style.zoom = zoom;
     }
     closeSettings();
   };
@@ -3148,14 +3182,18 @@ Return raw JSON only.`,
   };
 
   window.livePreviewFontSize = (v) => {
-    document.documentElement.style.fontSize = v + 'px';
+    // zoom scales everything (including hardcoded px values) uniformly
+    const zoom = (parseInt(v) / 14).toFixed(3); // 14 = default scale = 1
+    document.getElementById('app').style.zoom = zoom;
     const el = document.getElementById('font-size-display');
     if (el) el.textContent = v + 'px';
   };
 
   function initFontSize() {
     const saved = parseInt(localStorage.getItem('omar_font_size')) || 14;
-    document.documentElement.style.fontSize = saved + 'px';
+    const zoom = (saved / 14).toFixed(3);
+    const app = document.getElementById('app');
+    if (app) app.style.zoom = zoom;
   }
 
   window.applyPreset = (preset) => {
@@ -3820,12 +3858,45 @@ Return raw JSON only.`,
     const keyed = allTasks.filter(t => !t.completed && keyTaskIds.has(t.id));
     el.innerHTML = keyed.length
       ? keyed.map(t => `<div class="key-task-row">
+          <div class="home-chk" onclick="homeCompleteTask('${t.id}')" title="Mark complete"></div>
           <div class="key-task-dot" style="background:${dotColors[t.priority]||'var(--muted)'}"></div>
           <div class="key-task-text">${t.task_text}</div>
           <div class="key-task-cat">${t.category}</div>
         </div>`).join('')
       : '<div class="empty">No key tasks starred yet ★</div>';
   }
+
+  window.homeCompleteTask = async (id) => {
+    // Optimistic update
+    const t = allTasks.find(t => t.id === id);
+    if (!t) return;
+    t.completed = true;
+    keyTaskIds.delete(id);
+    renderKeyTasksHome();
+    // Re-render home to-do list too
+    const tdEl = document.getElementById('home-todo-list');
+    if (tdEl) {
+      const today = new Date().toISOString().slice(0,10);
+      const allOpen = allTasks.filter(t => !t.completed)
+        .sort((a,b) => { const p={high:0,medium:1,low:2}; const pd=(p[a.priority]||1)-(p[b.priority]||1); return pd!==0?pd:(a.due_date||'9999')<(b.due_date||'9999')?-1:1; })
+        .slice(0,10);
+      tdEl.innerHTML = allOpen.length
+        ? allOpen.map(t => `<div class="todo-row">
+            <div class="home-chk" onclick="homeCompleteTask('${t.id}')" title="Mark complete"></div>
+            <div class="todo-text">${t.task_text}</div>
+            ${t.due_date===today?`<span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--red)">TODAY</span>`:(t.due_date?`<span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted)">${t.due_date.slice(5)}</span>`:'')}
+          </div>`).join('')
+        : '<div class="empty" style="font-size:10px">All clear ✓</div>';
+    }
+    // Persist
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ completed: true }),
+      });
+    } catch(e) { console.warn('homeCompleteTask error', e); }
+  };
 
   // ── SUB-HABITS ───────────────────────────────────────────
   window.toggleSubHabit = (e, habitId, subId) => {
@@ -3956,45 +4027,59 @@ Return raw JSON only.`,
     const rightCol = document.getElementById('home-col-right');
     if (!lcHandle || !crHandle || !leftCol || !midCol || !rightCol) return;
 
-    function makeResizer(handle, colA, colB, side) {
-      let startX, startAW, startBW;
-      handle.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        startX  = e.clientX;
-        startAW = colA.offsetWidth;
-        startBW = colB.offsetWidth;
-        handle.classList.add('dragging');
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-        const onMove = (e) => {
-          const dx = e.clientX - startX;
-          const newAW = Math.max(160, Math.min(500, startAW + dx));
-          const newBW = Math.max(160, Math.min(500, startBW - dx));
-          colA.style.width = newAW + 'px';
-          colA.style.flex  = 'none';
-          if (side === 'right') {
-            colB.style.width = newBW + 'px';
-            colB.style.flex  = 'none';
-          }
-        };
-        const onUp = () => {
-          handle.classList.remove('dragging');
-          document.body.style.cursor = '';
-          document.body.style.userSelect = '';
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          // Save widths
-          localStorage.setItem('omar_col_widths', JSON.stringify({
-            left: leftCol.offsetWidth, right: rightCol.offsetWidth
-          }));
-        };
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-    }
+    // LEFT handle: drag right = left col grows, center shrinks
+    lcHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const startX  = e.clientX;
+      const startLW = leftCol.offsetWidth;
+      lcHandle.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      const onMove = (ev) => {
+        const dx  = ev.clientX - startX;
+        const newW = Math.max(160, Math.min(500, startLW + dx));
+        leftCol.style.width = newW + 'px';
+        leftCol.style.flex  = 'none';
+      };
+      const onUp = () => {
+        lcHandle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        localStorage.setItem('omar_col_widths', JSON.stringify({ left: leftCol.offsetWidth, right: rightCol.offsetWidth }));
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
 
-    makeResizer(lcHandle, leftCol, midCol, 'left');
-    makeResizer(crHandle, rightCol, midCol, 'right');
+    // RIGHT handle: drag right = right col grows (handle is between center and right)
+    // dx positive (right) = right col grows; dx negative (left) = right col shrinks
+    crHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const startX  = e.clientX;
+      const startRW = rightCol.offsetWidth;
+      crHandle.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      const onMove = (ev) => {
+        const dx  = ev.clientX - startX;
+        // Moving handle right → right col gets smaller (handle moves into right col territory)
+        const newW = Math.max(160, Math.min(500, startRW - dx));
+        rightCol.style.width = newW + 'px';
+        rightCol.style.flex  = 'none';
+      };
+      const onUp = () => {
+        crHandle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        localStorage.setItem('omar_col_widths', JSON.stringify({ left: leftCol.offsetWidth, right: rightCol.offsetWidth }));
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
 
     // Restore saved widths
     const saved = localStorage.getItem('omar_col_widths');
