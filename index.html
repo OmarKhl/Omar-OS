@@ -2174,65 +2174,54 @@
         return t; // US stocks — Google resolves without exchange prefix
       };
 
-      for (const ticker of missed) {
+      // Fetch all missed tickers in parallel — no sequential blocking
+      const googleResults = await Promise.all(missed.map(async (ticker) => {
         const sym = googleSym(ticker);
-        let got = false;
 
         // Attempt 1: old Google Finance info API (returns "// [{...}]")
         const infoUrl = `https://finance.google.com/finance/info?client=ig&q=${encodeURIComponent(sym)}`;
         for (const makeProxy of proxies) {
           try {
-            const resp = await fetch(makeProxy(infoUrl), { signal: AbortSignal.timeout(8000) });
+            const resp = await fetch(makeProxy(infoUrl), { signal: AbortSignal.timeout(6000) });
             if (!resp.ok) continue;
             const text = await resp.text();
-            // Strip leading "// " comment before JSON
             const jsonStr = text.replace(/^[^[{]*/, '').trim();
             let data;
-            try { data = JSON.parse(jsonStr); } catch { continue; }
+            try { data = JSON.parse(jsonStr); } catch (e2) { continue; }
             const item = Array.isArray(data) ? data[0] : data;
             if (!item) continue;
             const price = parseFloat((item.l || '').toString().replace(/,/g, ''));
             if (price > 0) {
-              prices[ticker] = {
-                price,
-                changePct: parseFloat(item.cp || 0),
-                name:      item.t || ticker,
-                currency:  'USD',
-                source:    'google',
-              };
-              fetchedAny = true;
-              got = true;
-              break;
+              return { ticker, price, changePct: parseFloat(item.cp || 0), name: item.t || ticker, source: 'google' };
             }
           } catch (e) { /* try next proxy */ }
         }
 
         // Attempt 2: scrape Google Finance quote page HTML
-        if (!got) {
-          const pageUrl = `https://www.google.com/finance/quote/${encodeURIComponent(sym)}`;
-          for (const makeProxy of proxies) {
-            try {
-              const resp = await fetch(makeProxy(pageUrl), { signal: AbortSignal.timeout(10000) });
-              if (!resp.ok) continue;
-              const html = await resp.text();
-              // Try several patterns Google Finance uses for the price value
-              const m = html.match(/data-last-price="([0-9.]+)"/i)
-                     || html.match(/class="[^"]*YMlKec fxKbKc[^"]*"[^>]*>\$?([0-9,]+\.?[0-9]*)</i)
-                     || html.match(/class="[^"]*YMlKec[^"]*"[^>]*>([0-9,]+\.?[0-9]*)</i)
-                     || html.match(/"price"\s*:\s*"([0-9.]+)"/i);
-              if (m) {
-                const price = parseFloat(m[1].replace(/,/g, ''));
-                if (price > 0) {
-                  prices[ticker] = { price, changePct: 0, name: ticker, currency: 'USD', source: 'google-html' };
-                  fetchedAny = true;
-                  got = true;
-                  break;
-                }
-              }
-            } catch (e) { /* try next proxy */ }
-          }
+        const pageUrl = `https://www.google.com/finance/quote/${encodeURIComponent(sym)}`;
+        for (const makeProxy of proxies) {
+          try {
+            const resp = await fetch(makeProxy(pageUrl), { signal: AbortSignal.timeout(7000) });
+            if (!resp.ok) continue;
+            const html = await resp.text();
+            const m = html.match(/data-last-price="([0-9.]+)"/i)
+                   || html.match(/class="[^"]*YMlKec fxKbKc[^"]*"[^>]*>\$?([0-9,]+\.?[0-9]*)</i)
+                   || html.match(/class="[^"]*YMlKec[^"]*"[^>]*>([0-9,]+\.?[0-9]*)</i)
+                   || html.match(/"price"\s*:\s*"([0-9.]+)"/i);
+            if (m) {
+              const price = parseFloat(m[1].replace(/,/g, ''));
+              if (price > 0) return { ticker, price, changePct: 0, name: ticker, source: 'google-html' };
+            }
+          } catch (e) { /* try next proxy */ }
         }
-      }
+        return null; // all attempts failed for this ticker
+      }));
+
+      googleResults.forEach(r => {
+        if (!r) return;
+        prices[r.ticker] = { price: r.price, changePct: r.changePct, name: r.name, currency: 'USD', source: r.source };
+        fetchedAny = true;
+      });
     }
 
     // ── Status bar update ────────────────────────────────
@@ -2386,28 +2375,38 @@
     ]);
 
     const holdings = txs.length ? calcHoldings(txs) : [];
-    const prices   = holdings.length ? await fetchLivePrices(holdings.map(h => h.ticker)) : {};
 
-    let liveTotal = 0, costTotal = 0, partialPrices = false;
-    holdings.forEach(h => {
-      costTotal += h.totalCost;
-      if (prices[h.ticker]?.price) {
-        liveTotal += prices[h.ticker].price * h.qty;
-      } else {
-        // Fall back to cost basis for this position but flag it
-        liveTotal += h.totalCost;
-        partialPrices = true;
-      }
-    });
-    if (partialPrices) {
-      const st = document.getElementById('prices-status');
-      if (st && !st.textContent.includes('⚠')) {
-        st.textContent += ' · some positions using cost basis';
-      }
-    }
+    // ── Render immediately with cost-basis so the table never hangs ──
+    const computeTotals = (holdings, prices) => {
+      let liveTotal = 0, costTotal = 0, partialPrices = false;
+      holdings.forEach(h => {
+        costTotal += h.totalCost;
+        if (prices[h.ticker]?.price) {
+          liveTotal += prices[h.ticker].price * h.qty;
+        } else {
+          liveTotal += h.totalCost;
+          partialPrices = true;
+        }
+      });
+      return { liveTotal, costTotal, partialPrices };
+    };
 
-    finData = { txs, watchlist, holdings, prices, liveTotal, costTotal };
+    // First pass: show data immediately using cost basis as live total
+    const { liveTotal: lt0, costTotal: ct0 } = computeTotals(holdings, {});
+    finData = { txs, watchlist, holdings, prices: {}, liveTotal: lt0, costTotal: ct0 };
     renderFinance();
+
+    // Second pass: fetch live prices in background, then re-render
+    if (holdings.length) {
+      const prices = await fetchLivePrices(holdings.map(h => h.ticker));
+      const { liveTotal, costTotal, partialPrices } = computeTotals(holdings, prices);
+      if (partialPrices) {
+        const st = document.getElementById('prices-status');
+        if (st && !st.textContent.includes('⚠')) st.textContent += ' · some using cost basis';
+      }
+      finData = { txs, watchlist, holdings, prices, liveTotal, costTotal };
+      renderFinance();
+    }
   }
 
   function renderFinance() {
