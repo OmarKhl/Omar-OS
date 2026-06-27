@@ -1099,9 +1099,11 @@
           oninput="this.style.borderColor='var(--border)'"
           value="">
         <button class="fin-icon-btn active" onclick="savePriceUrl()" style="white-space:nowrap">SAVE &amp; REFRESH</button>
+        <button class="fin-icon-btn" onclick="testPriceUrl()" style="white-space:nowrap">TEST</button>
         <button class="fin-icon-btn" onclick="clearPriceUrl()" style="white-space:nowrap">CLEAR</button>
       </div>
       <div id="price-url-status" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px"></div>
+      <div id="price-url-raw" style="display:none;margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto"></div>
     </div>
 
     <div class="section-label">PORTFOLIO OVERVIEW · LIVE</div>
@@ -2132,23 +2134,35 @@
         const toYahooSym = t => CRYPTO_TICKERS.has(t) ? t + '-USD' : t;
         const syms = tickers.map(toYahooSym).join(',');
         const url  = `${pricesWebAppUrl}?symbols=${encodeURIComponent(syms)}`;
-        const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
+        const resp = await fetch(url, {
+          redirect: 'follow',
+          signal: AbortSignal.timeout(30000)   // Apps Script cold starts can be slow
+        });
         if (resp.ok) {
-          const data = await resp.json();
-          Object.entries(data).forEach(([ticker, entry]) => {
-            if (entry && entry.price > 0) {
-              // ticker already has -USD stripped by cleanSym in Apps Script
-              prices[ticker] = { ...entry, source: 'apps-script' };
-            }
-          });
+          let data;
+          const text = await resp.text();
+          try { data = JSON.parse(text); } catch {
+            console.warn('[Omar OS] Apps Script returned non-JSON:', text.slice(0, 200));
+          }
+          if (data && !data.error) {
+            Object.entries(data).forEach(([ticker, entry]) => {
+              if (entry && entry.price > 0) {
+                prices[ticker] = { ...entry, source: 'apps-script' };
+              }
+            });
+          } else if (data && data.error) {
+            console.warn('[Omar OS] Apps Script returned error:', data.error);
+          }
+        } else {
+          console.warn('[Omar OS] Apps Script HTTP', resp.status);
         }
       } catch (err) {
         console.warn('[Omar OS] Apps Script proxy failed:', err.message);
       }
 
-      // If Apps Script returned prices for all tickers, skip CORS fallbacks
+      // If Apps Script returned all prices, skip CORS fallbacks
       const stillMissing = tickers.filter(t => !prices[t]);
-      if (stillMissing.length === 0) {
+      if (stillMissing.length === 0 && Object.keys(prices).length > 0) {
         const count   = Object.keys(prices).length;
         const timeStr = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
         if (statusEl) statusEl.textContent = `${count} prices via apps-script · ${timeStr}`;
@@ -2252,7 +2266,7 @@
   }
 
   // ── PRICE SETTINGS UI ────────────────────────────────────
-  function togglePriceSettings() {
+  window.togglePriceSettings = function togglePriceSettings() {
     const panel = document.getElementById('price-settings-panel');
     const btn   = document.getElementById('price-settings-btn');
     const input = document.getElementById('price-url-input');
@@ -2267,7 +2281,7 @@
     }
   }
 
-  function savePriceUrl() {
+  window.savePriceUrl = function savePriceUrl() {
     const input = document.getElementById('price-url-input');
     const url   = (input.value || '').trim();
     const st    = document.getElementById('price-url-status');
@@ -2296,13 +2310,74 @@
     }
   }
 
-  function clearPriceUrl() {
+  window.clearPriceUrl = function clearPriceUrl() {
     document.getElementById('price-url-input').value = '';
     pricesWebAppUrl = '';
     localStorage.removeItem('omar_prices_url');
     const st = document.getElementById('price-url-status');
     st.textContent = 'Cleared. Prices will use CORS fallbacks.';
     st.style.color  = 'var(--muted)';
+    document.getElementById('price-url-raw').style.display = 'none';
+  }
+
+  window.testPriceUrl = async function testPriceUrl() {
+    const input  = document.getElementById('price-url-input');
+    const st     = document.getElementById('price-url-status');
+    const rawBox = document.getElementById('price-url-raw');
+    const url    = (input.value || pricesWebAppUrl || '').trim();
+
+    if (!url) {
+      st.textContent = '⚠ Paste a URL first.';
+      st.style.color  = '#f59e0b';
+      return;
+    }
+
+    st.textContent = '⏳ Testing… (may take up to 30s on cold start)';
+    st.style.color  = 'var(--muted)';
+    rawBox.style.display = 'none';
+
+    try {
+      const testUrl = `${url}?symbols=AAPL`;
+      const resp    = await fetch(testUrl, { redirect: 'follow', signal: AbortSignal.timeout(35000) });
+      const text    = await resp.text();
+
+      rawBox.textContent   = `HTTP ${resp.status}\n\n${text.slice(0, 600)}`;
+      rawBox.style.display = 'block';
+
+      if (!resp.ok) {
+        st.textContent = `❌ HTTP ${resp.status} — see raw response below`;
+        st.style.color  = '#ef4444';
+        return;
+      }
+
+      let data;
+      try { data = JSON.parse(text); } catch {
+        st.textContent = '❌ Response is not JSON — see raw response below';
+        st.style.color  = '#ef4444';
+        return;
+      }
+
+      if (data && data.error) {
+        st.textContent = `❌ Apps Script error: ${data.error}`;
+        st.style.color  = '#ef4444';
+        return;
+      }
+
+      const keys = Object.keys(data || {});
+      if (keys.length > 0 && data[keys[0]]?.price > 0) {
+        const sample = data[keys[0]];
+        st.textContent = `✅ Working! AAPL = ${sample.currency} ${sample.price} (${sample.name})`;
+        st.style.color  = '#22c55e';
+      } else {
+        st.textContent = '⚠ Connected but no price returned — check the Apps Script logs';
+        st.style.color  = '#f59e0b';
+      }
+    } catch (err) {
+      rawBox.textContent   = err.toString();
+      rawBox.style.display = 'block';
+      st.textContent = `❌ Fetch failed: ${err.message}`;
+      st.style.color  = '#ef4444';
+    }
   }
 
   // ── BUILD CHART DATA ─────────────────────────────────────
