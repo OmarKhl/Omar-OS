@@ -643,21 +643,62 @@
     .habit-item.dragging { opacity: .4; }
     .habit-item.drag-over { border-color: var(--gold); background: rgba(200,168,75,.08); }
     .habit-item.expanded { border-color: var(--gold-dim); background: rgba(200,168,75,.04); }
-    .habit-sub-card {
-      background: var(--bg2); border: 1px solid var(--border2);
-      border-radius: 4px; padding: 7px 8px; cursor: pointer;
-      transition: border-color .15s, background .15s;
-      display: flex; align-items: center; gap: 7px;
+    /* Sub-tasks full-width panel */
+    .habit-subtasks-panel {
+      grid-column: 1 / -1;
+      background: var(--bg2);
+      border: 1px solid var(--gold-dim);
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 2px;
     }
-    .habit-sub-card:hover { border-color: var(--gold-dim); }
-    .habit-sub-card.done  { border-color: var(--green); background: rgba(34,197,94,.05); }
-    .habit-sub-card .sub-chk {
-      width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border2);
+    .habit-subtasks-header {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .12em;
+      color: var(--gold-dim);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .habit-subtasks-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .habit-sub-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 5px;
+      padding: 7px 10px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      min-width: 140px;
+      flex: 1 1 140px;
+      max-width: 240px;
+    }
+    .habit-sub-item:hover { border-color: var(--gold-dim); }
+    .habit-sub-item.done  { border-color: var(--green); background: rgba(34,197,94,.05); }
+    .habit-sub-item-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--muted);
+      flex-shrink: 0;
+      min-width: 14px;
+    }
+    .habit-sub-item-chk {
+      width: 15px; height: 15px; border-radius: 3px;
+      border: 1px solid var(--border2);
       display: flex; align-items: center; justify-content: center;
       font-size: 9px; color: #fff; flex-shrink: 0;
+      transition: background .15s, border-color .15s;
     }
-    .habit-sub-card .sub-chk.done { background: var(--green); border-color: var(--green); }
-    .habit-sub-card .sub-title { font-size: 10px; font-weight: 500; line-height: 1.2; }
+    .habit-sub-item-chk.done { background: var(--green); border-color: var(--green); }
+    .habit-sub-item-title { font-size: 11px; font-weight: 500; line-height: 1.2; }
+    .habit-sub-item.done .habit-sub-item-title { text-decoration: line-through; color: var(--muted); }
     .habit-del {
       position: absolute; top: 4px; right: 4px;
       width: 15px; height: 15px; display: none; align-items: center; justify-content: center;
@@ -1049,7 +1090,7 @@
   <div class="tasks-search-row">
     <div class="tasks-search-wrap">
       <span class="tasks-search-icon">⊕</span>
-      <input class="tasks-search-inp" id="task-search" placeholder="Search title, description, tag…" oninput="renderTasks()" />
+      <input class="tasks-search-inp" id="task-search" placeholder="Search title, description, tag…" oninput="doTaskSearch()" />
     </div>
     <button class="btn-add" onclick="openAddTask()">+ ADD</button>
   </div>
@@ -1057,7 +1098,8 @@
   <div class="filter-row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <div id="cat-filter-btns" style="display:contents"></div>
-      <button class="filter-btn" onclick="promptNewCategory()" title="Add new category" style="padding:3px 8px;font-size:13px;line-height:1">+</button>
+      <button class="filter-btn" onclick="openAddCategoryModal()" title="Add new category" style="padding:3px 8px;font-size:13px;line-height:1;min-width:26px">+</button>
+      <button class="filter-btn" onclick="openManageCategoriesModal()" title="Manage categories" style="padding:3px 8px;font-size:10px;line-height:1;letter-spacing:.06em">MANAGE</button>
       <span style="color:var(--muted2);font-size:11px;margin:0 4px">|</span>
       <div class="sort-group">
         <button class="sort-btn active" data-sort="created">NEWEST</button>
@@ -1179,6 +1221,35 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeAddGoal()">Cancel</button>
       <button class="btn-save" onclick="saveGoal()">Save Goal</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CATEGORY MODAL -->
+<div class="modal-overlay" id="add-cat-modal">
+  <div class="modal" style="max-width:380px">
+    <h3 style="margin-bottom:6px">ADD CATEGORY</h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:18px;line-height:1.5">Categories help you organise your tasks. The new category will appear as a filter on the Tasks page and as an option when creating or editing tasks.</p>
+    <div class="form-group">
+      <label class="form-label">Category Name</label>
+      <input class="form-input" id="new-cat-name" placeholder="e.g. Health, Finance, Strategy…" autocomplete="off" onkeydown="if(event.key==='Enter')saveNewCategory()" />
+    </div>
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="modal-btn-cancel" onclick="closeAddCategoryModal()">Cancel</button>
+      <button class="modal-btn-save" onclick="saveNewCategory()">Add Category</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE CATEGORIES MODAL -->
+<div class="modal-overlay" id="manage-cats-modal">
+  <div class="modal" style="max-width:440px">
+    <h3 style="margin-bottom:6px">MANAGE CATEGORIES</h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.5">Edit or delete your task categories. Renaming a category will update all tasks assigned to it.</p>
+    <div id="manage-cats-list" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto"></div>
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="modal-btn-cancel" onclick="closeManageCategoriesModal()">Close</button>
+      <button class="modal-btn-save" onclick="openAddCategoryModal()">+ New Category</button>
     </div>
   </div>
 </div>
@@ -2122,11 +2193,128 @@
     } catch(e) { console.warn('ensureCategoryExists error', e); }
   }
 
-  window.promptNewCategory = () => {
-    const name = prompt('New category name:');
-    if (!name || !name.trim()) return;
-    ensureCategoryExists(name.trim());
+  // ── ADD CATEGORY MODAL ──────────────────────────────────────────────
+  window.openAddCategoryModal = () => {
+    const el = document.getElementById('new-cat-name');
+    if (el) el.value = '';
+    // Close manage modal if open
+    const mm = document.getElementById('manage-cats-modal');
+    if (mm) mm.classList.remove('open');
+    const modal = document.getElementById('add-cat-modal');
+    if (modal) {
+      modal.classList.add('open');
+      setTimeout(() => el && el.focus(), 50);
+    }
   };
+  window.closeAddCategoryModal = () => {
+    const modal = document.getElementById('add-cat-modal');
+    if (modal) modal.classList.remove('open');
+  };
+  window.saveNewCategory = async () => {
+    const el = document.getElementById('new-cat-name');
+    const name = (el?.value || '').trim();
+    if (!name) { el?.focus(); return; }
+    await ensureCategoryExists(name);
+    closeAddCategoryModal();
+  };
+
+  // ── MANAGE CATEGORIES MODAL ─────────────────────────────────────────
+  window.openManageCategoriesModal = () => {
+    renderManageCatsList();
+    const modal = document.getElementById('manage-cats-modal');
+    if (modal) modal.classList.add('open');
+  };
+  window.closeManageCategoriesModal = () => {
+    const modal = document.getElementById('manage-cats-modal');
+    if (modal) modal.classList.remove('open');
+  };
+
+  function renderManageCatsList() {
+    const container = document.getElementById('manage-cats-list');
+    if (!container) return;
+    if (!taskCategories.length) {
+      container.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:8px 0">No categories yet. Add one using the button below.</div>';
+      return;
+    }
+    container.innerHTML = taskCategories.map((cat, idx) => `
+      <div class="manage-cat-row" id="manage-cat-row-${idx}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:5px">
+        <div class="manage-cat-view" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+          <span style="font-size:12px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cat}</span>
+          <button onclick="startEditCategory(${idx})" title="Rename" style="border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 5px;border-radius:3px;transition:color .15s" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">✎</button>
+          <button onclick="deleteCategory('${cat}')" title="Delete" style="border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 5px;border-radius:3px;transition:color .15s" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">✕</button>
+        </div>
+        <div class="manage-cat-edit" style="display:none;align-items:center;gap:6px;flex:1">
+          <input id="edit-cat-inp-${idx}" value="${cat}" style="flex:1;background:var(--bg4);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:4px 7px;font-size:11px;font-family:inherit" />
+          <button onclick="confirmEditCategory(${idx},'${cat}')" style="border:none;background:var(--gold);color:#000;cursor:pointer;font-size:10px;padding:4px 8px;border-radius:3px;font-weight:600">OK</button>
+          <button onclick="cancelEditCategory(${idx})" style="border:none;background:var(--bg4);color:var(--muted);cursor:pointer;font-size:10px;padding:4px 8px;border-radius:3px">✕</button>
+        </div>
+      </div>`).join('');
+  }
+
+  window.startEditCategory = (idx) => {
+    const row = document.getElementById(`manage-cat-row-${idx}`);
+    if (!row) return;
+    row.querySelector('.manage-cat-view').style.display = 'none';
+    const edit = row.querySelector('.manage-cat-edit');
+    edit.style.display = 'flex';
+    const inp = document.getElementById(`edit-cat-inp-${idx}`);
+    if (inp) { inp.focus(); inp.select(); }
+  };
+  window.cancelEditCategory = (idx) => {
+    const row = document.getElementById(`manage-cat-row-${idx}`);
+    if (!row) return;
+    row.querySelector('.manage-cat-view').style.display = 'flex';
+    row.querySelector('.manage-cat-edit').style.display = 'none';
+  };
+  window.confirmEditCategory = async (idx, oldName) => {
+    const inp = document.getElementById(`edit-cat-inp-${idx}`);
+    const newName = (inp?.value || '').trim();
+    if (!newName || newName === oldName) { cancelEditCategory(idx); return; }
+    // Update in-memory
+    const oldIdx = taskCategories.indexOf(oldName);
+    if (oldIdx >= 0) taskCategories[oldIdx] = newName;
+    // Update tasks in memory
+    allTasks.forEach(t => { if (t.category === oldName) t.category = newName; });
+    renderCategoryFilters();
+    populateCatDatalist();
+    renderManageCatsList();
+    renderTasks();
+    // Persist: rename in task_categories
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/task_categories?name=eq.${encodeURIComponent(oldName)}`, {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ name: newName }),
+      });
+      // Also update all tasks in DB
+      await fetch(`${SUPABASE_URL}/rest/v1/tasks?category=eq.${encodeURIComponent(oldName)}`, {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ category: newName }),
+      });
+    } catch(e) { console.warn('confirmEditCategory error', e); }
+  };
+  window.deleteCategory = async (name) => {
+    if (!confirm(`Delete category "${name}"? Tasks in this category will remain but lose their category.`)) return;
+    taskCategories = taskCategories.filter(c => c !== name);
+    // Clear category from in-memory tasks
+    allTasks.forEach(t => { if (t.category === name) t.category = ''; });
+    if (activeFilter === name) activeFilter = 'all';
+    renderCategoryFilters();
+    populateCatDatalist();
+    renderManageCatsList();
+    renderTasks();
+    // Persist
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/task_categories?name=eq.${encodeURIComponent(name)}`, {
+        method: 'DELETE',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Prefer': 'return=minimal' },
+      });
+    } catch(e) { console.warn('deleteCategory error', e); }
+  };
+
+  // Search: expose on window so oninput attribute can reach it
+  window.doTaskSearch = () => renderTasks();
 
   async function loadTasks() {
     await loadTaskCategories();
@@ -2732,7 +2920,7 @@ Return raw JSON only.`,
     renderHabits();
   };
 
-  // Patch renderHabits to include drag + delete + collapsible sub-habits as grid cards
+  // Patch renderHabits — row-based grid with full-width sub-tasks panel below expanded row
   const _origRenderHabits = renderHabits;
   renderHabits = function() {
     const habits   = getHabits();
@@ -2751,15 +2939,17 @@ Return raw JSON only.`,
       if (!habits.length) {
         grid.innerHTML = '<div class="empty" style="grid-column:1/-1;font-size:10px">No habits yet — tap + to add</div>';
       } else {
+        const COLS = 3;
         const pieces = [];
-        habits.forEach(h => {
+
+        // Helper to build a single habit card HTML
+        const habitCardHtml = (h) => {
           const done    = checkins[tk] && checkins[tk].includes(h.id);
           const streak  = habitStreak(h.id);
           const subs    = h.sub_habits || h.subHabits || [];
           const hasSubs = subs.length > 0;
           const expanded = hasSubs && expandedHabitId === h.id;
 
-          // Progress bar + count shown on the parent card when it has sub-habits
           let progressHtml = '';
           if (hasSubs) {
             const subsDone = subs.filter(sh => checkins[tk] && checkins[tk].includes(h.id + ':' + sh.id)).length;
@@ -2773,8 +2963,7 @@ Return raw JSON only.`,
             ? `onclick="toggleHabitExpand(event,'${h.id}')"`
             : `onclick="toggleCheckin('${h.id}')"`;
 
-          // Parent habit card
-          pieces.push(`<div class="habit-item ${done ? 'done' : ''} ${expanded ? 'expanded' : ''}" style="position:relative"
+          return `<div class="habit-item ${done ? 'done' : ''} ${expanded ? 'expanded' : ''}" style="position:relative"
             draggable="true"
             ondragstart="habitDragStart(event,'${h.id}')"
             ondragend="habitDragEnd(event)"
@@ -2787,20 +2976,33 @@ Return raw JSON only.`,
             <div class="habit-title" title="${h.title}">${h.title}${hasSubs ? ` <span style="font-size:9px;color:var(--muted)">${expanded ? '▲' : '▼'}</span>` : ''}</div>
             ${h.sub ? `<div class="habit-sub" title="${h.sub}">${h.sub}</div>` : (hasSubs ? '' : '<div style="height:5px"></div>')}
             ${hasSubs ? progressHtml : `<div class="habit-streak">🔥 ${streak}d</div>`}
-          </div>`);
+          </div>`;
+        };
 
-          // If expanded: inject each sub-habit as its own grid card immediately after
-          if (expanded) {
-            subs.forEach(sh => {
-              const shDone = checkins[tk] && checkins[tk].includes(h.id + ':' + sh.id);
-              pieces.push(`<div class="habit-sub-card ${shDone ? 'done' : ''}"
-                onclick="toggleSubHabit(event,'${h.id}','${sh.id}')">
-                <div class="sub-chk ${shDone ? 'done' : ''}">${shDone ? '✓' : ''}</div>
-                <div class="sub-title" style="${shDone ? 'text-decoration:line-through;color:var(--muted)' : ''}">${sh.title}</div>
-              </div>`);
-            });
+        // Process habits row by row (COLS per row)
+        for (let i = 0; i < habits.length; i += COLS) {
+          const row = habits.slice(i, i + COLS);
+          // Add habit cards for this row
+          row.forEach(h => pieces.push(habitCardHtml(h)));
+          // Check if any habit in this row is expanded
+          const expandedHabit = row.find(h => h.id === expandedHabitId);
+          if (expandedHabit) {
+            const subs = expandedHabit.sub_habits || expandedHabit.subHabits || [];
+            const subItems = subs.map((sh, idx) => {
+              const shDone = checkins[tk] && checkins[tk].includes(expandedHabit.id + ':' + sh.id);
+              return `<div class="habit-sub-item ${shDone ? 'done' : ''}"
+                onclick="toggleSubHabit(event,'${expandedHabit.id}','${sh.id}')">
+                <span class="habit-sub-item-num">${String(idx + 1).padStart(2, '0')}</span>
+                <div class="habit-sub-item-chk ${shDone ? 'done' : ''}">${shDone ? '✓' : ''}</div>
+                <span class="habit-sub-item-title">${sh.title}</span>
+              </div>`;
+            }).join('');
+            pieces.push(`<div class="habit-subtasks-panel">
+              <div class="habit-subtasks-header">SUB-TASKS · ALL REQUIRED TO COMPLETE</div>
+              <div class="habit-subtasks-items">${subItems}</div>
+            </div>`);
           }
-        });
+        }
 
         grid.innerHTML = pieces.join('');
         // Show delete button on hover via JS
