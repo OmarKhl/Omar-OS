@@ -2989,11 +2989,12 @@
       }
       Object.values(sheetByKey).forEach(grp => grp.sort((a, b) => a.qty - b.qty));
 
-      // 3. Compare sheet vs DB positionally — build insert / patch lists
-      const toInsert = [], toUpdate = [];
+      // 3. Compare sheet vs DB positionally — build insert / patch / delete lists
+      const toInsert = [], toUpdate = [], toDelete = [];
       const fneq = (a, b) => Math.abs((parseFloat(a) || 0) - (parseFloat(b) || 0)) > 0.000001;
       const now  = new Date().toISOString();
 
+      // Sheet → DB: inserts and patches
       for (const [key, sheetGrp] of Object.entries(sheetByKey)) {
         const dbGrp = dbByKey[key] || [];
         for (let i = 0; i < sheetGrp.length; i++) {
@@ -3025,6 +3026,19 @@
         }
       }
 
+      // DB → Sheet: find DB rows that no longer exist in the sheet
+      for (const [key, dbGrp] of Object.entries(dbByKey)) {
+        const sheetGrp = sheetByKey[key] || [];
+        // Any DB rows beyond what the sheet has should be deleted
+        for (let i = sheetGrp.length; i < dbGrp.length; i++) {
+          toDelete.push(dbGrp[i].id);
+        }
+        // If the key is completely absent from the sheet, all DB rows are gone
+        if (!sheetByKey[key]) {
+          dbGrp.forEach(r => toDelete.push(r.id));
+        }
+      }
+
       // 4. Batch insert new rows (100 at a time)
       let inserted = 0;
       for (let i = 0; i < toInsert.length; i += 100) {
@@ -3052,19 +3066,35 @@
         else console.warn('[Sync] patch error', await r.text());
       }
 
-      // 6. Update status
+      // 6. DELETE removed rows (dedupe ids first, batch via ?id=in.(…))
+      let deleted = 0;
+      const uniqueDelIds = [...new Set(toDelete)];
+      for (let i = 0; i < uniqueDelIds.length; i += 100) {
+        const batch = uniqueDelIds.slice(i, i + 100);
+        const idList = batch.join(',');
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=in.(${idList})`, {
+          method: 'DELETE',
+          headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`,
+            Prefer: 'return=minimal' },
+        });
+        if (r.ok) deleted += batch.length;
+        else console.warn('[Sync] delete error', await r.text());
+      }
+
+      // 7. Update status
       const ts = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
       localStorage.setItem('omar_sync_ts', ts);
       const parts = [];
       if (inserted > 0) parts.push(`↑ ${inserted} new`);
       if (updated > 0)  parts.push(`✎ ${updated} updated`);
+      if (deleted > 0)  parts.push(`✕ ${deleted} removed`);
       if (syncSt) {
-        syncSt.style.color = (inserted || updated) ? 'var(--green)' : 'var(--muted)';
+        syncSt.style.color = (inserted || updated || deleted) ? 'var(--green)' : 'var(--muted)';
         syncSt.textContent = parts.length ? `${parts.join(' · ')} · ${ts}` : `✓ up to date · ${ts}`;
       }
 
-      // 7. Reload Finance if anything changed
-      if ((inserted > 0 || updated > 0) && finData) {
+      // 8. Reload Finance if anything changed
+      if ((inserted > 0 || updated > 0 || deleted > 0) && finData) {
         const safe = async (fn) => { try { return await fn(); } catch(e) { return []; } };
         const txs = await safe(() => sb('transactions', '?order=trade_date.asc'));
         const holdings = txs.length ? calcHoldings(txs) : [];
@@ -3077,7 +3107,7 @@
         renderFinance();
       }
 
-      return inserted + updated;
+      return inserted + updated + deleted;
     } catch(e) {
       console.warn('[Omar OS] syncTradeLog error:', e.message);
       if (syncSt) { syncSt.style.color = 'var(--red)'; syncSt.textContent = '⚠ sync failed'; }
