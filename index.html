@@ -1475,10 +1475,10 @@
 
 </div><!-- /app -->
 
-<!-- PRICE SETTINGS MODAL -->
+<!-- FINANCE INTEGRATIONS MODAL -->
 <div class="modal-overlay" id="price-settings-modal" onclick="if(event.target===this)closePriceSettings()">
   <div class="modal" style="width:540px;max-height:90vh;overflow-y:auto">
-    <h3 style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em">⚙ INTEGRATIONS</h3>
+    <h3 style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em">⚙ FINANCE INTEGRATIONS</h3>
 
     <!-- ── Price Source ── -->
     <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:10px">PRICE SOURCE · APPS SCRIPT PROXY</div>
@@ -1502,8 +1502,8 @@
 
     <hr style="border:none;border-top:1px solid var(--border);margin:4px 0 20px">
 
-    <!-- ── Sheets Write-back ── -->
-    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:10px">GOOGLE SHEETS WRITE-BACK</div>
+    <!-- ── Trade Log Write-back ── -->
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:10px">TRADE LOG · SHEETS WRITE-BACK</div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
       When you log a trade here, it will also be appended to your <strong style="color:var(--text)">Trade Log</strong> sheet automatically.
       Requires a one-time Apps Script setup.
@@ -1516,7 +1516,6 @@
     </div>
     <div id="sheets-write-status" style="font-family:'JetBrains Mono',monospace;font-size:10px;min-height:14px;margin-bottom:10px"></div>
 
-    <!-- Setup instructions collapsible -->
     <details style="margin-bottom:16px">
       <summary style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;user-select:none;letter-spacing:.05em">SETUP INSTRUCTIONS ▾</summary>
       <div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.8">
@@ -1562,14 +1561,20 @@
       <button class="btn-save" onclick="saveSheetsWriteUrl()">SAVE</button>
     </div>
 
-    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+  </div>
+</div>
 
-    <!-- ── Benzo Rental Write-back ── -->
-    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:10px">BENZO · RENTAL WRITE-BACK</div>
+<!-- BENZO INTEGRATIONS MODAL -->
+<div class="modal-overlay" id="benzo-settings-modal" onclick="if(event.target===this)closeBenzoSettings()">
+  <div class="modal" style="width:540px;max-height:90vh;overflow-y:auto">
+    <h3 style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em">⚙ BENZO INTEGRATIONS</h3>
+
+    <!-- ── Benzo Rental Sync ── -->
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:10px">RENTAL WRITE-BACK · APPS SCRIPT</div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
-      When you add, edit, or delete a rental in the dashboard it will sync back to your
+      When you add, edit, or delete a rental in the dashboard it syncs back to your
       <strong style="color:var(--text)">Google Sheets</strong> rental tabs automatically.
-      Paste the deployed web app URL from your Benzo Apps Script below.
+      The ↻ SYNC button pulls from the sheet — this URL handles the reverse direction.
     </p>
     <div class="form-group">
       <label class="form-label">Benzo Sheets Write URL</label>
@@ -1583,11 +1588,10 @@
       <summary style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;user-select:none;letter-spacing:.05em">SETUP INSTRUCTIONS ▾</summary>
       <div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.8">
         1. Open your Benzo Google Sheet → <strong style="color:var(--text)">Extensions → Apps Script</strong><br>
-        2. Paste the Apps Script code (shared in chat) into a new script file<br>
-        3. Click <strong style="color:var(--text)">Deploy → New deployment → Web app</strong><br>
-        4. Set <em>Execute as</em>: <strong style="color:var(--text)">Me</strong> · <em>Who has access</em>: <strong style="color:var(--text)">Anyone</strong><br>
-        5. Copy the web app URL and paste it above<br><br>
-        <span style="color:var(--muted2)">Each vehicle must have its own sheet tab named exactly the same as the vehicle name in the dashboard (e.g., "Mercedes C300").</span>
+        2. Paste the Apps Script code (shared in chat) and deploy as a Web App<br>
+        3. Set <em>Execute as</em>: <strong style="color:var(--text)">Me</strong> · <em>Who has access</em>: <strong style="color:var(--text)">Anyone</strong><br>
+        4. Copy the web app URL and paste it above<br><br>
+        <span style="color:var(--muted2)">Each sheet tab must be named exactly the same as the vehicle in the dashboard.</span>
       </div>
     </details>
 
@@ -1595,7 +1599,6 @@
       <button class="btn-cancel" onclick="clearBenzoWriteUrl()">CLEAR</button>
       <button class="btn-save" onclick="saveBenzoWriteUrl()">SAVE</button>
     </div>
-
   </div>
 </div>
 
@@ -2720,14 +2723,6 @@
       swSt.textContent = sheetsWriteUrl ? '✅ Sheets write-back active' : 'Not configured — trades will only save to the database';
       swSt.style.color = sheetsWriteUrl ? '#22c55e' : 'var(--muted)';
     }
-    // Populate benzo write URL field
-    const bwInput = document.getElementById('benzo-write-url-input');
-    const bwSt    = document.getElementById('benzo-write-status');
-    if (bwInput) bwInput.value = benzoWriteUrl;
-    if (bwSt) {
-      bwSt.textContent = benzoWriteUrl ? '✅ Benzo write-back active' : 'Not configured — rental changes will only save to the database';
-      bwSt.style.color = benzoWriteUrl ? '#22c55e' : 'var(--muted)';
-    }
     modal.classList.add('open');
   }
 
@@ -2828,12 +2823,18 @@
   }
 
   window.openBenzoSettings = function() {
-    // Open the integrations modal and scroll to the Benzo section
-    togglePriceSettings();
-    setTimeout(() => {
-      const el = document.getElementById('benzo-write-url-input');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 120);
+    const modal  = document.getElementById('benzo-settings-modal');
+    const input  = document.getElementById('benzo-write-url-input');
+    const st     = document.getElementById('benzo-write-status');
+    if (input) input.value = benzoWriteUrl;
+    if (st) {
+      st.textContent = benzoWriteUrl ? '✅ Benzo write-back active' : 'Not configured — rental changes will only save to the database';
+      st.style.color  = benzoWriteUrl ? '#22c55e' : 'var(--muted)';
+    }
+    modal.classList.add('open');
+  }
+  window.closeBenzoSettings = function() {
+    document.getElementById('benzo-settings-modal').classList.remove('open');
   }
 
   window.testPriceUrl = async function testPriceUrl() {
