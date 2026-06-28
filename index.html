@@ -312,6 +312,32 @@
     .fin-icon-btn:hover { color: var(--text); border-color: var(--muted2); }
     .fin-icon-btn.active { color: var(--gold); border-color: var(--gold-dim); }
 
+    /* Fix filter popup button text always white */
+    #tx-filter-popup, #tx-filter-popup * { color: #c9d1d9 !important; }
+    #tx-filter-popup button { background: transparent !important; }
+
+    .tx-col-resize {
+      position: absolute; right: 0; top: 0; bottom: 0; width: 5px;
+      cursor: col-resize; z-index: 1; background: transparent;
+    }
+    .tx-col-resize:hover, .tx-col-resize.dragging { background: var(--gold-dim); }
+    #txlog-table { table-layout: fixed; }
+    #txlog-table th { position: relative; overflow: hidden; }
+
+    .fin-sub-tabs {
+      display: flex; gap: 0; margin: 14px 0 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .fin-sub-tab {
+      padding: 7px 18px; background: transparent; border: none;
+      color: var(--muted); font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: .08em; cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color .15s, border-color .15s;
+    }
+    .fin-sub-tab:hover { color: var(--text); }
+    .fin-sub-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
     .section-label {
       font-family: 'JetBrains Mono', monospace;
       font-size: 9px; letter-spacing: .14em; color: var(--muted);
@@ -1095,7 +1121,7 @@
 <div class="page" id="page-finance">
   <div class="finance-main">
 
-    <!-- Controls row -->
+    <!-- Controls row (always visible) -->
     <div class="fin-top-row">
       <div class="fin-currency-group">
         <button class="fin-cur-btn active" data-cur="USD" onclick="setCurrency('USD')">USD</button>
@@ -1115,65 +1141,98 @@
       </div>
     </div>
 
-    <div class="section-label">PORTFOLIO OVERVIEW · LIVE</div>
-    <div class="big-value" id="fin-total">—</div>
-    <div id="fin-delta" style="margin-top:4px;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
-
-    <div class="stat-cards">
-      <div class="stat-card">
-        <div class="label">PORTFOLIO VALUE</div>
-        <div class="val" id="sc-port">—</div>
-        <div class="sub" id="sc-port-sub"></div>
-      </div>
-      <div class="stat-card">
-        <div class="label">WATCHLIST ALERTS</div>
-        <div class="val" id="sc-alerts">—</div>
-        <div class="sub">active alerts</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">POSITIONS</div>
-        <div class="val" id="sc-pos">—</div>
-        <div class="sub">stocks, crypto &amp; ETFs</div>
-      </div>
+    <!-- Sub-tabs -->
+    <div class="fin-sub-tabs">
+      <button class="fin-sub-tab active" id="fst-overview" onclick="switchFinTab('overview')">OVERVIEW</button>
+      <button class="fin-sub-tab" id="fst-tradelog" onclick="switchFinTab('tradelog')">TRADE LOG</button>
     </div>
 
-    <!-- Performance chart -->
-    <div class="fin-chart-header">
-      <div class="section-label" style="margin-bottom:0">PERFORMANCE</div>
-      <div class="fin-tf-group">
-        <button class="fin-tf-btn" data-tf="1W" onclick="setTimeframe('1W')">1W</button>
-        <button class="fin-tf-btn active" data-tf="1M" onclick="setTimeframe('1M')">1M</button>
-        <button class="fin-tf-btn" data-tf="1Y" onclick="setTimeframe('1Y')">1Y</button>
-        <button class="fin-tf-btn" data-tf="5Y" onclick="setTimeframe('5Y')">5Y</button>
-        <button class="fin-tf-btn" data-tf="ALL" onclick="setTimeframe('ALL')">ALL</button>
+    <!-- ── OVERVIEW PANEL ── -->
+    <div id="fin-panel-overview">
+      <div class="section-label">PORTFOLIO OVERVIEW · LIVE</div>
+      <div class="big-value" id="fin-total">—</div>
+      <div id="fin-delta" style="margin-top:4px;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
+
+      <div class="stat-cards">
+        <div class="stat-card">
+          <div class="label">PORTFOLIO VALUE</div>
+          <div class="val" id="sc-port">—</div>
+          <div class="sub" id="sc-port-sub"></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">WATCHLIST ALERTS</div>
+          <div class="val" id="sc-alerts">—</div>
+          <div class="sub">active alerts</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">POSITIONS</div>
+          <div class="val" id="sc-pos">—</div>
+          <div class="sub">stocks, crypto &amp; ETFs</div>
+        </div>
       </div>
-    </div>
-    <div class="chart-wrap" style="height:210px;margin:8px 0 22px">
-      <canvas id="portfolio-chart"></canvas>
-    </div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="section-label" style="margin-bottom:0">HOLDINGS · LIVE</div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th onclick="sortHoldings('ticker')" id="sh-ticker" style="cursor:pointer;user-select:none">TICKER <span class="sort-arrow" id="sa-ticker"></span></th>
-          <th onclick="sortHoldings('shares')" id="sh-shares" style="cursor:pointer;user-select:none">SHARES <span class="sort-arrow" id="sa-shares"></span></th>
-          <th>AVG COST</th>
-          <th>LIVE PRICE</th>
-          <th onclick="sortHoldings('value')" id="sh-value" style="cursor:pointer;user-select:none">VALUE <span class="sort-arrow" id="sa-value"></span></th>
-          <th onclick="sortHoldings('gain')" id="sh-gain" style="text-align:right;cursor:pointer;user-select:none">GAIN / LOSS <span class="sort-arrow" id="sa-gain"></span></th>
-        </tr>
-      </thead>
-      <tbody id="holdings-body">
-        <tr><td colspan="6" class="loading">Loading holdings…</td></tr>
-      </tbody>
-    </table>
+      <!-- Performance chart -->
+      <div class="fin-chart-header">
+        <div class="section-label" style="margin-bottom:0">PERFORMANCE</div>
+        <div class="fin-tf-group">
+          <button class="fin-tf-btn" data-tf="1W" onclick="setTimeframe('1W')">1W</button>
+          <button class="fin-tf-btn active" data-tf="1M" onclick="setTimeframe('1M')">1M</button>
+          <button class="fin-tf-btn" data-tf="1Y" onclick="setTimeframe('1Y')">1Y</button>
+          <button class="fin-tf-btn" data-tf="5Y" onclick="setTimeframe('5Y')">5Y</button>
+          <button class="fin-tf-btn" data-tf="ALL" onclick="setTimeframe('ALL')">ALL</button>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:210px;margin:8px 0 22px">
+        <canvas id="portfolio-chart"></canvas>
+      </div>
 
-    <div class="section-label" style="margin:20px 0 8px">ALLOCATION</div>
-    <div class="alloc-bar" id="alloc-bar"></div>
-    <div class="alloc-legend" id="alloc-legend"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="section-label" style="margin-bottom:0">HOLDINGS · LIVE</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortHoldings('ticker')" id="sh-ticker" style="cursor:pointer;user-select:none">TICKER <span class="sort-arrow" id="sa-ticker"></span></th>
+            <th onclick="sortHoldings('shares')" id="sh-shares" style="cursor:pointer;user-select:none">SHARES <span class="sort-arrow" id="sa-shares"></span></th>
+            <th>AVG COST</th>
+            <th>LIVE PRICE</th>
+            <th onclick="sortHoldings('value')" id="sh-value" style="cursor:pointer;user-select:none">VALUE <span class="sort-arrow" id="sa-value"></span></th>
+            <th onclick="sortHoldings('gain')" id="sh-gain" style="text-align:right;cursor:pointer;user-select:none">GAIN / LOSS <span class="sort-arrow" id="sa-gain"></span></th>
+          </tr>
+        </thead>
+        <tbody id="holdings-body">
+          <tr><td colspan="6" class="loading">Loading holdings…</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-label" style="margin:20px 0 8px">ALLOCATION</div>
+      <div class="alloc-bar" id="alloc-bar"></div>
+      <div class="alloc-legend" id="alloc-legend"></div>
+    </div><!-- /fin-panel-overview -->
+
+    <!-- ── TRADE LOG PANEL ── -->
+    <div id="fin-panel-tradelog" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div class="section-label" style="margin-bottom:2px">TRADE LOG</div>
+          <div id="txlog-count" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)"></div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;position:relative">
+          <button class="fin-icon-btn" id="tx-density-btn" onclick="cycleTxDensity()" title="Row height">ROWS: NORMAL</button>
+          <button class="fin-icon-btn" onclick="toggleTxColPicker()" id="tx-col-btn">COLUMNS ▾</button>
+          <div id="tx-col-picker" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:12px 14px;z-index:300;min-width:170px;box-shadow:0 6px 20px rgba(0,0,0,.5)">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.08em;margin-bottom:8px">VISIBLE COLUMNS</div>
+            <div id="tx-col-checks"></div>
+          </div>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="txlog-table" style="width:100%;min-width:520px">
+          <thead id="txlog-head"></thead>
+          <tbody id="txlog-body"><tr><td class="loading">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div><!-- /fin-panel-tradelog -->
 
   </div><!-- /finance-main -->
 
@@ -1361,25 +1420,91 @@
 
 <!-- PRICE SETTINGS MODAL -->
 <div class="modal-overlay" id="price-settings-modal" onclick="if(event.target===this)closePriceSettings()">
-  <div class="modal" style="width:500px">
-    <h3 style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em">⚙ PRICE SOURCE · APPS SCRIPT PROXY</h3>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+  <div class="modal" style="width:540px;max-height:90vh;overflow-y:auto">
+    <h3 style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em">⚙ INTEGRATIONS</h3>
+
+    <!-- ── Price Source ── -->
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:10px">PRICE SOURCE · APPS SCRIPT PROXY</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
       Paste the URL of your deployed <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:11px">omar_os_prices.gs</code> web app.
       Once set, live prices are fetched server-side through Yahoo Finance — no CORS issues.
     </p>
     <div class="form-group">
-      <label class="form-label">Apps Script Web App URL</label>
+      <label class="form-label">Price Fetch URL</label>
       <input class="form-input" id="price-url-input" type="url"
         placeholder="https://script.google.com/macros/s/…/exec"
         oninput="this.style.borderColor=''" />
     </div>
     <div id="price-url-status" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;min-height:14px"></div>
     <div id="price-url-raw" style="display:none;margin-bottom:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto"></div>
-    <div class="modal-actions">
+    <div style="display:flex;gap:6px;margin-bottom:20px">
       <button class="btn-cancel" onclick="clearPriceUrl()">CLEAR</button>
       <button class="btn-cancel" onclick="testPriceUrl()">TEST CONNECTION</button>
       <button class="btn-save" onclick="savePriceUrl()">SAVE &amp; REFRESH</button>
     </div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:4px 0 20px">
+
+    <!-- ── Sheets Write-back ── -->
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:10px">GOOGLE SHEETS WRITE-BACK</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+      When you log a trade here, it will also be appended to your <strong style="color:var(--text)">Trade Log</strong> sheet automatically.
+      Requires a one-time Apps Script setup.
+    </p>
+    <div class="form-group">
+      <label class="form-label">Sheets Write URL</label>
+      <input class="form-input" id="sheets-write-url-input" type="url"
+        placeholder="https://script.google.com/macros/s/…/exec"
+        oninput="this.style.borderColor=''" />
+    </div>
+    <div id="sheets-write-status" style="font-family:'JetBrains Mono',monospace;font-size:10px;min-height:14px;margin-bottom:10px"></div>
+
+    <!-- Setup instructions collapsible -->
+    <details style="margin-bottom:16px">
+      <summary style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;user-select:none;letter-spacing:.05em">SETUP INSTRUCTIONS ▾</summary>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.8">
+        1. Open your Google Sheet → <strong style="color:var(--text)">Extensions → Apps Script</strong><br>
+        2. Paste the code below into a new script file<br>
+        3. Click <strong style="color:var(--text)">Deploy → New deployment → Web app</strong><br>
+        4. Set <em>Execute as</em>: <strong style="color:var(--text)">Me</strong> · <em>Who has access</em>: <strong style="color:var(--text)">Anyone</strong><br>
+        5. Copy the web app URL and paste it above
+      </div>
+      <pre style="margin-top:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text);white-space:pre-wrap;word-break:break-all;max-height:220px;overflow-y:auto">function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet()
+                  .getSheetByName('Trade Log');
+    if (!sheet) throw new Error('Sheet "Trade Log" not found');
+    var last = sheet.getLastRow();
+    sheet.appendRow([
+      last - 1,            // Row #
+      data.date,           // Date (MM-DD-YYYY)
+      data.type,           // Transaction Type
+      data.ticker,         // Ticker
+      data.qty   || '',    // Quantity
+      data.price || '',    // Amount per unit
+      data.total || '',    // Total Amount
+      data.fees  || 0,     // Trading Fees
+      data.account || '',  // Investment Account
+      data.split || '',    // Split Ratio
+      data.fx    || 1,     // FX Rate
+    ]);
+    return ContentService
+      .createTextOutput(JSON.stringify({ok:true}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ok:false,error:err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+    </details>
+
+    <div style="display:flex;gap:6px">
+      <button class="btn-cancel" onclick="clearSheetsWriteUrl()">CLEAR</button>
+      <button class="btn-save" onclick="saveSheetsWriteUrl()">SAVE</button>
+    </div>
+
   </div>
 </div>
 
@@ -1816,10 +1941,37 @@
   let holdingsSortKey = 'value';   // ticker | shares | value | gain
   let holdingsSortDir = -1;        // -1 = desc, 1 = asc
   let portfolioChart  = null;
-  let pricesWebAppUrl = localStorage.getItem('omar_prices_url') || '';
+  let pricesWebAppUrl  = localStorage.getItem('omar_prices_url') || '';
+  let sheetsWriteUrl   = localStorage.getItem('omar_sheets_write_url') || '';
   let finRefreshTimer = null;      // auto-refresh interval while finance tab is open
   let isSyncing       = false;     // prevent concurrent syncs
   const TRADELOG_URL  = 'https://docs.google.com/spreadsheets/d/1HzWX1RN6sl1SpRIBsTfM1aFADMbQ_0X2Bg3Vv-vBfZU/gviz/tq?tqx=out:csv&sheet=Trade%20Log';
+
+  // Trade log column visibility (persisted)
+  const TX_COL_DEFS = [
+    { key: 'date',    label: 'DATE' },
+    { key: 'type',    label: 'TYPE' },
+    { key: 'ticker',  label: 'TICKER' },
+    { key: 'qty',     label: 'QTY' },
+    { key: 'price',   label: 'PRICE / UNIT' },
+    { key: 'total',   label: 'TOTAL' },
+    { key: 'fees',    label: 'FEES' },
+    { key: 'account', label: 'ACCOUNT' },
+    { key: 'split',   label: 'SPLIT RATIO' },
+  ];
+  const TX_COL_DEFAULTS = { date:true, type:true, ticker:true, qty:true, price:true, total:true, fees:false, account:true, split:false };
+  let txCols = (() => {
+    try { return Object.assign({}, TX_COL_DEFAULTS, JSON.parse(localStorage.getItem('omar_tx_cols') || '{}')); }
+    catch(e) { return Object.assign({}, TX_COL_DEFAULTS); }
+  })();
+  let txSortKey = 'date';
+  let txSortDir = -1;   // -1 = DESC (newest first), 1 = ASC
+  let txFilters = { type: null, ticker: null, account: null };
+  const TX_DENSITIES = ['COMPACT', 'NORMAL', 'SPACIOUS'];
+  let txDensityIdx = 1; // default: NORMAL
+  const TX_DENSITY_PAD = { COMPACT: '3px 8px', NORMAL: '7px 8px', SPACIOUS: '13px 8px' };
+  let txColWidths = (() => { try { return JSON.parse(localStorage.getItem('omar_tx_col_widths')||'{}'); } catch(e) { return {}; } })();
+  let txResizing = null;
   let homeSparkChart  = null;
   // ── Habit in-memory cache (loaded from Supabase) ──────────
   let habitsData      = [];   // array of habit rows
@@ -2445,6 +2597,14 @@
       ? '✅ Apps Script proxy is active — you can test it or paste a new URL'
       : 'No proxy configured yet — paste your web app URL above';
     st.style.color = pricesWebAppUrl ? '#22c55e' : 'var(--muted)';
+    // Populate sheets write URL field
+    const swInput = document.getElementById('sheets-write-url-input');
+    const swSt    = document.getElementById('sheets-write-status');
+    if (swInput) swInput.value = sheetsWriteUrl;
+    if (swSt) {
+      swSt.textContent = sheetsWriteUrl ? '✅ Sheets write-back active' : 'Not configured — trades will only save to the database';
+      swSt.style.color = sheetsWriteUrl ? '#22c55e' : 'var(--muted)';
+    }
     modal.classList.add('open');
   }
 
@@ -2488,6 +2648,33 @@
     st.textContent = 'Cleared. Using CORS fallbacks.';
     st.style.color  = 'var(--muted)';
     document.getElementById('price-url-raw').style.display = 'none';
+  }
+
+  window.saveSheetsWriteUrl = function() {
+    const input = document.getElementById('sheets-write-url-input');
+    const st    = document.getElementById('sheets-write-status');
+    const url   = (input.value || '').trim();
+    if (url && !url.startsWith('https://script.google.com/')) {
+      input.style.borderColor = '#ef4444';
+      st.textContent = '⚠ URL should start with https://script.google.com/…';
+      st.style.color = '#ef4444';
+      return;
+    }
+    sheetsWriteUrl = url;
+    if (url) localStorage.setItem('omar_sheets_write_url', url);
+    else     localStorage.removeItem('omar_sheets_write_url');
+    input.style.borderColor = '';
+    st.textContent = url ? '✅ Saved — new trades will be written to Google Sheets' : 'Cleared.';
+    st.style.color = url ? '#22c55e' : 'var(--muted)';
+  }
+
+  window.clearSheetsWriteUrl = function() {
+    document.getElementById('sheets-write-url-input').value = '';
+    sheetsWriteUrl = '';
+    localStorage.removeItem('omar_sheets_write_url');
+    const st = document.getElementById('sheets-write-status');
+    st.textContent = 'Cleared.';
+    st.style.color = 'var(--muted)';
   }
 
   window.testPriceUrl = async function testPriceUrl() {
@@ -2865,6 +3052,9 @@
     // Performance chart
     updatePortfolioChart(txs, liveTotal, costTotal);
 
+    // Trade log table (only if that sub-tab is active)
+    if (activeFinTab === 'tradelog') renderTradeLog();
+
     // Watchlist sidebar
     const wl = document.getElementById('watchlist-items');
     if (!watchlist.length) {
@@ -2892,6 +3082,275 @@
       }).join('');
     }
   }
+
+  // ── FINANCE SUB-TABS ─────────────────────────────────────
+  let activeFinTab = 'overview';
+
+  window.switchFinTab = function(tab) {
+    activeFinTab = tab;
+    ['overview', 'tradelog'].forEach(t => {
+      const panel = document.getElementById('fin-panel-' + t);
+      const btn   = document.getElementById('fst-' + t);
+      if (panel) panel.style.display = t === tab ? '' : 'none';
+      if (btn)   btn.classList.toggle('active', t === tab);
+    });
+    if (tab === 'tradelog') renderTradeLog();
+  };
+
+  // ── TRADE LOG TABLE ──────────────────────────────────────
+  function txCell(key, tx) {
+    const mono = "font-family:'JetBrains Mono',monospace;font-size:10px";
+    if (key === 'date') {
+      return `<td style="${mono};white-space:nowrap;color:var(--muted)">${tx.trade_date || '—'}</td>`;
+    }
+    if (key === 'type') {
+      const isBuy  = (tx.transaction_type || '').toUpperCase() === 'BUY';
+      const isSell = (tx.transaction_type || '').toUpperCase() === 'SELL';
+      const bg  = isBuy  ? 'rgba(34,197,94,.15)'  : isSell ? 'rgba(239,68,68,.15)' : 'rgba(255,255,255,.05)';
+      const col = isBuy  ? 'var(--green)'          : isSell ? 'var(--red)'          : 'var(--muted)';
+      return `<td><span style="${mono};font-size:9px;padding:2px 6px;border-radius:3px;background:${bg};color:${col};letter-spacing:.05em">${tx.transaction_type || '—'}</span></td>`;
+    }
+    if (key === 'ticker') {
+      return `<td style="font-size:11px;font-weight:600;letter-spacing:.04em">${tx.ticker || '—'}</td>`;
+    }
+    if (key === 'qty') {
+      const q = parseFloat(tx.quantity) || 0;
+      const fmt = q === 0 ? '—' : q < 1 ? q.toFixed(6) : q % 1 === 0 ? q.toFixed(0) : q.toFixed(4);
+      return `<td style="${mono};text-align:right">${fmt}</td>`;
+    }
+    if (key === 'price') {
+      return `<td style="${mono};text-align:right">${tx.amount_per_unit != null ? fmtMoney(parseFloat(tx.amount_per_unit)) : '—'}</td>`;
+    }
+    if (key === 'total') {
+      return `<td style="${mono};text-align:right;font-weight:500">${tx.total_amount != null ? fmtMoney(parseFloat(tx.total_amount)) : '—'}</td>`;
+    }
+    if (key === 'fees') {
+      const f = parseFloat(tx.trading_fees) || 0;
+      return `<td style="${mono};text-align:right;color:var(--muted)">${f ? fmtMoney(f) : '—'}</td>`;
+    }
+    if (key === 'account') {
+      return `<td style="font-size:10px;color:var(--muted2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:18px">${tx.investment_account || '—'}</td>`;
+    }
+    if (key === 'split') {
+      const s = parseFloat(tx.split_ratio) || 0;
+      return `<td style="${mono};text-align:right;color:var(--muted)">${s ? s.toFixed(4) : '—'}</td>`;
+    }
+    return '<td>—</td>';
+  }
+
+  function txGetData() {
+    if (!finData || !finData.txs) return [];
+    let rows = [...finData.txs];
+    // Apply filters
+    if (txFilters.type)    rows = rows.filter(r => r.transaction_type === txFilters.type);
+    if (txFilters.ticker)  rows = rows.filter(r => r.ticker === txFilters.ticker);
+    if (txFilters.account) rows = rows.filter(r => r.investment_account === txFilters.account);
+    // Apply sort
+    rows.sort((a, b) => {
+      if (txSortKey === 'date')   return txSortDir * (a.trade_date > b.trade_date ? 1 : a.trade_date < b.trade_date ? -1 : 0);
+      if (txSortKey === 'ticker') return txSortDir * a.ticker.localeCompare(b.ticker);
+      if (txSortKey === 'qty')    return txSortDir * (parseFloat(a.quantity) - parseFloat(b.quantity));
+      if (txSortKey === 'total')  return txSortDir * (parseFloat(a.total_amount) - parseFloat(b.total_amount));
+      return txSortDir * (a.trade_date > b.trade_date ? 1 : -1);
+    });
+    return rows;
+  }
+
+  function txHeadCell(col) {
+    const alignRight = new Set(['qty','price','total','fees','split']);
+    const sortOnly   = new Set(['date','qty','total']);
+    const filterOnly = new Set(['type','account']);
+    const both       = col.key === 'ticker';
+    let style = 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    if (alignRight.has(col.key)) style += 'text-align:right;';
+    if (col.key === 'account')   style += 'padding-left:18px;';
+    if (txColWidths[col.key])    style += `width:${txColWidths[col.key]}px;min-width:${txColWidths[col.key]}px;`;
+    let onclick = '', badge = '';
+    if (sortOnly.has(col.key)) {
+      style += 'cursor:pointer;user-select:none;';
+      onclick = `onclick="txSort('${col.key}')"`;
+      if (txSortKey === col.key) badge = `<span style="color:var(--gold)">${txSortDir === -1 ? ' ▼' : ' ▲'}</span>`;
+    }
+    if (filterOnly.has(col.key)) {
+      style += 'cursor:pointer;user-select:none;';
+      onclick = `onclick="txOpenFilter('${col.key}',this)"`;
+      if (txFilters[col.key]) badge = `<span style="color:var(--gold)"> ●</span>`;
+    }
+    if (both) {
+      style += 'cursor:pointer;user-select:none;';
+      onclick = `onclick="txOpenFilter('${col.key}',this)"`;
+      if (txSortKey === 'ticker') badge += `<span style="color:var(--gold)">${txSortDir === 1 ? ' ▲' : ' ▼'}</span>`;
+      if (txFilters.ticker)       badge += `<span style="color:var(--gold)"> ●</span>`;
+    }
+    const handle = `<div class="tx-col-resize" onmousedown="txResizeStart(event,'${col.key}')"></div>`;
+    return `<th style="${style}" ${onclick}>${col.label}${badge}${handle}</th>`;
+  }
+
+  function renderTradeLog() {
+    const head = document.getElementById('txlog-head');
+    const body = document.getElementById('txlog-body');
+    const checks = document.getElementById('tx-col-checks');
+    if (!head || !body || !finData) return;
+    if (activeFinTab !== 'tradelog') return;
+
+    // Column checkboxes
+    if (checks) {
+      checks.innerHTML = TX_COL_DEFS.map(c =>
+        `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text)">
+          <input type="checkbox" ${txCols[c.key] ? 'checked' : ''} onchange="toggleTxCol('${c.key}',this.checked)"
+            style="width:13px;height:13px;accent-color:var(--gold);cursor:pointer">
+          ${c.label}
+        </label>`
+      ).join('');
+    }
+
+    const visible = TX_COL_DEFS.filter(c => txCols[c.key]);
+    head.innerHTML = `<tr>${visible.map(txHeadCell).join('')}</tr>`;
+
+    const txs = txGetData();
+    const total = (finData.txs || []).length;
+    const countEl = document.getElementById('txlog-count');
+    const activeFilters = Object.values(txFilters).filter(Boolean).length;
+    if (countEl) {
+      countEl.textContent = activeFilters
+        ? `${txs.length} of ${total} transactions (filtered)`
+        : `${total} transactions`;
+    }
+    if (!txs.length) {
+      body.innerHTML = `<tr><td colspan="${visible.length}" class="empty">${activeFilters ? 'No matches — clear filters to see all.' : 'No transactions yet.'}</td></tr>`;
+      return;
+    }
+    const pad = TX_DENSITY_PAD[TX_DENSITIES[txDensityIdx]];
+    body.innerHTML = txs.map(tx =>
+      `<tr>${visible.map(c => {
+        const cell = txCell(c.key, tx);
+        return cell.replace('<td ', `<td style="padding:${pad}" `).replace('<td>', `<td style="padding:${pad}">`);
+      }).join('')}</tr>`
+    ).join('');
+  }
+
+  window.toggleTxColPicker = function() {
+    const picker = document.getElementById('tx-col-picker');
+    if (!picker) return;
+    const isOpen = picker.style.display !== 'none';
+    picker.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) renderTradeLog(); // refresh checkboxes when opening
+  };
+
+  window.toggleTxCol = function(key, checked) {
+    txCols[key] = checked;
+    try { localStorage.setItem('omar_tx_cols', JSON.stringify(txCols)); } catch(e) {}
+    renderTradeLog();
+  };
+
+  window.txResizeStart = function(e, key) {
+    e.preventDefault();
+    e.stopPropagation();
+    const th = e.currentTarget.closest('th');
+    if (!th) return;
+    txResizing = { key, startX: e.clientX, startWidth: th.offsetWidth, th };
+    e.currentTarget.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  document.addEventListener('mousemove', function(e) {
+    if (!txResizing) return;
+    const newWidth = Math.max(40, txResizing.startWidth + (e.clientX - txResizing.startX));
+    txResizing.th.style.width    = newWidth + 'px';
+    txResizing.th.style.minWidth = newWidth + 'px';
+    txColWidths[txResizing.key]  = newWidth;
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!txResizing) return;
+    document.body.style.cursor    = '';
+    document.body.style.userSelect = '';
+    txResizing.th.querySelector('.tx-col-resize')?.classList.remove('dragging');
+    try { localStorage.setItem('omar_tx_col_widths', JSON.stringify(txColWidths)); } catch(e) {}
+    txResizing = null;
+  });
+
+  window.cycleTxDensity = function() {
+    txDensityIdx = (txDensityIdx + 1) % TX_DENSITIES.length;
+    const label = TX_DENSITIES[txDensityIdx];
+    const btn = document.getElementById('tx-density-btn');
+    if (btn) btn.textContent = 'ROWS: ' + label;
+    // Re-apply padding to all rows
+    const pad = TX_DENSITY_PAD[label];
+    document.querySelectorAll('#txlog-body tr td').forEach(td => td.style.padding = pad);
+  };
+
+  window.txSort = function(key) {
+    if (txSortKey === key) txSortDir *= -1;
+    else { txSortKey = key; txSortDir = key === 'ticker' ? 1 : -1; }
+    renderTradeLog();
+  };
+
+  window.txOpenFilter = function(key, el) {
+    closeTxFilterPopup();
+    if (!finData || !finData.txs) return;
+    const fieldMap = { type: 'transaction_type', ticker: 'ticker', account: 'investment_account' };
+    const field = fieldMap[key];
+    const uniqueVals = [...new Set(finData.txs.map(r => r[field]).filter(Boolean))].sort();
+    const current = txFilters[key];
+
+    const popup = document.createElement('div');
+    popup.id = 'tx-filter-popup';
+    popup.style.cssText = 'position:fixed;background:#1e1e2e;color:#c9d1d9;border:1px solid #30363d;border-radius:6px;padding:8px;z-index:500;min-width:160px;max-height:260px;overflow-y:auto;box-shadow:0 6px 24px rgba(0,0,0,.7)';
+    const rect = el.getBoundingClientRect();
+    popup.style.top  = (rect.bottom + 4) + 'px';
+    popup.style.left = Math.min(rect.left, window.innerWidth - 180) + 'px';
+
+    const btnStyle = 'display:block;width:100%;text-align:left;background:transparent;border:none;font-family:"JetBrains Mono",monospace;font-size:10px;cursor:pointer;padding:5px 8px;border-radius:3px;color:#c9d1d9;white-space:nowrap';
+
+    let html = `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8b6914;letter-spacing:.08em;padding:2px 6px 6px;border-bottom:1px solid #30363d;margin-bottom:4px">FILTER BY ${key.toUpperCase()}</div>`;
+
+    // Ticker gets sort options too
+    if (key === 'ticker') {
+      const sortLabel = txSortKey === 'ticker'
+        ? (txSortDir === 1 ? '▲ A → Z (active)' : '▼ Z → A (active)')
+        : '↕ SORT A → Z / Z → A';
+      html += `<button style="${btnStyle};color:${txSortKey==='ticker'?'#d4a947':'#8b949e'}" onmouseover="this.style.background='#2d2d3f'" onmouseout="this.style.background='transparent'" onclick="txSort('ticker');closeTxFilterPopup()">${sortLabel}</button>
+        <div style="border-bottom:1px solid #30363d;margin:4px 0"></div>`;
+    }
+
+    if (current) {
+      html += `<button style="${btnStyle};color:#f87171" onmouseover="this.style.background='#2d2d3f'" onmouseout="this.style.background='transparent'" onclick="applyTxFilter('${key}',null)">✕ CLEAR FILTER</button>
+        <div style="border-bottom:1px solid #30363d;margin:4px 0"></div>`;
+    }
+
+    html += uniqueVals.map(v =>
+      `<button style="${btnStyle};${v===current?'color:#d4a947;font-weight:600':''}" onmouseover="this.style.background='#2d2d3f'" onmouseout="this.style.background='transparent'" onclick="applyTxFilter('${key}','${v.replace(/'/g,"\\'")}')">${v===current?'● ':''} ${v}</button>`
+    ).join('');
+
+    popup.innerHTML = html;
+    document.body.appendChild(popup);
+  };
+
+  window.applyTxFilter = function(key, val) {
+    txFilters[key] = val || null;
+    closeTxFilterPopup();
+    renderTradeLog();
+  };
+
+  window.closeTxFilterPopup = function() {
+    const el = document.getElementById('tx-filter-popup');
+    if (el) el.remove();
+  };
+
+  // Close column picker and filter popup on outside click
+  document.addEventListener('click', function(e) {
+    const picker = document.getElementById('tx-col-picker');
+    const btn    = document.getElementById('tx-col-btn');
+    if (picker && picker.style.display !== 'none' && !picker.contains(e.target) && e.target !== btn) {
+      picker.style.display = 'none';
+    }
+    const popup = document.getElementById('tx-filter-popup');
+    if (popup && !popup.contains(e.target) && !e.target.closest('th')) {
+      closeTxFilterPopup();
+    }
+  });
 
   // ── TRADE LOG SYNC ───────────────────────────────────────
   // Parses a quoted CSV string into an array of string arrays.
@@ -4561,6 +5020,33 @@ Return raw JSON only.`,
         row_hash:          Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2,'0')).join('')
       };
       await sbPost('transactions', row);
+
+      // Write to Google Sheets if configured
+      if (sheetsWriteUrl) {
+        try {
+          const [yr, mo, dy] = row.trade_date.split('-');
+          await fetch(sheetsWriteUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+              date:    `${mo}-${dy}-${yr}`,
+              type:    row.transaction_type,
+              ticker:  row.ticker,
+              qty:     row.quantity,
+              price:   row.amount_per_unit,
+              total:   row.total_amount,
+              fees:    row.trading_fees,
+              account: row.investment_account,
+              split:   row.split_ratio,
+              fx:      row.fx_rate,
+            }),
+          });
+        } catch(sheetErr) {
+          console.warn('[Omar OS] Sheets write-back failed:', sheetErr.message);
+        }
+      }
+
       closeAddTrade();
       finData = null;
       loaders['finance'] = false;
