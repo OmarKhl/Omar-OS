@@ -5938,9 +5938,8 @@ Return raw JSON only.`,
     let inserted = 0, updated = 0, deleted = 0, errors = 0;
     const failedTabs = [];
 
-    async function fetchSheetCsv(vehicleName) {
-      const tab = encodeURIComponent(vehicleName);
-      // Try primary gviz URL first, then export fallback
+    async function fetchSheetCsv(tabName) {
+      const tab = encodeURIComponent(tabName);
       const urls = [
         `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${tab}`,
         `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/export?format=csv&sheet=${tab}`,
@@ -5948,15 +5947,23 @@ Return raw JSON only.`,
       let lastErr = '';
       for (const url of urls) {
         try {
-          const resp = await fetch(url, { signal: AbortSignal.timeout(20000) });
-          if (!resp.ok) { lastErr = `HTTP ${resp.status}`; continue; }
-          const text = await resp.text();
-          // gviz sometimes returns an HTML error page with HTTP 200
-          if (text.trim().startsWith('<!') || text.trim().startsWith('<html')) {
-            lastErr = 'Sheet returned HTML (not public or tab not found)'; continue;
+          console.log(`[Benzo] Fetching: ${url}`);
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 20000);
+          let resp;
+          try {
+            resp = await fetch(url, { signal: controller.signal });
+          } finally {
+            clearTimeout(timer);
           }
+          if (!resp.ok) { lastErr = `HTTP ${resp.status}`; console.warn(`[Benzo] ${url} → ${resp.status}`); continue; }
+          const text = await resp.text();
+          if (text.trim().startsWith('<!') || text.trim().startsWith('<html')) {
+            lastErr = 'Sheet not public or tab not found'; console.warn(`[Benzo] ${url} → HTML response`); continue;
+          }
+          console.log(`[Benzo] Got ${text.split('\n').length} rows from tab "${tabName}"`);
           return text;
-        } catch(e) { lastErr = e.message; }
+        } catch(e) { lastErr = e.message; console.warn(`[Benzo] Fetch error for ${url}:`, e.message); }
       }
       throw new Error(lastErr || 'fetch failed');
     }
@@ -6147,7 +6154,7 @@ Return raw JSON only.`,
       renderBenzo();
     } catch(e) {
       console.error('[Benzo Sync]', e);
-      if (statusEl) statusEl.textContent = '⚠ Sync failed — check console';
+      if (statusEl) statusEl.textContent = `⚠ Sync error: ${e.message || e}`;
     } finally {
       isBenzoSyncing = false;
       if (btn) { btn.disabled = false; btn.textContent = '↻ SYNC'; }
