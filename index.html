@@ -5605,9 +5605,16 @@ Return raw JSON only.`,
     { key: 'address',         label: 'ADDRESS',          def: false },
     { key: 'dob',             label: 'DATE OF BIRTH',    def: false },
     { key: 'age',             label: 'AGE',              def: false },
-    { key: 'allowed_mileage', label: 'ALLOWED MILEAGE',  def: false },
-    { key: 'booking_number',  label: '#',                def: false },
-    { key: 'notes',           label: 'NOTES',            def: true  },
+    { key: 'allowed_mileage',        label: 'ALLOWED MILEAGE',       def: false },
+    { key: 'extra_mileage_km',       label: 'EXTRA KM',              def: false },
+    { key: 'extra_mileage_charge',   label: 'EXTRA KM CHARGE',       def: false },
+    { key: 'extra_mileage_total',    label: 'EXTRA MILEAGE TOTAL',   def: false },
+    { key: 'security_deposit',       label: 'SECURITY DEPOSIT',      def: false },
+    { key: 'security_deposit_taken', label: 'SEC. DEPOSIT TAKEN',    def: false },
+    { key: 'total_amount',           label: 'TOTAL $',               def: false },
+    { key: 'rent_income_with',       label: 'RENT INCOME WITH',      def: false },
+    { key: 'booking_number',         label: '#',                     def: false },
+    { key: 'notes',                  label: 'NOTES',                 def: true  },
   ];
   let benzoRentColVis = (() => {
     try {
@@ -5633,9 +5640,21 @@ Return raw JSON only.`,
     'duration (days)': 'duration',
     'allowed milage': 'allowed_mileage',   // typo in sheet intentionally kept
     'allowed mileage': 'allowed_mileage',
-    'bookin deposit ($)': 'deposit',        // typo in sheet intentionally kept
+    'bookin deposit ($)': 'deposit',
     'booking deposit ($)': 'deposit',
     'rent income ($)': 'total_rent',
+    'extra milage (km)': 'extra_mileage_km',
+    'extra mileage (km)': 'extra_mileage_km',
+    'extra milage charge': 'extra_mileage_charge',
+    'extra mileage charge': 'extra_mileage_charge',
+    'extra milage': 'extra_mileage_total',
+    'extra mileage': 'extra_mileage_total',
+    'security deposit ($)': 'security_deposit',
+    'security deposit': 'security_deposit',
+    'security deposit taken($)': 'security_deposit_taken',
+    'security deposit taken ($)': 'security_deposit_taken',
+    'total $': 'total_amount', 'total': 'total_amount',
+    'rent income with:': 'rent_income_with', 'rent income with': 'rent_income_with',
     // ── COMMON ALIASES ───────────────────────────────────────
     'customer': 'customer_name', 'customer name': 'customer_name',
     'client': 'customer_name', 'renter': 'customer_name', 'full name': 'customer_name',
@@ -6017,33 +6036,43 @@ Return raw JSON only.`,
           const start    = benzoNormalizeDate(getCol('start_date')) || null;
           const end      = benzoNormalizeDate(getCol('end_date'))   || null;
 
-          const rateRaw   = getCol('daily_rate');
-          const totalRaw  = getCol('total_rent');
-          const depositRaw = getCol('deposit');
-          const rawStatus = getCol('status').toLowerCase();
+          const rateRaw                = getCol('daily_rate');
+          const totalRaw               = getCol('total_rent');
+          const depositRaw             = getCol('deposit');
+          const secDepRaw              = getCol('security_deposit');
+          const secDepTakenRaw         = getCol('security_deposit_taken');
+          const rawStatus              = getCol('status').toLowerCase();
+          const parseNum = s => parseFloat((s||'').replace(/[^0-9.-]/g,'')) || null;
 
           const extra = {};
           extraCols.forEach(ec => { const v = (r[ec.idx] || '').trim(); if (v) extra[ec.name] = v; });
 
           sheetRows.push({
             customer, start, end,
-            rate:            parseFloat(rateRaw.replace(/[^0-9.-]/g,'')) || null,
-            total_rent:      parseFloat(totalRaw.replace(/[^0-9.-]/g,'')) || null,
-            deposit:         parseFloat(depositRaw.replace(/[^0-9.-]/g,'')) || null,
-            status:          (['upcoming','active','completed'].includes(rawStatus) ? rawStatus : 'upcoming'),
-            notes:           getCol('notes') || null,
-            start_time:      getCol('start_time') || null,
-            end_time:        getCol('end_time') || null,
-            driver_license:  getCol('driver_license') || null,
-            phone:           getCol('phone') || null,
-            email:           getCol('email') || null,
-            address:         getCol('address') || null,
-            dob:             getCol('dob') || null,
-            age:             getCol('age') || null,
-            duration:        getCol('duration') || null,
-            allowed_mileage: getCol('allowed_mileage') || null,
-            booking_number:  getCol('booking_number') || null,
-            extra_data:      Object.keys(extra).length ? extra : null,
+            rate:                    parseNum(rateRaw),
+            total_rent:              parseNum(totalRaw),
+            deposit:                 parseNum(depositRaw),
+            security_deposit:        parseNum(secDepRaw),
+            security_deposit_taken:  parseNum(secDepTakenRaw),
+            status:                  (['upcoming','active','completed'].includes(rawStatus) ? rawStatus : null),
+            notes:                   getCol('notes')            || null,
+            start_time:              getCol('start_time')       || null,
+            end_time:                getCol('end_time')         || null,
+            driver_license:          getCol('driver_license')   || null,
+            phone:                   getCol('phone')            || null,
+            email:                   getCol('email')            || null,
+            address:                 getCol('address')          || null,
+            dob:                     getCol('dob')              || null,
+            age:                     getCol('age')              || null,
+            duration:                getCol('duration')         || null,
+            allowed_mileage:         getCol('allowed_mileage')  || null,
+            booking_number:          getCol('booking_number')   || null,
+            extra_mileage_km:        getCol('extra_mileage_km') || null,
+            extra_mileage_charge:    getCol('extra_mileage_charge') || null,
+            extra_mileage_total:     getCol('extra_mileage_total')  || null,
+            total_amount:            getCol('total_amount')     || null,
+            rent_income_with:        getCol('rent_income_with') || null,
+            extra_data:              Object.keys(extra).length ? extra : null,
           });
         }
 
@@ -6073,29 +6102,40 @@ Return raw JSON only.`,
               || (dbRow.total_rent   != null ? parseFloat(dbRow.total_rent)   : null) !== sr.total_rent
               || (dbRow.deposit      != null ? parseFloat(dbRow.deposit)      : null) !== sr.deposit
               || dbRow.status !== sr.status
-              || (dbRow.notes           || null) !== sr.notes
-              || (dbRow.start_time      || null) !== sr.start_time
-              || (dbRow.end_time        || null) !== sr.end_time
-              || (dbRow.driver_license  || null) !== sr.driver_license
-              || (dbRow.phone           || null) !== sr.phone
-              || (dbRow.email           || null) !== sr.email
-              || (dbRow.address         || null) !== sr.address
-              || (dbRow.dob             || null) !== sr.dob
-              || (dbRow.age             || null) !== sr.age
-              || (dbRow.duration        || null) !== sr.duration
-              || (dbRow.allowed_mileage || null) !== sr.allowed_mileage
-              || (dbRow.booking_number  || null) !== sr.booking_number
+              || (dbRow.notes                  || null) !== sr.notes
+              || (dbRow.start_time             || null) !== sr.start_time
+              || (dbRow.end_time               || null) !== sr.end_time
+              || (dbRow.driver_license         || null) !== sr.driver_license
+              || (dbRow.phone                  || null) !== sr.phone
+              || (dbRow.email                  || null) !== sr.email
+              || (dbRow.address                || null) !== sr.address
+              || (dbRow.dob                    || null) !== sr.dob
+              || (dbRow.age                    || null) !== sr.age
+              || (dbRow.duration               || null) !== sr.duration
+              || (dbRow.allowed_mileage        || null) !== sr.allowed_mileage
+              || (dbRow.booking_number         || null) !== sr.booking_number
+              || (dbRow.extra_mileage_km       || null) !== sr.extra_mileage_km
+              || (dbRow.extra_mileage_charge   || null) !== sr.extra_mileage_charge
+              || (dbRow.extra_mileage_total    || null) !== sr.extra_mileage_total
+              || (dbRow.security_deposit       != null ? parseFloat(dbRow.security_deposit)       : null) !== sr.security_deposit
+              || (dbRow.security_deposit_taken != null ? parseFloat(dbRow.security_deposit_taken) : null) !== sr.security_deposit_taken
+              || (dbRow.total_amount           || null) !== sr.total_amount
+              || (dbRow.rent_income_with       || null) !== sr.rent_income_with
               || dbRow.row_hash !== hash;
             if (changed) {
               const patch = {
                 customer_name: sr.customer, start_date: sr.start, end_date: sr.end,
                 daily_rate: sr.rate, total_rent: sr.total_rent, deposit: sr.deposit,
+                security_deposit: sr.security_deposit, security_deposit_taken: sr.security_deposit_taken,
                 status: sr.status, notes: sr.notes,
                 start_time: sr.start_time, end_time: sr.end_time,
                 driver_license: sr.driver_license, phone: sr.phone, email: sr.email,
                 address: sr.address, dob: sr.dob, age: sr.age,
                 duration: sr.duration, allowed_mileage: sr.allowed_mileage,
-                booking_number: sr.booking_number, extra_data: sr.extra_data,
+                booking_number: sr.booking_number,
+                extra_mileage_km: sr.extra_mileage_km, extra_mileage_charge: sr.extra_mileage_charge,
+                extra_mileage_total: sr.extra_mileage_total, total_amount: sr.total_amount,
+                rent_income_with: sr.rent_income_with, extra_data: sr.extra_data,
                 row_hash: hash, synced_at: new Date().toISOString(),
               };
               await sbPatch('rentals', dbRow.id, patch);
@@ -6107,12 +6147,16 @@ Return raw JSON only.`,
               vehicle_id: vehicle.id, customer_name: sr.customer,
               start_date: sr.start, end_date: sr.end,
               daily_rate: sr.rate, total_rent: sr.total_rent, deposit: sr.deposit,
+              security_deposit: sr.security_deposit, security_deposit_taken: sr.security_deposit_taken,
               status: sr.status, notes: sr.notes,
               start_time: sr.start_time, end_time: sr.end_time,
               driver_license: sr.driver_license, phone: sr.phone, email: sr.email,
               address: sr.address, dob: sr.dob, age: sr.age,
               duration: sr.duration, allowed_mileage: sr.allowed_mileage,
-              booking_number: sr.booking_number, extra_data: sr.extra_data,
+              booking_number: sr.booking_number,
+              extra_mileage_km: sr.extra_mileage_km, extra_mileage_charge: sr.extra_mileage_charge,
+              extra_mileage_total: sr.extra_mileage_total, total_amount: sr.total_amount,
+              rent_income_with: sr.rent_income_with, extra_data: sr.extra_data,
               row_hash: hash, synced_at: new Date().toISOString(),
             });
             if (newRow?.[0]) { benzoRentals.unshift(newRow[0]); inserted++; }
