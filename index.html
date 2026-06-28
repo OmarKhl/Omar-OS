@@ -6019,8 +6019,8 @@ Return raw JSON only.`,
           };
           const customer = getCol('customer_name');
           if (!customer) continue;
-          const start    = benzoNormalizeDate(getCol('start_date'));
-          const end      = benzoNormalizeDate(getCol('end_date'));
+          const start    = benzoNormalizeDate(getCol('start_date')) || null;
+          const end      = benzoNormalizeDate(getCol('end_date'))   || null;
 
           const rateRaw   = getCol('daily_rate');
           const totalRaw  = getCol('total_rent');
