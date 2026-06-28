@@ -2078,13 +2078,65 @@
     }
   }
 
-  // ── CRYPTO TICKERS ───────────────────────────────────────
-  const CRYPTO_TICKERS = new Set([
-    'BTC','ETH','SOL','BNB','AVAX','ADA','DOT','MATIC','LINK','XRP',
-    'DOGE','LTC','ATOM','NEAR','FTM','ALGO','XLM','VET','UNI','AAVE',
-    'CRO','SAND','MANA','AXS','GALA','ONE','HBAR','ETC','ZEC','DASH'
-  ]);
-  function yahooSymbol(ticker) { return CRYPTO_TICKERS.has(ticker) ? ticker + '-USD' : ticker; }
+  // ── TICKER NORMALISATION ──────────────────────────────────
+  // Handles Google Finance formats (CURRENCY:BTCUSD, TSE:TPU, NYSE:XYZ, USDCAD)
+  // as well as standard Yahoo formats (BTC-USD, RY.TO, AAPL).
+  const EXCHANGE_SUFFIX = {
+    TSE:'.TO', TSX:'.TO', TSXV:'.V', CVE:'.V',
+    NYSE:'', NASDAQ:'', AMEX:'', ARCX:'',
+    LON:'.L', FRA:'.DE', EPA:'.PA', ASX:'.AX',
+    NSE:'.NS', BSE:'.BO'
+  };
+
+  function toYahooFormat(t) {
+    if (t.startsWith('CURRENCY:')) {
+      const base = t.slice(9); // e.g. BTCUSD, ETHUSD, USDCAD
+      if (base.length > 3 && base.endsWith('USD')) return base.slice(0,-3) + '-USD';
+      if (base.length === 6) return base + '=X'; // forex pair
+      return base;
+    }
+    const c = t.indexOf(':');
+    if (c > 0) {
+      const exch = t.slice(0, c), sym = t.slice(c+1);
+      const sfx  = EXCHANGE_SUFFIX[exch];
+      return sfx !== undefined ? sym + sfx : sym;
+    }
+    if (/^[A-Z]{6}$/.test(t)) return t + '=X'; // bare forex: USDCAD → USDCAD=X
+    return t;
+  }
+
+  function toStooqFormat(t) {
+    if (t.startsWith('CURRENCY:')) {
+      const base = t.slice(9);
+      if (base.length > 3 && base.endsWith('USD')) return base.slice(0,-3).toLowerCase() + '.v';
+      return base.toLowerCase(); // forex pair
+    }
+    const c = t.indexOf(':');
+    if (c > 0) {
+      const exch = t.slice(0, c), sym = t.slice(c+1).toLowerCase();
+      if (exch==='TSE'||exch==='TSX'||exch==='TSXV'||exch==='CVE') return sym + '.ca';
+      if (exch==='LON') return sym + '.uk';
+      if (exch==='FRA'||exch==='EPA') return sym + '.de';
+      if (exch==='ASX') return sym + '.au';
+      return sym;
+    }
+    if (/^[A-Z]{6}$/.test(t)) return t.toLowerCase(); // USDCAD
+    if (t.endsWith('.TO')||t.endsWith('.TSX')) return t.split('.')[0].toLowerCase() + '.ca';
+    if (t.endsWith('.V'))  return t.split('.')[0].toLowerCase() + '.ca';
+    if (t.endsWith('.L'))  return t.split('.')[0].toLowerCase() + '.uk';
+    if (t.endsWith('.AX')) return t.split('.')[0].toLowerCase() + '.au';
+    if (t.endsWith('-USD')) return t.replace(/-USD$/i,'').toLowerCase() + '.v';
+    return t.toLowerCase();
+  }
+
+  function isCryptoTicker(t) {
+    if (t.startsWith('CURRENCY:')) return true;
+    if (t.endsWith('-USD') && t.length <= 10) return true;
+    return false;
+  }
+
+  // Legacy helper kept for any existing references
+  function yahooSymbol(ticker) { return toYahooFormat(ticker); }
 
   // ── CALC HOLDINGS ────────────────────────────────────────
   function calcHoldings(txs) {
@@ -2100,7 +2152,7 @@
       const fxRate  = Math.max(parseFloat(tx.fx_rate) || 1, 0.0001);
       const priceUSD = price / fxRate;
       const feesUSD  = fees  / fxRate;
-      if (!map[t]) map[t] = { ticker: t, qty: 0, totalCost: 0, isCrypto: CRYPTO_TICKERS.has(t), account: tx.investment_account };
+      if (!map[t]) map[t] = { ticker: t, qty: 0, totalCost: 0, isCrypto: isCryptoTicker(t), account: tx.investment_account };
       if (type === 'buy') {
         map[t].totalCost += priceUSD * qty + feesUSD;
         map[t].qty += qty;
@@ -2133,10 +2185,9 @@
     // ── Source 0: Apps Script proxy (set via ⚙ button) ───
     if (pricesWebAppUrl) {
       try {
-        // The Apps Script web app accepts ?symbols=AAPL,BTC-USD,RY.TO
-        // and returns { AAPL: { price, changePct, name, currency }, … }
-        const toYahooSym = t => CRYPTO_TICKERS.has(t) ? t + '-USD' : t;
-        const syms = tickers.map(toYahooSym).join(',');
+        // Send raw tickers as-is — the Apps Script normalises CURRENCY:, TSE:, etc.
+        // internally and returns prices keyed by the same original ticker string.
+        const syms = tickers.join(',');
         const url  = `${pricesWebAppUrl}?symbols=${encodeURIComponent(syms)}`;
         const resp = await fetch(url, {
           redirect: 'follow',
@@ -2199,43 +2250,41 @@
     const remaining = tickers.filter(t => !prices[t]);
 
     // ── Source A: Yahoo Finance v8 batch (20 at a time) ──
-    const toYahooSym = t => CRYPTO_TICKERS.has(t) ? t + '-USD' : t;
+    // toYahooFormat converts CURRENCY:BTCUSD→BTC-USD, TSE:TPU→TPU.TO, etc.
+    // We need to map Yahoo's returned symbol back to the original ticker key.
     const yBatches = [];
     for (let i = 0; i < remaining.length; i += 20) yBatches.push(remaining.slice(i, i + 20));
 
     await Promise.all(yBatches.map(async batch => {
-      const syms = batch.map(toYahooSym).join(',');
-      const url  = `https://query1.finance.yahoo.com/v8/finance/quote?symbols=${encodeURIComponent(syms)}&fields=regularMarketPrice,regularMarketChangePercent,shortName,currency`;
+      const origMap = {};
+      const yahooSyms = batch.map(t => {
+        const y = toYahooFormat(t);
+        origMap[y.toUpperCase()] = t;
+        origMap[y.replace(/-USD$/i,'').toUpperCase()] = t;
+        return y;
+      });
+      const url  = `https://query1.finance.yahoo.com/v8/finance/quote?symbols=${encodeURIComponent(yahooSyms.join(','))}&fields=regularMarketPrice,regularMarketChangePercent,shortName,currency`;
       const text = await raceFetch(url, 10000);
       if (!text) return;
       let data; try { data = JSON.parse(text); } catch { return; }
       (data?.quoteResponse?.result || []).forEach(q => {
         if (!q.regularMarketPrice) return;
-        const t = q.symbol.replace(/-USD$/i, '');
-        prices[t] = { price: q.regularMarketPrice, changePct: q.regularMarketChangePercent || 0, name: q.shortName || t, currency: q.currency || 'USD', source: 'yahoo' };
+        const origKey = origMap[q.symbol.toUpperCase()] || origMap[q.symbol.replace(/-USD$/i,'').toUpperCase()] || q.symbol;
+        prices[origKey] = { price: q.regularMarketPrice, changePct: q.regularMarketChangePercent || 0, name: q.shortName || origKey, currency: q.currency || 'USD', source: 'yahoo' };
       });
     }));
 
     // ── Source B: Stooq CSV — parallel per ticker ─────────
-    const toStooq = t => {
-      if (CRYPTO_TICKERS.has(t)) return t.toLowerCase() + '.v';
-      if (t.endsWith('.TO'))     return t.slice(0, -3).toLowerCase() + '.ca';
-      if (t.endsWith('.V'))      return t.slice(0, -2).toLowerCase() + '.ca';
-      if (t.endsWith('.AX'))     return t.slice(0, -3).toLowerCase() + '.au';
-      if (t.endsWith('.L'))      return t.slice(0, -2).toLowerCase() + '.uk';
-      return t.toLowerCase();
-    };
-
     const missedA = tickers.filter(t => !prices[t]);
     if (missedA.length > 0) {
       await Promise.all(missedA.map(async t => {
-        const url  = `https://stooq.com/q/l/?s=${toStooq(t)}&f=sd2t2ohlcv&h&e=csv`;
+        const url  = `https://stooq.com/q/l/?s=${toStooqFormat(t)}&f=sd2t2ohlcv&h&e=csv`;
         const text = await raceFetch(url, 8000);
         if (!text) return;
         const rows = text.trim().split('\n');
         if (rows.length < 2) return;
         const cols  = rows[1].split(',');
-        const close = parseFloat(cols[4]);   // index 4 = Close
+        const close = parseFloat(cols[6]);   // index 6 = Close
         if (close > 0 && isFinite(close)) {
           prices[t] = { price: close, changePct: 0, name: t, currency: 'USD', source: 'stooq' };
         }
@@ -2243,10 +2292,10 @@
     }
 
     // ── Source C: Yahoo per-ticker chart endpoint ─────────
-    const missedB = tickers.filter(t => !prices[t] && !CRYPTO_TICKERS.has(t));
+    const missedB = tickers.filter(t => !prices[t] && !isCryptoTicker(t));
     if (missedB.length > 0) {
       await Promise.all(missedB.map(async t => {
-        const url  = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(t)}?interval=1d&range=1d`;
+        const url  = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(toYahooFormat(t))}?interval=1d&range=1d`;
         const text = await raceFetch(url, 8000);
         if (!text) return;
         let data; try { data = JSON.parse(text); } catch { return; }
