@@ -1134,7 +1134,7 @@
     <!-- Controls row (always visible) -->
     <div class="fin-top-row">
       <div class="fin-currency-group">
-        <button class="fin-cur-btn active" data-cur="USD" onclick="setCurrency('USD')">USD</button>
+        <button class="fin-cur-btn" data-cur="USD" onclick="setCurrency('USD')">USD</button>
         <button class="fin-cur-btn" data-cur="CAD" onclick="setCurrency('CAD')">CAD</button>
         <button class="fin-cur-btn" data-cur="AED" onclick="setCurrency('AED')">AED</button>
       </div>
@@ -2062,7 +2062,7 @@
   // ── CURRENCY + PRIVACY STATE ────────────────────────────
   const FX     = { USD: 1, CAD: 1.37, AED: 3.67 };
   const FX_SYM = { USD: '$', CAD: 'C$', AED: 'AED ' };
-  let activeCurrency  = 'USD';
+  let activeCurrency  = localStorage.getItem('omar_currency') || 'CAD';
   let privacyMode     = true;
   let homePrivacyMode = true;
   let keyTaskIds      = new Set();   // populated from tasks.is_starred on load
@@ -2118,6 +2118,7 @@
 
   window.setCurrency = (cur) => {
     activeCurrency = cur;
+    localStorage.setItem('omar_currency', cur);
     document.querySelectorAll('.fin-cur-btn').forEach(b => b.classList.toggle('active', b.dataset.cur === cur));
     if (finData) renderFinance();
   };
@@ -3094,6 +3095,8 @@
   window.refreshFinance = () => { finData = null; loaders['finance'] = false; loadFinance(); loaders['finance'] = true; };
 
   async function loadFinance() {
+    // Apply saved currency preference to the button group
+    document.querySelectorAll('.fin-cur-btn').forEach(b => b.classList.toggle('active', b.dataset.cur === activeCurrency));
     const safe = async (fn) => { try { return await fn(); } catch(e) { return []; } };
     const [txs, watchlist] = await Promise.all([
       safe(() => sb('transactions', '?order=trade_date.asc')),
@@ -5617,8 +5620,8 @@ Return raw JSON only.`,
             <td style="font-size:11px;color:var(--muted)">${v ? v.vehicle_name : '—'}</td>
             <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.start_date}</td>
             <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.end_date}</td>
-            <td>$${fmt(r.daily_rate)}/day</td>
-            <td style="font-weight:500;color:var(--gold)">$${fmt(r.total_revenue)}</td>
+            <td>C$${fmt(r.daily_rate)}/day</td>
+            <td style="font-weight:500;color:var(--gold)">C$${fmt(r.total_revenue)}</td>
             <td><span class="badge ${statusColors[r.status] || ''}">${r.status}</span></td>
             <td style="font-size:11px;color:var(--muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.notes||'').replace(/"/g,'&quot;')}">${r.notes || '—'}</td>
             <td style="text-align:right;white-space:nowrap">
