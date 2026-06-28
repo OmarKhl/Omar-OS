@@ -1347,6 +1347,7 @@
     <div style="display:flex;gap:8px;align-items:center">
       <span id="benzo-sync-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)"></span>
       <button class="fin-icon-btn" id="benzo-sync-btn" onclick="syncBenzoRentals()" title="Sync with Google Sheets">↻ SYNC</button>
+      <button class="fin-icon-btn" onclick="openBenzoSettings()" title="Integrations & write-back settings">⚙</button>
       <button class="btn-add" style="background:var(--bg4);color:var(--muted);border:1px solid var(--border2)" onclick="openAddRental()">+ Add Rental</button>
       <button class="btn-add" onclick="openAddVehicle()">+ Add Vehicle</button>
     </div>
@@ -2824,6 +2825,15 @@
     const st = document.getElementById('benzo-write-status');
     st.textContent = 'Cleared.';
     st.style.color = 'var(--muted)';
+  }
+
+  window.openBenzoSettings = function() {
+    // Open the integrations modal and scroll to the Benzo section
+    togglePriceSettings();
+    setTimeout(() => {
+      const el = document.getElementById('benzo-write-url-input');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
   }
 
   window.testPriceUrl = async function testPriceUrl() {
