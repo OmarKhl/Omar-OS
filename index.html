@@ -1494,11 +1494,15 @@
     </div>
     <div id="price-url-status" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;min-height:14px"></div>
     <div id="price-url-raw" style="display:none;margin-bottom:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto"></div>
-    <div style="display:flex;gap:6px;margin-bottom:20px">
+    <div style="display:flex;gap:6px;margin-bottom:12px">
       <button class="btn-cancel" onclick="clearPriceUrl()">CLEAR</button>
       <button class="btn-cancel" onclick="testPriceUrl()">TEST CONNECTION</button>
       <button class="btn-save" onclick="savePriceUrl()">SAVE &amp; REFRESH</button>
     </div>
+    <details style="margin-bottom:20px" onToggle="if(this.open)renderUrlHistory('omar_history_price_url','price-url-input','hist-price-url')">
+      <summary style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);cursor:pointer;user-select:none;letter-spacing:.06em">↩ RESTORE PREVIOUS URL</summary>
+      <div id="hist-price-url" style="margin-top:10px"></div>
+    </details>
 
     <hr style="border:none;border-top:1px solid var(--border);margin:4px 0 20px">
 
@@ -1556,10 +1560,14 @@
 }</pre>
     </details>
 
-    <div style="display:flex;gap:6px">
+    <div style="display:flex;gap:6px;margin-bottom:12px">
       <button class="btn-cancel" onclick="clearSheetsWriteUrl()">CLEAR</button>
       <button class="btn-save" onclick="saveSheetsWriteUrl()">SAVE</button>
     </div>
+    <details onToggle="if(this.open)renderUrlHistory('omar_history_sheets_write','sheets-write-url-input','hist-sheets-write')">
+      <summary style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);cursor:pointer;user-select:none;letter-spacing:.06em">↩ RESTORE PREVIOUS URL</summary>
+      <div id="hist-sheets-write" style="margin-top:10px"></div>
+    </details>
 
   </div>
 </div>
@@ -1595,10 +1603,14 @@
       </div>
     </details>
 
-    <div style="display:flex;gap:6px">
+    <div style="display:flex;gap:6px;margin-bottom:12px">
       <button class="btn-cancel" onclick="clearBenzoWriteUrl()">CLEAR</button>
       <button class="btn-save" onclick="saveBenzoWriteUrl()">SAVE</button>
     </div>
+    <details onToggle="if(this.open)renderUrlHistory('omar_history_benzo_write','benzo-write-url-input','hist-benzo-write')">
+      <summary style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);cursor:pointer;user-select:none;letter-spacing:.06em">↩ RESTORE PREVIOUS URL</summary>
+      <div id="hist-benzo-write" style="margin-top:10px"></div>
+    </details>
   </div>
 </div>
 
@@ -2703,6 +2715,61 @@
     return prices;
   }
 
+  // ── URL HISTORY ──────────────────────────────────────────
+  const URL_HISTORY_MAX = 20;
+
+  function addToUrlHistory(storageKey, url) {
+    if (!url) return;
+    const hist = getUrlHistory(storageKey);
+    // Skip if identical to most recent entry
+    if (hist.length && hist[0].url === url) return;
+    hist.unshift({ url, savedAt: new Date().toISOString() });
+    if (hist.length > URL_HISTORY_MAX) hist.length = URL_HISTORY_MAX;
+    localStorage.setItem(storageKey, JSON.stringify(hist));
+  }
+
+  function getUrlHistory(storageKey) {
+    try { return JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch(e) { return []; }
+  }
+
+  function renderUrlHistory(storageKey, inputId, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const hist = getUrlHistory(storageKey);
+    if (!hist.length) {
+      container.innerHTML = '<div style="font-size:11px;color:var(--muted2);padding:6px 0">No history yet — URLs are logged here each time you save.</div>';
+      return;
+    }
+    container.innerHTML = hist.map((entry, idx) => {
+      const d   = new Date(entry.savedAt);
+      const dt  = d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' })
+                + ' · ' + d.toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+      const short = entry.url.length > 62 ? entry.url.slice(0, 30) + '…' + entry.url.slice(-24) : entry.url;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;margin-bottom:6px">
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${entry.url}">${short}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px">${dt}</div>
+        </div>
+        <button onclick="restoreUrlEntry('${storageKey}','${inputId}',${idx},'${containerId}')"
+          style="flex-shrink:0;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;border:1px solid var(--gold-dim);border-radius:3px;background:transparent;color:var(--gold);cursor:pointer">RESTORE</button>
+      </div>`;
+    }).join('');
+  }
+
+  window.restoreUrlEntry = function(storageKey, inputId, idx, containerId) {
+    const hist  = getUrlHistory(storageKey);
+    const entry = hist[idx];
+    if (!entry) return;
+    const input = document.getElementById(inputId);
+    if (input) {
+      input.value = entry.url;
+      input.style.borderColor = 'var(--gold)';
+      setTimeout(() => { input.style.borderColor = ''; }, 1500);
+    }
+    // Re-render so the restored entry is visually highlighted
+    renderUrlHistory(storageKey, inputId, containerId);
+  };
+
   // ── PRICE SETTINGS MODAL ─────────────────────────────────
   window.togglePriceSettings = function togglePriceSettings() {
     const modal = document.getElementById('price-settings-modal');
@@ -2742,6 +2809,7 @@
       return;
     }
 
+    if (url) addToUrlHistory('omar_history_price_url', url);
     pricesWebAppUrl = url;
     if (url) localStorage.setItem('omar_prices_url', url);
     else     localStorage.removeItem('omar_prices_url');
@@ -2778,6 +2846,7 @@
       st.style.color = '#ef4444';
       return;
     }
+    if (url) addToUrlHistory('omar_history_sheets_write', url);
     sheetsWriteUrl = url;
     if (url) localStorage.setItem('omar_sheets_write_url', url);
     else     localStorage.removeItem('omar_sheets_write_url');
@@ -2805,6 +2874,7 @@
       input.style.borderColor = '#f59e0b';
       return;
     }
+    if (url) addToUrlHistory('omar_history_benzo_write', url);
     benzoWriteUrl = url;
     if (url) localStorage.setItem('omar_benzo_write_url', url);
     else     localStorage.removeItem('omar_benzo_write_url');
