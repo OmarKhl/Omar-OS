@@ -1398,8 +1398,9 @@
       </div>
     </div>
     <!-- Rentals table -->
-    <div style="overflow-x:auto">
-      <table style="width:100%;min-width:640px">
+    <div style="overflow-x:auto" id="benzo-rent-table-wrap">
+      <table id="benzo-rental-table" style="width:100%;min-width:640px;table-layout:fixed">
+        <colgroup id="benzo-rent-colgroup"></colgroup>
         <thead id="benzo-rent-head"></thead>
         <tbody id="benzo-rent-body">
           <tr><td colspan="9" class="loading">Loading…</td></tr>
@@ -5863,9 +5864,20 @@ Return raw JSON only.`,
     const visCols = allCols.filter(c => benzoRentColVis[c.key]);
     const colCount = visCols.length + 1;
 
-    // Render header
+    // Column widths from localStorage
+    const colWidths = (() => { try { return JSON.parse(localStorage.getItem('omar_benzo_col_widths')||'{}'); } catch(e){ return {}; } })();
+    const DEFAULT_COL_W = 120;
+    const ACTION_COL_W  = 80;
+
+    // Render <colgroup> for fixed-width columns
+    const cg = document.getElementById('benzo-rent-colgroup');
+    if (cg) cg.innerHTML = visCols.map(c => `<col style="width:${colWidths[c.key]||DEFAULT_COL_W}px;min-width:50px">`).join('') + `<col style="width:${ACTION_COL_W}px">`;
+
+    // Render header with resize handles
     const head = document.getElementById('benzo-rent-head');
-    if (head) head.innerHTML = `<tr>${visCols.map(c => `<th>${c.label}</th>`).join('')}<th></th></tr>`;
+    if (head) head.innerHTML = `<tr>${visCols.map(c =>
+      `<th data-col="${c.key}" style="position:relative;overflow:hidden;white-space:nowrap">${c.label}<div class="col-resize-handle" data-col="${c.key}" style="position:absolute;right:0;top:0;width:5px;height:100%;cursor:col-resize;background:transparent" onmousedown="benzoColResizeStart(event,'${c.key}')"></div></th>`
+    ).join('')}<th></th></tr>`;
 
     const body = document.getElementById('benzo-rent-body');
     if (!body) return;
@@ -5895,8 +5907,15 @@ Return raw JSON only.`,
         case 'duration':        return `<td style="font-size:11px;color:var(--muted);text-align:center">${r.duration || '—'}</td>`;
         case 'allowed_mileage': return `<td style="font-size:11px;color:var(--muted)">${r.allowed_mileage || '—'}</td>`;
         case 'booking_number':  return `<td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold-dim)">${r.booking_number || '—'}</td>`;
-        case 'deposit':         return `<td style="font-size:11px;color:var(--muted)">C$${fmt(r.deposit)}</td>`;
-        case 'notes':           return `<td style="font-size:11px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.notes||'').replace(/"/g,'&quot;')}">${r.notes || '—'}</td>`;
+        case 'deposit':                return `<td style="font-size:11px;color:var(--muted)">C$${fmt(r.deposit)}</td>`;
+        case 'security_deposit':       return `<td style="font-size:11px;color:var(--muted)">C$${fmt(r.security_deposit)}</td>`;
+        case 'security_deposit_taken': return `<td style="font-size:11px;color:var(--muted)">C$${fmt(r.security_deposit_taken)}</td>`;
+        case 'extra_mileage_km':       return `<td style="font-size:11px;color:var(--muted)">${r.extra_mileage_km || '—'}</td>`;
+        case 'extra_mileage_charge':   return `<td style="font-size:11px;color:var(--muted)">${r.extra_mileage_charge || '—'}</td>`;
+        case 'extra_mileage_total':    return `<td style="font-size:11px;color:var(--muted)">${r.extra_mileage_total || '—'}</td>`;
+        case 'total_amount':           return `<td style="font-weight:500;color:var(--gold)">${r.total_amount || '—'}</td>`;
+        case 'rent_income_with':       return `<td style="font-size:11px;color:var(--muted)">${r.rent_income_with || '—'}</td>`;
+        case 'notes':           return `<td style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.notes||'').replace(/"/g,'&quot;')}">${r.notes || '—'}</td>`;
         default:                return `<td>—</td>`;
       }
     };
@@ -5917,6 +5936,40 @@ Return raw JSON only.`,
         }).join('')
       : `<tr><td colspan="${colCount}" class="empty">${benzoFleet.length === 0 ? 'No vehicles yet.' : 'No rentals match.'}</td></tr>`;
   };
+
+  // ── COLUMN RESIZE ─────────────────────────────────────────
+  let _colResizeDrag = null;
+  window.benzoColResizeStart = (e, colKey) => {
+    e.preventDefault();
+    const th = document.querySelector(`#benzo-rent-head th[data-col="${colKey}"]`);
+    if (!th) return;
+    _colResizeDrag = { colKey, startX: e.pageX, startW: th.offsetWidth };
+    document.addEventListener('mousemove', _onColResizeMove);
+    document.addEventListener('mouseup',   _onColResizeEnd);
+  };
+  function _onColResizeMove(e) {
+    if (!_colResizeDrag) return;
+    const newW = Math.max(50, _colResizeDrag.startW + (e.pageX - _colResizeDrag.startX));
+    const col = document.querySelector(`#benzo-rent-colgroup col:nth-child(${
+      Array.from(document.querySelectorAll('#benzo-rent-head th[data-col]'))
+        .findIndex(th => th.dataset.col === _colResizeDrag.colKey) + 1
+    })`);
+    if (col) col.style.width = newW + 'px';
+  }
+  function _onColResizeEnd(e) {
+    if (!_colResizeDrag) return;
+    const thIdx = Array.from(document.querySelectorAll('#benzo-rent-head th[data-col]'))
+      .findIndex(th => th.dataset.col === _colResizeDrag.colKey);
+    const col = document.querySelector(`#benzo-rent-colgroup col:nth-child(${thIdx + 1})`);
+    if (col) {
+      const widths = (() => { try { return JSON.parse(localStorage.getItem('omar_benzo_col_widths')||'{}'); } catch(e){ return {}; } })();
+      widths[_colResizeDrag.colKey] = parseInt(col.style.width);
+      localStorage.setItem('omar_benzo_col_widths', JSON.stringify(widths));
+    }
+    document.removeEventListener('mousemove', _onColResizeMove);
+    document.removeEventListener('mouseup',   _onColResizeEnd);
+    _colResizeDrag = null;
+  }
 
   window.switchBenzoTab = (tab) => {
     activeBenzoTab = tab;
@@ -6025,6 +6078,8 @@ Return raw JSON only.`,
           if (dbField && !(dbField in colIdx)) colIdx[dbField] = i;
         });
         console.log(`[Benzo] Recognized columns:`, colIdx);
+        const unrecognized = headerRow.filter(h => h && !SHEET_COL_MAP[h]);
+        if (unrecognized.length) console.log(`[Benzo] Unrecognized headers (going to extra_data):`, unrecognized);
 
         // Build list of extra unknown columns
         const extraCols = [];
