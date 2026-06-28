@@ -5986,17 +5986,43 @@ Return raw JSON only.`,
   function benzoNormalizeDate(raw) {
     if (!raw) return '';
     raw = raw.trim();
+    if (!raw) return '';
     // Already YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-    // MM/DD/YYYY or DD/MM/YYYY → try as M/D/Y
+    // YYYY/MM/DD
+    if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(raw)) {
+      const [y,m,d] = raw.split('/');
+      return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+    }
+    // Numeric: M/D/YYYY or D/M/YYYY or M-D-YYYY etc.
     const parts = raw.split(/[\/\-\.]/);
     if (parts.length === 3) {
-      if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
-      if (parts[2].length === 4) return `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+      const [a,b,c] = parts;
+      if (a.length === 4 && parseInt(a) > 1900) // YYYY-M-D
+        return `${a}-${b.padStart(2,'0')}-${c.padStart(2,'0')}`;
+      if (c.length === 4 && parseInt(c) > 1900)  // M-D-YYYY or D-M-YYYY
+        return `${c}-${a.padStart(2,'0')}-${b.padStart(2,'0')}`;
+      if (c.length === 2 && parseInt(c) >= 0) {   // M/D/YY two-digit year
+        const yr = parseInt(c) < 50 ? `20${c}` : `19${c}`;
+        return `${yr}-${a.padStart(2,'0')}-${b.padStart(2,'0')}`;
+      }
     }
-    // Try Date parse as fallback
-    const d = new Date(raw);
-    return isNaN(d) ? '' : d.toISOString().slice(0,10);
+    // Month-name formats: "Jan 1 2025", "1-Jan-2025", "January 1, 2025"
+    const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+    const mName = raw.match(/(\d{1,2})[- ]([A-Za-z]{3,9})[- ,]+(\d{4})/);
+    if (mName) {
+      const mo = MONTHS[(mName[2]||'').toLowerCase().slice(0,3)];
+      if (mo) return `${mName[3]}-${String(mo).padStart(2,'0')}-${mName[1].padStart(2,'0')}`;
+    }
+    const mName2 = raw.match(/([A-Za-z]{3,9})[- ,]+(\d{1,2})[, ]+(\d{4})/);
+    if (mName2) {
+      const mo = MONTHS[(mName2[1]||'').toLowerCase().slice(0,3)];
+      if (mo) return `${mName2[3]}-${String(mo).padStart(2,'0')}-${mName2[2].padStart(2,'0')}`;
+    }
+    // Fallback: browser Date parse (UTC noon to avoid timezone shifts)
+    const d = new Date(raw + (raw.includes(':') ? '' : 'T12:00:00Z'));
+    if (!isNaN(d)) return d.toISOString().slice(0,10);
+    return '';
   }
 
   window.syncBenzoRentals = async () => {
@@ -6013,8 +6039,10 @@ Return raw JSON only.`,
     async function fetchSheetCsv(tabName) {
       const tab = encodeURIComponent(tabName);
       const urls = [
-        `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${tab}`,
+        // Raw export first — preserves all rows exactly as in the sheet
         `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/export?format=csv&sheet=${tab}`,
+        // gviz fallback — may reformat dates / skip leading rows
+        `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${tab}`,
       ];
       let lastErr = '';
       for (const url of urls) {
@@ -6058,37 +6086,57 @@ Return raw JSON only.`,
         const allRows  = parseCSV(text);
         if (allRows.length < 2) continue;
 
-        // Auto-detect header row: scan first 15 rows, pick the one with most recognized columns
+        // Multi-row header detection:
+        // Google Sheets can have multi-level headers where DIFFERENT columns have
+        // their labels on DIFFERENT rows (e.g. "Client Name" on row 2, "#" and
+        // "Rental Start Date" on row 4). We scan the first 12 rows and build a
+        // MERGED column map from every row that contributes at least one match.
         const normalize = h => (h||'').replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
-        let headerRowIdx = 0, bestMatches = 0;
-        for (let ri = 0; ri < Math.min(15, allRows.length); ri++) {
-          const matches = allRows[ri].filter(h => SHEET_COL_MAP[normalize(h)]).length;
-          if (matches > bestMatches) { bestMatches = matches; headerRowIdx = ri; }
+
+        // Log raw CSV rows to console for debugging
+        console.log(`[Benzo] Raw CSV rows 0-7 for tab "${tabName}":`);
+        for (let ri = 0; ri < Math.min(8, allRows.length); ri++) {
+          console.log(`  Row[${ri}]:`, allRows[ri].map(c => (c||'').trim()).join(' | '));
         }
-        console.log(`[Benzo] Header row detected at index ${headerRowIdx} with ${bestMatches} recognized columns`);
 
-        const rawHeaders = allRows[headerRowIdx].map(h => (h || '').trim());
-        const headerRow  = rawHeaders.map(normalize);
-        console.log(`[Benzo] Normalized headers:`, headerRow);
+        const colIdx = {};      // dbField → column index
+        let lastHeaderRow = 0; // last row that contributed ≥1 header match
 
-        // Build colIdx: dbField → column index
-        const colIdx = {};
-        headerRow.forEach((h, i) => {
-          const dbField = SHEET_COL_MAP[h];
-          if (dbField && !(dbField in colIdx)) colIdx[dbField] = i;
-        });
-        console.log(`[Benzo] Recognized columns:`, colIdx);
-        const unrecognized = headerRow.filter(h => h && !SHEET_COL_MAP[h]);
-        if (unrecognized.length) console.log(`[Benzo] Unrecognized headers (going to extra_data):`, unrecognized);
+        for (let ri = 0; ri < Math.min(12, allRows.length); ri++) {
+          const row = allRows[ri];
+          let anyMatch = false;
+          for (let ci = 0; ci < row.length; ci++) {
+            const h = normalize(row[ci]);
+            const field = SHEET_COL_MAP[h];
+            if (field && !(field in colIdx)) {
+              colIdx[field] = ci;
+              anyMatch = true;
+            }
+          }
+          if (anyMatch) lastHeaderRow = ri;
+        }
 
-        // Build list of extra unknown columns
+        console.log(`[Benzo] Column map (scanned rows 0-${lastHeaderRow}):`, colIdx);
+        const missingImportant = ['customer_name','start_date','end_date','driver_license','phone','booking_number','total_rent']
+          .filter(f => !(f in colIdx));
+        if (missingImportant.length) console.warn(`[Benzo] Still unmapped fields:`, missingImportant);
+
+        // Collect unrecognized header cells as extra_data sources
         const extraCols = [];
-        headerRow.forEach((h, i) => {
-          if (h && !SHEET_COL_MAP[h]) extraCols.push({ name: rawHeaders[i], idx: i });
-        });
+        const mappedIdxSet = new Set(Object.values(colIdx));
+        for (let ri = 0; ri <= lastHeaderRow; ri++) {
+          allRows[ri].forEach((cell, ci) => {
+            const h = normalize(cell);
+            if (h && !SHEET_COL_MAP[h] && !mappedIdxSet.has(ci)) {
+              if (!extraCols.find(e => e.idx === ci)) {
+                extraCols.push({ name: cell.trim(), idx: ci });
+              }
+            }
+          });
+        }
 
         const sheetRows = [];
-        const startDataRow = headerRowIdx + 1; // skip header row
+        const startDataRow = lastHeaderRow + 1; // data starts right after last header row
         for (let i = startDataRow; i < allRows.length; i++) {
           const r = allRows[i];
           const getCol = (field, fallbackIdx) => {
