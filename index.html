@@ -5686,7 +5686,17 @@ Return raw JSON only.`,
     'number of days': 'duration', 'no. of days': 'duration',
     '#': 'booking_number', 'booking number': 'booking_number', 'booking #': 'booking_number',
     'rental #': 'booking_number', 'rental number': 'booking_number', 'ref': 'booking_number',
-    'reservation': 'booking_number',
+    'reservation': 'booking_number', 'client #': 'booking_number', 'no.': 'booking_number',
+    'no': 'booking_number', 'num': 'booking_number', 'sl': 'booking_number', 'sl.': 'booking_number',
+    'id': 'booking_number',
+    // DOB aliases
+    'd.o.b.': 'dob', 'd.o.b': 'dob', 'birth': 'dob', 'birthdate': 'dob',
+    // Age aliases
+    'client age': 'age', 'age (yrs)': 'age', 'yrs': 'age', 'years': 'age',
+    // Time aliases
+    'check out time': 'start_time', 'check-out time': 'start_time', 'depart time': 'start_time',
+    'return time': 'end_time', 'check in time': 'end_time', 'check-in time': 'end_time',
+    'finish time': 'end_time', 'drop off time': 'end_time',
   };
 
   async function loadBenzo() {
@@ -6092,57 +6102,60 @@ Return raw JSON only.`,
         const allRows  = parseCSV(text);
         if (allRows.length < 2) continue;
 
-        // Multi-row header detection:
-        // Google Sheets can have multi-level headers where DIFFERENT columns have
-        // their labels on DIFFERENT rows (e.g. "Client Name" on row 2, "#" and
-        // "Rental Start Date" on row 4). We scan the first 12 rows and build a
-        // MERGED column map from every row that contributes at least one match.
         const normalize = h => (h||'').replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
 
-        // Log raw CSV rows to console for debugging
+        // Log raw CSV rows for debugging
         console.log(`[Benzo] Raw CSV rows 0-7 for tab "${tabName}":`);
         for (let ri = 0; ri < Math.min(8, allRows.length); ri++) {
           console.log(`  Row[${ri}]:`, allRows[ri].map(c => (c||'').trim()).join(' | '));
         }
 
-        const colIdx = {};      // dbField → column index
-        let lastHeaderRow = 0; // last row that contributed ≥1 header match
-
+        // Step 1: find the PRIMARY header row — the one with the most recognized columns.
+        // This is the authoritative source for column positions.
+        let primaryRowIdx = 0, bestMatches = 0;
         for (let ri = 0; ri < Math.min(12, allRows.length); ri++) {
-          const row = allRows[ri];
-          let anyMatch = false;
-          for (let ci = 0; ci < row.length; ci++) {
-            const h = normalize(row[ci]);
-            const field = SHEET_COL_MAP[h];
-            if (field && !(field in colIdx)) {
-              colIdx[field] = ci;
-              anyMatch = true;
-            }
-          }
-          if (anyMatch) lastHeaderRow = ri;
+          const matches = allRows[ri].filter(cell => SHEET_COL_MAP[normalize(cell)]).length;
+          if (matches > bestMatches) { bestMatches = matches; primaryRowIdx = ri; }
         }
+        console.log(`[Benzo] Primary header row: index ${primaryRowIdx} (${bestMatches} matches)`);
 
-        console.log(`[Benzo] Column map (scanned rows 0-${lastHeaderRow}):`, colIdx);
-        const missingImportant = ['customer_name','start_date','end_date','driver_license','phone','booking_number','total_rent']
-          .filter(f => !(f in colIdx));
-        if (missingImportant.length) console.warn(`[Benzo] Still unmapped fields:`, missingImportant);
+        // Step 2: build colIdx from the primary row
+        const colIdx = {};
+        allRows[primaryRowIdx].forEach((cell, ci) => {
+          const h = normalize(cell);
+          const field = SHEET_COL_MAP[h];
+          if (field && !(field in colIdx)) colIdx[field] = ci;
+        });
 
-        // Collect unrecognized header cells as extra_data sources
-        const extraCols = [];
-        const mappedIdxSet = new Set(Object.values(colIdx));
-        for (let ri = 0; ri <= lastHeaderRow; ri++) {
+        // Step 3: supplement from other rows (before and after primary) ONLY for
+        // fields not yet found — this handles split headers without overriding
+        // positions already locked in by the primary row.
+        for (let ri = 0; ri < Math.min(12, allRows.length); ri++) {
+          if (ri === primaryRowIdx) continue;
           allRows[ri].forEach((cell, ci) => {
             const h = normalize(cell);
-            if (h && !SHEET_COL_MAP[h] && !mappedIdxSet.has(ci)) {
-              if (!extraCols.find(e => e.idx === ci)) {
-                extraCols.push({ name: cell.trim(), idx: ci });
-              }
-            }
+            const field = SHEET_COL_MAP[h];
+            if (field && !(field in colIdx)) colIdx[field] = ci;
           });
         }
 
+        console.log(`[Benzo] Column map (primary row ${primaryRowIdx}, supplemented):`, colIdx);
+        const missingImportant = ['customer_name','start_date','end_date','driver_license','phone','booking_number','total_rent']
+          .filter(f => !(f in colIdx));
+        if (missingImportant.length) console.warn(`[Benzo] Still unmapped:`, missingImportant);
+
+        // Collect unrecognized header cells for extra_data
+        const extraCols = [];
+        const mappedIdxSet = new Set(Object.values(colIdx));
+        allRows[primaryRowIdx].forEach((cell, ci) => {
+          const h = normalize(cell);
+          if (h && !SHEET_COL_MAP[h] && !mappedIdxSet.has(ci)) {
+            extraCols.push({ name: cell.trim(), idx: ci });
+          }
+        });
+
         const sheetRows = [];
-        const startDataRow = lastHeaderRow + 1; // data starts right after last header row
+        const startDataRow = primaryRowIdx + 1; // data starts right after primary header row
         for (let i = startDataRow; i < allRows.length; i++) {
           const r = allRows[i];
           const getCol = (field, fallbackIdx) => {
