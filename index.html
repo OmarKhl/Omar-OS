@@ -6039,10 +6039,10 @@ Return raw JSON only.`,
     async function fetchSheetCsv(tabName) {
       const tab = encodeURIComponent(tabName);
       const urls = [
-        // Raw export first — preserves all rows exactly as in the sheet
-        `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/export?format=csv&sheet=${tab}`,
-        // gviz fallback — may reformat dates / skip leading rows
+        // gviz first — returns an error (not a redirect) when the tab doesn't exist
         `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${tab}`,
+        // export fallback — WARNING: silently redirects to default tab if tab not found, so only used as last resort
+        `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/export?format=csv&sheet=${tab}`,
       ];
       let lastErr = '';
       for (const url of urls) {
