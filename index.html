@@ -465,7 +465,7 @@
 
     /* ── BENZO PAGE ── */
     #page-benzo { flex-direction: column; padding: 24px 28px; overflow-y: auto; }
-    .benzo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; margin-bottom: 28px; }
+    .benzo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; margin-bottom: 8px; }
     .fleet-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: 16px 18px; }
     .fleet-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
     .fleet-name { font-size: 14px; font-weight: 500; }
@@ -481,6 +481,16 @@
     .split-item { font-size: 10px; color: var(--muted); }
     .split-item span { color: var(--text); font-weight: 500; }
     .rentals-table-wrap { overflow-x: auto; }
+    /* Benzo sub-tabs */
+    .benzo-sub-tabs { display:flex; gap:0; margin-bottom:22px; border-bottom:1px solid var(--border); }
+    .benzo-sub-tab { background:transparent; border:none; border-bottom:2px solid transparent; color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; padding:8px 18px; cursor:pointer; margin-bottom:-1px; transition:color .15s; }
+    .benzo-sub-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+    .benzo-sub-tab:hover:not(.active) { color:var(--text); }
+    /* Vehicle selector pills */
+    .benzo-veh-pills { display:flex; flex-wrap:wrap; gap:8px; }
+    .benzo-veh-pill { background:var(--bg2); border:1px solid var(--border2); border-radius:20px; padding:5px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.06em; color:var(--muted); cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:6px; }
+    .benzo-veh-pill.selected { background:rgba(200,168,75,.12); border-color:var(--gold); color:var(--gold); }
+    .benzo-veh-pill:hover:not(.selected) { border-color:var(--muted); color:var(--text); }
 
     /* ── AGENTS PAGE ── */
     #page-agents { flex-direction: row; overflow: hidden; }
@@ -1334,28 +1344,74 @@
 <div class="page" id="page-benzo">
   <div class="page-header">
     <div class="page-title">Benzo Fleet</div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="benzo-sync-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)"></span>
+      <button class="fin-icon-btn" id="benzo-sync-btn" onclick="syncBenzoRentals()" title="Sync with Google Sheets">↻ SYNC</button>
       <button class="btn-add" style="background:var(--bg4);color:var(--muted);border:1px solid var(--border2)" onclick="openAddRental()">+ Add Rental</button>
       <button class="btn-add" onclick="openAddVehicle()">+ Add Vehicle</button>
     </div>
   </div>
-  <div class="section-label" style="margin-bottom:12px">VEHICLES</div>
-  <div class="benzo-grid" id="fleet-grid">
-    <div class="loading">Loading fleet…</div>
+
+  <!-- Sub-tabs -->
+  <div class="benzo-sub-tabs">
+    <button class="benzo-sub-tab active" id="bst-fleet"   onclick="switchBenzoTab('fleet')">FLEET</button>
+    <button class="benzo-sub-tab"        id="bst-rentals" onclick="switchBenzoTab('rentals')">RENTALS</button>
+    <button class="benzo-sub-tab"        id="bst-tickets" onclick="switchBenzoTab('tickets')">TICKETS</button>
   </div>
-  <div class="section-label" style="margin-bottom:12px">RENTALS</div>
-  <div class="rentals-table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>CUSTOMER</th><th>VEHICLE</th><th>START</th><th>END</th>
-          <th>DAILY RATE</th><th>REVENUE</th><th>STATUS</th><th></th>
-        </tr>
-      </thead>
-      <tbody id="rentals-body">
-        <tr><td colspan="7" class="loading">Loading rentals…</td></tr>
-      </tbody>
-    </table>
+
+  <!-- ── FLEET panel ── -->
+  <div id="benzo-panel-fleet">
+    <div class="benzo-grid" id="fleet-grid">
+      <div class="loading">Loading fleet…</div>
+    </div>
+  </div>
+
+  <!-- ── RENTALS panel ── -->
+  <div id="benzo-panel-rentals" style="display:none">
+    <!-- Vehicle selector -->
+    <div style="margin-bottom:16px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.08em;margin-bottom:8px">SELECT VEHICLE(S) — CLICK TO TOGGLE · MULTI-SELECT SUPPORTED</div>
+      <div class="benzo-veh-pills" id="benzo-veh-pills"></div>
+    </div>
+    <!-- Controls bar -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <input class="form-input" id="benzo-rent-search" placeholder="Search customer, notes…"
+        style="width:220px;height:30px;font-size:11px;margin:0"
+        oninput="renderBenzoRentals()" />
+      <select class="form-input" id="benzo-rent-status"
+        style="width:130px;height:30px;font-size:11px;margin:0;padding:0 8px"
+        onchange="renderBenzoRentals()">
+        <option value="all">All Statuses</option>
+        <option value="upcoming">Upcoming</option>
+        <option value="active">Active</option>
+        <option value="completed">Completed</option>
+      </select>
+      <div style="flex:1"></div>
+      <span id="benzo-rent-count" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)"></span>
+    </div>
+    <!-- Rentals table -->
+    <div style="overflow-x:auto">
+      <table style="width:100%;min-width:640px">
+        <thead>
+          <tr>
+            <th>CUSTOMER</th><th>VEHICLE</th><th>START</th><th>END</th>
+            <th>RATE/DAY</th><th>REVENUE</th><th>STATUS</th><th>NOTES</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="benzo-rent-body">
+          <tr><td colspan="9" class="loading">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── TICKETS panel ── -->
+  <div id="benzo-panel-tickets" style="display:none">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 0;gap:14px">
+      <div style="font-size:32px;opacity:.25">🎫</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.1em">TICKETS — COMING SOON</div>
+      <div style="font-size:11px;color:var(--muted2)">Vehicle ticket tracking will be added here.</div>
+    </div>
   </div>
 </div>
 
@@ -1505,6 +1561,40 @@
       <button class="btn-save" onclick="saveSheetsWriteUrl()">SAVE</button>
     </div>
 
+    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+
+    <!-- ── Benzo Rental Write-back ── -->
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:10px">BENZO · RENTAL WRITE-BACK</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+      When you add, edit, or delete a rental in the dashboard it will sync back to your
+      <strong style="color:var(--text)">Google Sheets</strong> rental tabs automatically.
+      Paste the deployed web app URL from your Benzo Apps Script below.
+    </p>
+    <div class="form-group">
+      <label class="form-label">Benzo Sheets Write URL</label>
+      <input class="form-input" id="benzo-write-url-input" type="url"
+        placeholder="https://script.google.com/macros/s/…/exec"
+        oninput="this.style.borderColor=''" />
+    </div>
+    <div id="benzo-write-status" style="font-family:'JetBrains Mono',monospace;font-size:10px;min-height:14px;margin-bottom:14px"></div>
+
+    <details style="margin-bottom:16px">
+      <summary style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;user-select:none;letter-spacing:.05em">SETUP INSTRUCTIONS ▾</summary>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.8">
+        1. Open your Benzo Google Sheet → <strong style="color:var(--text)">Extensions → Apps Script</strong><br>
+        2. Paste the Apps Script code (shared in chat) into a new script file<br>
+        3. Click <strong style="color:var(--text)">Deploy → New deployment → Web app</strong><br>
+        4. Set <em>Execute as</em>: <strong style="color:var(--text)">Me</strong> · <em>Who has access</em>: <strong style="color:var(--text)">Anyone</strong><br>
+        5. Copy the web app URL and paste it above<br><br>
+        <span style="color:var(--muted2)">Each vehicle must have its own sheet tab named exactly the same as the vehicle name in the dashboard (e.g., "Mercedes C300").</span>
+      </div>
+    </details>
+
+    <div style="display:flex;gap:6px">
+      <button class="btn-cancel" onclick="clearBenzoWriteUrl()">CLEAR</button>
+      <button class="btn-save" onclick="saveBenzoWriteUrl()">SAVE</button>
+    </div>
+
   </div>
 </div>
 
@@ -1608,6 +1698,30 @@
     <div class="form-group">
       <label class="form-label">Due Date</label>
       <input class="form-input" type="date" id="new-task-due" />
+    </div>
+    <!-- Recurring toggle -->
+    <div class="form-group" style="margin-bottom:6px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--muted)">
+        <input type="checkbox" id="new-task-recurring" onchange="toggleRecurringFields()"
+          style="width:14px;height:14px;accent-color:var(--gold);cursor:pointer">
+        RECURRING TASK
+      </label>
+    </div>
+    <div id="recurring-fields" style="display:none;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:12px;margin-bottom:10px">
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">FREQUENCY</label>
+        <select class="form-select" id="new-task-freq">
+          <option value="daily">Daily</option>
+          <option value="weekly" selected>Weekly</option>
+          <option value="biweekly">Every 2 Weeks</option>
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">END DATE <span style="color:var(--muted2);font-weight:400">(last recurrence)</span></label>
+        <input class="form-input" type="date" id="new-task-recur-end" />
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeAddTask()">Cancel</button>
@@ -2182,7 +2296,7 @@
     loadHabitsData();
     loadOpProfile();
     const [tasks, rentals, fleet, goals, notes, txs] = await Promise.all([
-      safe(() => sb('tasks',       '?select=id,completed,due_date,task_text,category,priority,is_starred')),
+      safe(() => sb('tasks',       '?select=id,completed,due_date,task_text,category,priority,is_starred,is_recurring,recurrence_frequency,recurrence_end_date,recurrence_parent_id')),
       safe(() => sb('rentals',     '?select=id,status,customer_name,vehicle_id,end_date,daily_rate')),
       safe(() => sb('fleet',       '?select=id,vehicle_name,status')),
       safe(() => sb('goals',       '?select=id,title,category,completed,target_date')),
@@ -2605,6 +2719,14 @@
       swSt.textContent = sheetsWriteUrl ? '✅ Sheets write-back active' : 'Not configured — trades will only save to the database';
       swSt.style.color = sheetsWriteUrl ? '#22c55e' : 'var(--muted)';
     }
+    // Populate benzo write URL field
+    const bwInput = document.getElementById('benzo-write-url-input');
+    const bwSt    = document.getElementById('benzo-write-status');
+    if (bwInput) bwInput.value = benzoWriteUrl;
+    if (bwSt) {
+      bwSt.textContent = benzoWriteUrl ? '✅ Benzo write-back active' : 'Not configured — rental changes will only save to the database';
+      bwSt.style.color = benzoWriteUrl ? '#22c55e' : 'var(--muted)';
+    }
     modal.classList.add('open');
   }
 
@@ -2673,6 +2795,33 @@
     sheetsWriteUrl = '';
     localStorage.removeItem('omar_sheets_write_url');
     const st = document.getElementById('sheets-write-status');
+    st.textContent = 'Cleared.';
+    st.style.color = 'var(--muted)';
+  }
+
+  window.saveBenzoWriteUrl = function() {
+    const input = document.getElementById('benzo-write-url-input');
+    const st    = document.getElementById('benzo-write-status');
+    const url   = (input.value || '').trim();
+    if (url && !url.startsWith('https://script.google.com/')) {
+      st.textContent = '⚠ URL should start with https://script.google.com/';
+      st.style.color  = '#f59e0b';
+      input.style.borderColor = '#f59e0b';
+      return;
+    }
+    benzoWriteUrl = url;
+    if (url) localStorage.setItem('omar_benzo_write_url', url);
+    else     localStorage.removeItem('omar_benzo_write_url');
+    st.textContent = url ? '✅ Saved — rental changes will sync to Google Sheets' : 'Cleared.';
+    st.style.color  = url ? '#22c55e' : 'var(--muted)';
+    input.style.borderColor = '';
+  }
+
+  window.clearBenzoWriteUrl = function() {
+    document.getElementById('benzo-write-url-input').value = '';
+    benzoWriteUrl = '';
+    localStorage.removeItem('omar_benzo_write_url');
+    const st = document.getElementById('benzo-write-status');
     st.textContent = 'Cleared.';
     st.style.color = 'var(--muted)';
   }
@@ -3843,7 +3992,7 @@
 
   async function loadTasks() {
     await loadTaskCategories();
-    allTasks = await sb('tasks', '?order=created_at.desc');
+    allTasks = await sb('tasks', '?select=id,completed,due_date,task_text,category,priority,is_starred,is_recurring,recurrence_frequency,recurrence_end_date,recurrence_parent_id&order=created_at.desc');
     // Populate keyTaskIds from is_starred column
     keyTaskIds = new Set(allTasks.filter(t => t.is_starred).map(t => t.id));
     renderTasks();
@@ -3858,7 +4007,7 @@
     list.innerHTML = filtered.map(t => `
       <div class="task-row ${t.completed ? 'done' : ''}" id="task-${t.id}">
         <div class="task-check ${t.completed ? 'checked' : ''}" onclick="toggleTask('${t.id}', ${t.completed})"></div>
-        <div class="task-text" style="${t.completed ? 'text-decoration:line-through' : ''}">${t.task_text}</div>
+        <div class="task-text" style="${t.completed ? 'text-decoration:line-through' : ''}">${t.task_text}${t.is_recurring ? ' <span title="Recurring task" style="color:var(--gold-dim);font-size:10px">↻</span>' : ''}</div>
         <div class="task-meta">
           <span class="badge" style="background:var(--bg4);border:1px solid ${getCatColor(t.category)};color:${getCatColor(t.category)}">${t.category || '—'}</span>
           <span class="badge badge-${t.priority}">${t.priority}</span>
@@ -3867,10 +4016,37 @@
       </div>`).join('');
   }
 
+  function nextRecurDate(dueDateStr, frequency) {
+    const d = new Date(dueDateStr + 'T00:00:00');
+    switch (frequency) {
+      case 'daily':     d.setDate(d.getDate() + 1); break;
+      case 'weekly':    d.setDate(d.getDate() + 7); break;
+      case 'biweekly':  d.setDate(d.getDate() + 14); break;
+      case 'monthly':   d.setMonth(d.getMonth() + 1); break;
+      case 'yearly':    d.setFullYear(d.getFullYear() + 1); break;
+      default:          d.setDate(d.getDate() + 7);
+    }
+    return d.toISOString().slice(0, 10);
+  }
+
   window.toggleTask = async (id, completed) => {
     await sbPatch('tasks', id, { completed: !completed });
     const t = allTasks.find(t => t.id === id);
     if (t) t.completed = !completed;
+    // Spawn next recurrence when marking complete
+    if (t && !completed && t.is_recurring && t.recurrence_frequency && t.due_date) {
+      const nextDue = nextRecurDate(t.due_date, t.recurrence_frequency);
+      if (!t.recurrence_end_date || nextDue <= t.recurrence_end_date) {
+        const child = await sbPost('tasks', {
+          task_text: t.task_text, category: t.category, priority: t.priority,
+          due_date: nextDue, source: 'manual',
+          is_recurring: true, recurrence_frequency: t.recurrence_frequency,
+          recurrence_end_date: t.recurrence_end_date || null,
+          recurrence_parent_id: t.recurrence_parent_id || t.id,
+        });
+        if (child?.[0]) allTasks.unshift(child[0]);
+      }
+    }
     renderTasks();
   };
 
@@ -3910,7 +4086,20 @@
     document.getElementById('task-modal').classList.add('open');
     document.getElementById('new-task-due').value = new Date().toISOString().slice(0,10);
     document.getElementById('new-task-cat').value = taskCategories[0] || 'Personal';
+    const cb = document.getElementById('new-task-recurring');
+    if (cb) { cb.checked = false; }
+    const rf = document.getElementById('recurring-fields');
+    if (rf) rf.style.display = 'none';
+    const freqEl = document.getElementById('new-task-freq');
+    if (freqEl) freqEl.value = 'weekly';
+    const endEl = document.getElementById('new-task-recur-end');
+    if (endEl) endEl.value = '';
     populateCatDatalist();
+  };
+  window.toggleRecurringFields = function() {
+    const cb = document.getElementById('new-task-recurring');
+    const fields = document.getElementById('recurring-fields');
+    if (fields) fields.style.display = cb && cb.checked ? '' : 'none';
   };
   window.closeAddTask = () => document.getElementById('task-modal').classList.remove('open');
   window.saveTask = async () => {
@@ -3918,10 +4107,17 @@
     if (!text) return;
     const cat = (document.getElementById('new-task-cat').value || 'Personal').trim();
     await ensureCategoryExists(cat);
+    const isRecurring = document.getElementById('new-task-recurring')?.checked || false;
+    const freq = isRecurring ? (document.getElementById('new-task-freq')?.value || 'weekly') : null;
+    const recurEnd = isRecurring ? (document.getElementById('new-task-recur-end')?.value || null) : null;
     const newTask = await sbPost('tasks', {
       task_text: text, category: cat,
       priority:  document.getElementById('new-task-pri').value,
-      due_date:  document.getElementById('new-task-due').value || null, source: 'manual'
+      due_date:  document.getElementById('new-task-due').value || null, source: 'manual',
+      is_recurring: isRecurring,
+      recurrence_frequency: freq,
+      recurrence_end_date: recurEnd,
+      recurrence_parent_id: null,
     });
     allTasks.unshift(newTask[0]); renderTasks(); closeAddTask();
     document.getElementById('new-task-text').value = '';
@@ -5121,7 +5317,7 @@ Return raw JSON only.`,
         <div class="task-check ${t.completed ? 'checked' : ''}" onclick="toggleTask('${t.id}', ${t.completed})"></div>
         <div class="task-text" style="${t.completed ? 'text-decoration:line-through;color:var(--muted)' : ''}"
           title="Double-click to edit"
-          ondblclick="inlineEditTask(event,'${t.id}')">${t.task_text}</div>
+          ondblclick="inlineEditTask(event,'${t.id}')">${t.task_text}${t.is_recurring ? ' <span title="Recurring · ' + (t.recurrence_frequency||'') + (t.recurrence_end_date ? ' until ' + t.recurrence_end_date : '') + '" style="color:var(--gold-dim);font-size:10px">↻</span>' : ''}</div>
         <div class="task-meta">
           <span class="badge badge-${(t.category||'personal').toLowerCase()}">${t.category}</span>
           <span class="badge badge-${t.priority}" style="color:${priColors[t.priority]||'var(--muted)'}">${t.priority}</span>
@@ -5221,66 +5417,298 @@ Return raw JSON only.`,
 
   // ── BENZO CRUD ───────────────────────────────────────────
   let benzoFleet = [], benzoRentals = [];
+  let activeBenzoTab = 'fleet';
+  let selectedVehicleIds = new Set();
+  let isBenzoSyncing = false;
+  const BENZO_SHEET_ID = '1qf2Pr2CF4JnSMPKc12xJJSCdxlvOXOxi';
+  let benzoWriteUrl = localStorage.getItem('omar_benzo_write_url') || '';
 
   async function loadBenzo() {
     [benzoFleet, benzoRentals] = await Promise.all([
       sb('fleet',   '?order=created_at.asc'),
       sb('rentals', '?order=start_date.desc'),
     ]);
+    // Default: select all vehicles on first load
+    if (selectedVehicleIds.size === 0) benzoFleet.forEach(v => selectedVehicleIds.add(v.id));
+    // Restore previous sync status label
+    const prevTs = localStorage.getItem('omar_benzo_sync_ts');
+    if (prevTs) {
+      const el = document.getElementById('benzo-sync-status');
+      if (el && !el.textContent) el.textContent = `Last sync: ${prevTs}`;
+    }
     renderBenzo();
   }
 
   function renderBenzo() {
-    const fleetMap = {}; benzoFleet.forEach(v => fleetMap[v.id] = v);
+    renderBenzoFleet();
+    renderBenzoVehiclePills();
+    renderBenzoRentals();
+  }
 
+  function renderBenzoFleet() {
     document.getElementById('fleet-grid').innerHTML = benzoFleet.length
       ? benzoFleet.map(v => {
           const splits     = v.owner_splits || {};
           const splitsHtml = Object.entries(splits).map(([name, pct]) => `<span class="split-item"><span>${pct}%</span> ${name}</span>`).join('');
+          const vehRentals = benzoRentals.filter(r => r.vehicle_id === v.id);
+          const active     = vehRentals.filter(r => r.status === 'active').length;
+          const upcoming   = vehRentals.filter(r => r.status === 'upcoming').length;
           return `<div class="fleet-card">
             <div class="fleet-card-header">
               <div style="min-width:0;flex:1">
                 <div class="fleet-name">${v.vehicle_name}</div>
-                <div class="fleet-sub">${v.year} ${v.make} ${v.model}</div>
+                <div class="fleet-sub">${[v.year,v.make,v.model].filter(Boolean).join(' ')}</div>
               </div>
               <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
                 <span class="status-pill status-${v.status}">${v.status}</span>
                 <button onclick="openEditVehicle(${JSON.stringify(v).replace(/"/g,'&quot;')})"
-                  style="padding:2px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.04em;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--muted);cursor:pointer">Edit</button>
+                  style="padding:2px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--muted);cursor:pointer">Edit</button>
                 <button onclick="confirmDeleteVehicle('${v.id}')"
-                  style="padding:2px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.04em;border:1px solid rgba(239,68,68,.4);border-radius:3px;background:transparent;color:var(--red);cursor:pointer">Del</button>
+                  style="padding:2px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid rgba(239,68,68,.4);border-radius:3px;background:transparent;color:var(--red);cursor:pointer">Del</button>
               </div>
             </div>
             ${v.notes ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">${v.notes}</div>` : ''}
+            <div style="display:flex;gap:10px;margin-bottom:10px">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)">
+                <span style="color:var(--text);font-weight:500">${vehRentals.length}</span> total
+              </div>
+              ${active ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#4a7cbb"><span style="font-weight:500">${active}</span> active</div>` : ''}
+              ${upcoming ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim)"><span style="font-weight:500">${upcoming}</span> upcoming</div>` : ''}
+            </div>
             <div class="os-micro-lbl" style="margin-bottom:5px">OWNER SPLITS</div>
             <div class="splits-row">${splitsHtml || '<span style="color:var(--muted2);font-size:10px">—</span>'}</div>
             ${v.last_service_date ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:8px">Last service: ${v.last_service_date}</div>` : ''}
+            <button onclick="switchBenzoTab('rentals');selectedVehicleIds=new Set(['${v.id}']);renderBenzoVehiclePills();renderBenzoRentals();"
+              style="margin-top:10px;width:100%;padding:5px 0;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--muted);cursor:pointer">VIEW RENTALS →</button>
           </div>`;
         }).join('')
       : '<div class="empty">No vehicles yet.</div>';
+  }
 
+  function renderBenzoVehiclePills() {
+    const container = document.getElementById('benzo-veh-pills');
+    if (!container) return;
+    container.innerHTML = benzoFleet.map(v => {
+      const count = benzoRentals.filter(r => r.vehicle_id === v.id).length;
+      return `<button class="benzo-veh-pill ${selectedVehicleIds.has(v.id) ? 'selected' : ''}"
+        onclick="toggleBenzoVehicle('${v.id}')">
+        ${v.vehicle_name}
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;opacity:.6">${count}</span>
+      </button>`;
+    }).join('');
+  }
+
+  window.toggleBenzoVehicle = (id) => {
+    if (selectedVehicleIds.has(id)) {
+      if (selectedVehicleIds.size > 1) selectedVehicleIds.delete(id);
+    } else {
+      selectedVehicleIds.add(id);
+    }
+    renderBenzoVehiclePills();
+    renderBenzoRentals();
+  };
+
+  window.renderBenzoRentals = () => {
+    const fleetMap = {}; benzoFleet.forEach(v => fleetMap[v.id] = v);
+    const search = (document.getElementById('benzo-rent-search')?.value || '').toLowerCase().trim();
+    const statusFilter = document.getElementById('benzo-rent-status')?.value || 'all';
+
+    let filtered = benzoRentals.filter(r => selectedVehicleIds.has(r.vehicle_id));
+    if (statusFilter !== 'all') filtered = filtered.filter(r => r.status === statusFilter);
+    if (search) filtered = filtered.filter(r =>
+      (r.customer_name || '').toLowerCase().includes(search) ||
+      (r.notes || '').toLowerCase().includes(search) ||
+      (fleetMap[r.vehicle_id]?.vehicle_name || '').toLowerCase().includes(search)
+    );
+
+    const countEl = document.getElementById('benzo-rent-count');
+    if (countEl) countEl.textContent = `${filtered.length} rental${filtered.length !== 1 ? 's' : ''}`;
+
+    const body = document.getElementById('benzo-rent-body');
+    if (!body) return;
     const statusColors = { active: 'badge-work', upcoming: 'badge-medium', completed: 'badge-low' };
-    document.getElementById('rentals-body').innerHTML = benzoRentals.length
-      ? benzoRentals.map(r => {
+
+    body.innerHTML = filtered.length
+      ? filtered.map(r => {
           const v = fleetMap[r.vehicle_id];
           return `<tr>
-            <td>${r.customer_name}</td>
-            <td>${v ? v.vehicle_name : '—'}</td>
+            <td style="font-weight:500">${r.customer_name}</td>
+            <td style="font-size:11px;color:var(--muted)">${v ? v.vehicle_name : '—'}</td>
             <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.start_date}</td>
             <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.end_date}</td>
             <td>$${fmt(r.daily_rate)}/day</td>
             <td style="font-weight:500;color:var(--gold)">$${fmt(r.total_revenue)}</td>
-            <td><span class="badge ${statusColors[r.status]||''}">${r.status}</span></td>
-            <td style="text-align:right">
+            <td><span class="badge ${statusColors[r.status] || ''}">${r.status}</span></td>
+            <td style="font-size:11px;color:var(--muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.notes||'').replace(/"/g,'&quot;')}">${r.notes || '—'}</td>
+            <td style="text-align:right;white-space:nowrap">
               <button onclick="openEditRental(${JSON.stringify(r).replace(/"/g,'&quot;')})"
                 style="padding:3px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--muted);cursor:pointer;margin-right:4px">Edit</button>
               <button onclick="confirmDeleteRental('${r.id}')"
-                style="padding:3px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid var(--border2);border-radius:3px;background:transparent;color:var(--red);cursor:pointer">Del</button>
+                style="padding:3px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;border:1px solid rgba(239,68,68,.4);border-radius:3px;background:transparent;color:var(--red);cursor:pointer">Del</button>
             </td>
           </tr>`;
         }).join('')
-      : '<tr><td colspan="8" class="empty">No rentals yet.</td></tr>';
+      : `<tr><td colspan="9" class="empty">${benzoFleet.length === 0 ? 'No vehicles yet.' : 'No rentals match.'}</td></tr>`;
+  };
+
+  window.switchBenzoTab = (tab) => {
+    activeBenzoTab = tab;
+    ['fleet','rentals','tickets'].forEach(t => {
+      const panel = document.getElementById(`benzo-panel-${t}`);
+      const btn   = document.getElementById(`bst-${t}`);
+      if (panel) panel.style.display = t === tab ? '' : 'none';
+      if (btn)   btn.classList.toggle('active', t === tab);
+    });
+    if (tab === 'rentals') renderBenzoRentals();
+  };
+
+  // ── BENZO SHEETS SYNC ────────────────────────────────────
+  function benzoNormalizeDate(raw) {
+    if (!raw) return '';
+    raw = raw.trim();
+    // Already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    // MM/DD/YYYY or DD/MM/YYYY → try as M/D/Y
+    const parts = raw.split(/[\/\-\.]/);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+      if (parts[2].length === 4) return `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+    }
+    // Try Date parse as fallback
+    const d = new Date(raw);
+    return isNaN(d) ? '' : d.toISOString().slice(0,10);
   }
+
+  window.syncBenzoRentals = async () => {
+    if (isBenzoSyncing) return;
+    isBenzoSyncing = true;
+    const btn      = document.getElementById('benzo-sync-btn');
+    const statusEl = document.getElementById('benzo-sync-status');
+    if (btn) { btn.disabled = true; btn.textContent = '↻ SYNCING…'; }
+    if (statusEl) statusEl.textContent = 'Syncing…';
+
+    let inserted = 0, updated = 0, deleted = 0, errors = 0;
+
+    try {
+      for (const vehicle of benzoFleet) {
+        const tabName = encodeURIComponent(vehicle.vehicle_name);
+        const csvUrl  = `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${tabName}`;
+        let text;
+        try {
+          const resp = await fetch(csvUrl, { signal: AbortSignal.timeout(15000) });
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          text = await resp.text();
+        } catch(e) {
+          console.warn(`[Benzo] Sheet fetch failed for "${vehicle.vehicle_name}":`, e.message);
+          errors++;
+          continue;
+        }
+
+        const allRows  = parseCSV(text);
+        if (allRows.length < 2) continue; // header only or empty
+
+        // Data rows: col index → B=1:customer  C=2:start  D=3:end  E=4:rate  F=5:status  G=6:notes
+        const sheetRows = [];
+        for (let i = 1; i < allRows.length; i++) {
+          const r = allRows[i];
+          const customer = (r[1] || '').trim();
+          const start    = benzoNormalizeDate(r[2]);
+          const end      = benzoNormalizeDate(r[3]);
+          if (!customer || !start || !end) continue;
+          sheetRows.push({
+            customer,
+            start,
+            end,
+            rate:   parseFloat((r[4] || '0').replace(/[^0-9.-]/g,'')) || 0,
+            status: (['upcoming','active','completed'].includes((r[5]||'').trim().toLowerCase())
+                       ? (r[5]||'upcoming').trim().toLowerCase() : 'upcoming'),
+            notes:  (r[6] || '').trim(),
+          });
+        }
+
+        // DB rows for this vehicle keyed by customer|start|end
+        const dbRows  = benzoRentals.filter(r => r.vehicle_id === vehicle.id);
+        const dbByKey = {};
+        dbRows.forEach(r => {
+          const k = `${r.customer_name}|${r.start_date}|${r.end_date}`;
+          if (!dbByKey[k]) dbByKey[k] = [];
+          dbByKey[k].push(r);
+        });
+
+        const matchedIds = new Set();
+
+        for (const sr of sheetRows) {
+          const hash = `${vehicle.id}|${sr.customer}|${sr.start}|${sr.end}`;
+          const key  = `${sr.customer}|${sr.start}|${sr.end}`;
+          const pool = dbByKey[key];
+          const dbRow = pool ? pool.shift() : null;
+
+          if (dbRow) {
+            matchedIds.add(dbRow.id);
+            const changed = dbRow.customer_name !== sr.customer
+              || dbRow.start_date !== sr.start
+              || dbRow.end_date   !== sr.end
+              || parseFloat(dbRow.daily_rate) !== sr.rate
+              || dbRow.status !== sr.status
+              || (dbRow.notes || '') !== sr.notes
+              || dbRow.row_hash !== hash;
+            if (changed) {
+              await sbPatch('rentals', dbRow.id, {
+                customer_name: sr.customer, start_date: sr.start, end_date: sr.end,
+                daily_rate: sr.rate, status: sr.status, notes: sr.notes || null,
+                row_hash: hash, synced_at: new Date().toISOString(),
+              });
+              Object.assign(dbRow, {
+                customer_name: sr.customer, start_date: sr.start, end_date: sr.end,
+                daily_rate: sr.rate, status: sr.status, notes: sr.notes, row_hash: hash,
+              });
+              updated++;
+            }
+          } else {
+            const newRow = await sbPost('rentals', {
+              vehicle_id: vehicle.id, customer_name: sr.customer,
+              start_date: sr.start, end_date: sr.end,
+              daily_rate: sr.rate, status: sr.status,
+              notes: sr.notes || null, row_hash: hash,
+              synced_at: new Date().toISOString(),
+            });
+            if (newRow?.[0]) { benzoRentals.unshift(newRow[0]); inserted++; }
+          }
+        }
+
+        // Rows in DB but gone from sheet → delete (sheet is master)
+        for (const r of dbRows) {
+          if (!matchedIds.has(r.id)) {
+            try {
+              await sbDelete('rentals', r.id);
+              const idx = benzoRentals.findIndex(x => x.id === r.id);
+              if (idx !== -1) benzoRentals.splice(idx, 1);
+              deleted++;
+            } catch(e) { console.warn('[Benzo] Delete failed:', e.message); }
+          }
+        }
+      }
+
+      const now = new Date();
+      const ts  = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      const parts = [];
+      if (inserted) parts.push(`↑ ${inserted} new`);
+      if (updated)  parts.push(`✎ ${updated} updated`);
+      if (deleted)  parts.push(`✕ ${deleted} removed`);
+      if (errors)   parts.push(`⚠ ${errors} tab(s) unreachable`);
+      if (!parts.length) parts.push('up to date');
+      if (statusEl) statusEl.textContent = parts.join(' · ') + ` · ${ts}`;
+      localStorage.setItem('omar_benzo_sync_ts', ts);
+
+      renderBenzo();
+    } catch(e) {
+      console.error('[Benzo Sync]', e);
+      if (statusEl) statusEl.textContent = '⚠ Sync failed — check console';
+    } finally {
+      isBenzoSyncing = false;
+      if (btn) { btn.disabled = false; btn.textContent = '↻ SYNC'; }
+    }
+  };
 
   // Vehicle CRUD
   window.openAddVehicle = () => {
@@ -5389,8 +5817,8 @@ Return raw JSON only.`,
   };
   window.closeRentalModal = () => document.getElementById('rental-modal').classList.remove('open');
   window.saveRental = async () => {
-    const btn  = document.getElementById('ren-save-btn');
-    const cust = document.getElementById('ren-customer').value.trim();
+    const btn   = document.getElementById('ren-save-btn');
+    const cust  = document.getElementById('ren-customer').value.trim();
     const vehId = document.getElementById('ren-vehicle').value;
     const start = document.getElementById('ren-start').value;
     const end   = document.getElementById('ren-end').value;
@@ -5399,29 +5827,71 @@ Return raw JSON only.`,
 
     btn.textContent = 'Saving…'; btn.disabled = true;
     try {
-      const days = Math.max(1, Math.round((new Date(end) - new Date(start)) / 86400000));
+      const status = document.getElementById('ren-status').value;
+      const notes  = document.getElementById('ren-notes').value.trim() || null;
       const row = {
-        vehicle_id:     vehId     || null,
-        customer_name:  cust,
-        start_date:     start,
-        end_date:       end,
-        daily_rate:     rate,
-        total_revenue:  rate * days,
-        status:         document.getElementById('ren-status').value,
-        notes:          document.getElementById('ren-notes').value.trim() || null
+        vehicle_id: vehId || null, customer_name: cust,
+        start_date: start, end_date: end, daily_rate: rate, status, notes
       };
       const id = document.getElementById('ren-id').value;
-      if (id) await sbPatch('rentals', id, row);
-      else    await sbPost('rentals', row);
+      let savedRow;
+      if (id) {
+        await sbPatch('rentals', id, row);
+        const idx = benzoRentals.findIndex(r => r.id === id);
+        if (idx !== -1) { Object.assign(benzoRentals[idx], row); savedRow = benzoRentals[idx]; }
+      } else {
+        const result = await sbPost('rentals', row);
+        savedRow = result?.[0];
+        if (savedRow) benzoRentals.unshift(savedRow);
+      }
       closeRentalModal();
-      await loadBenzo();
+      renderBenzo();
+
+      // Write-back to Google Sheets via Apps Script
+      if (benzoWriteUrl && savedRow) {
+        const vehicle = benzoFleet.find(v => v.id === vehId);
+        try {
+          await fetch(benzoWriteUrl, {
+            method: 'POST', mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+              action: id ? 'update' : 'add',
+              vehicle: vehicle?.vehicle_name || '',
+              customer: cust, start, end,
+              rate, status, notes: notes || '',
+              id: savedRow.id,
+            }),
+          });
+        } catch(sheetErr) { console.warn('[Benzo] Sheet write-back failed:', sheetErr.message); }
+      }
     } catch(e) { alert('Error: ' + e.message); }
     btn.textContent = 'Save Changes'; btn.disabled = false;
   };
+
   window.confirmDeleteRental = async (id) => {
     if (!confirm('Delete this rental? This cannot be undone.')) return;
-    try { await sbDelete('rentals', id); await loadBenzo(); }
-    catch(e) { alert('Error: ' + e.message); }
+    try {
+      const r = benzoRentals.find(x => x.id === id);
+      await sbDelete('rentals', id);
+      const idx = benzoRentals.findIndex(x => x.id === id);
+      if (idx !== -1) benzoRentals.splice(idx, 1);
+      renderBenzo();
+      // Write-back delete to sheet
+      if (benzoWriteUrl && r) {
+        const vehicle = benzoFleet.find(v => v.id === r.vehicle_id);
+        try {
+          await fetch(benzoWriteUrl, {
+            method: 'POST', mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+              action: 'delete',
+              vehicle: vehicle?.vehicle_name || '',
+              customer: r.customer_name, start: r.start_date, end: r.end_date,
+            }),
+          });
+        } catch(sheetErr) { console.warn('[Benzo] Sheet delete write-back failed:', sheetErr.message); }
+      }
+    } catch(e) { alert('Error: ' + e.message); }
   };
 
   // ── CONFETTI ─────────────────────────────────────────────
@@ -5497,6 +5967,20 @@ Return raw JSON only.`,
         headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({ completed: true }),
       });
+      // Spawn next recurrence if applicable
+      if (t.is_recurring && t.recurrence_frequency && t.due_date) {
+        const nextDue = nextRecurDate(t.due_date, t.recurrence_frequency);
+        if (!t.recurrence_end_date || nextDue <= t.recurrence_end_date) {
+          const child = await sbPost('tasks', {
+            task_text: t.task_text, category: t.category, priority: t.priority,
+            due_date: nextDue, source: 'manual',
+            is_recurring: true, recurrence_frequency: t.recurrence_frequency,
+            recurrence_end_date: t.recurrence_end_date || null,
+            recurrence_parent_id: t.recurrence_parent_id || t.id,
+          });
+          if (child?.[0]) allTasks.unshift(child[0]);
+        }
+      }
     } catch(e) { console.warn('homeCompleteTask error', e); }
   };
 
