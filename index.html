@@ -2933,12 +2933,6 @@
     return parseFloat(String(s).replace(/,/g, '')) || 0;
   }
 
-  // Deterministic fingerprint for dedup (matches both sheet rows and existing DB rows).
-  function tradeFP(r) {
-    const qty = parseFloat(r.quantity || 0);
-    return `${r.trade_date}|${r.transaction_type}|${r.ticker}|${qty}|${r.investment_account}`;
-  }
-
   window.syncTradeLog = async function syncTradeLog(silent = false) {
     if (isSyncing) return 0;
     isSyncing = true;
@@ -2946,101 +2940,131 @@
     const syncSt  = document.getElementById('sync-status');
     try {
       if (syncBtn) { syncBtn.disabled = true; syncBtn.textContent = '⟳ SYNC'; }
-      if (!silent && syncSt) syncSt.textContent = '⟳ syncing…';
-      else if (syncSt) syncSt.textContent = '⟳ auto-syncing…';
+      if (syncSt) { syncSt.style.color = 'var(--muted)'; syncSt.textContent = '⟳ syncing…'; }
 
-      // 1. Fetch existing transactions for fingerprint dedup
+      // 1. Fetch ALL existing transactions — need id + fields for identity matching
       const existing = await sb('transactions',
-        '?select=trade_date,transaction_type,ticker,quantity,investment_account,row_hash');
-      const fpSet = new Set();
+        '?select=id,trade_date,transaction_type,ticker,quantity,amount_per_unit,total_amount,trading_fees,investment_account,split_ratio,fx_rate');
+
+      // Group DB rows by stable identity key (date|type|ticker|account — no qty)
+      // Sort each group by qty ASC for positional pairing
+      const dbByKey = {};
       existing.forEach(r => {
-        fpSet.add(tradeFP(r));
-        // Include row_hash if it's in our pipe-delimited format (future rows we inserted)
-        if (r.row_hash && r.row_hash.includes('|')) fpSet.add(r.row_hash);
+        const key = `${r.trade_date}|${r.transaction_type}|${r.ticker}|${r.investment_account}`;
+        if (!dbByKey[key]) dbByKey[key] = [];
+        dbByKey[key].push(r);
       });
+      Object.values(dbByKey).forEach(grp =>
+        grp.sort((a, b) => parseFloat(a.quantity) - parseFloat(b.quantity)));
 
       // 2. Fetch the Google Sheets CSV
       const resp = await fetch(TRADELOG_URL, { signal: AbortSignal.timeout(20000) });
       if (!resp.ok) throw new Error(`Sheet fetch HTTP ${resp.status}`);
       const csv = await resp.text();
-
-      // 3. Parse CSV (skip row 0 = column headers with "Example:", row 1 = descriptive header)
       const rows = parseCSV(csv);
-      const toInsert = [];
-      const now = new Date().toISOString();
 
+      // Group sheet rows by same identity key, sort by qty ASC
+      const sheetByKey = {};
       for (let i = 2; i < rows.length; i++) {
         const c = rows[i];
         if (!c || c.length < 4) continue;
-        const dateRaw  = (c[1] || '').trim();
-        const type     = (c[2] || '').trim();
-        const ticker   = (c[3] || '').trim();
-
-        // Skip blanks, examples, placeholder tickers
+        const dateRaw = (c[1] || '').trim();
+        const type    = (c[2] || '').trim();
+        const ticker  = (c[3] || '').trim();
         if (!dateRaw || !ticker || !type) continue;
-        if (ticker === 'USDCAD') continue;  // currency conversion, not a security
+        if (ticker === 'USDCAD') continue;
         if (dateRaw.toLowerCase().includes('example')) continue;
-
         const date = parseTradeDate(dateRaw);
         if (!date) continue;
+        const qty   = parseSheetNum(c[4]);
+        const price = parseSheetNum(c[5]);
+        const total = parseSheetNum(c[6]);
+        const fees  = parseSheetNum(c[7]);
+        const acct  = (c[8] || '').trim();
+        const split = parseSheetNum(c[9]) || null;
+        const fx    = parseSheetNum(c[10]) || null;
+        const key   = `${date}|${type}|${ticker}|${acct}`;
+        if (!sheetByKey[key]) sheetByKey[key] = [];
+        sheetByKey[key].push({ date, type, ticker, qty, price, total, fees, acct, split, fx });
+      }
+      Object.values(sheetByKey).forEach(grp => grp.sort((a, b) => a.qty - b.qty));
 
-        const qty    = parseSheetNum(c[4]);
-        const price  = parseSheetNum(c[5]);
-        const total  = parseSheetNum(c[6]);
-        const fees   = parseSheetNum(c[7]);
-        const acct   = (c[8] || '').trim();
-        const split  = parseSheetNum(c[9]);
-        const fx     = parseSheetNum(c[10]);
+      // 3. Compare sheet vs DB positionally — build insert / patch lists
+      const toInsert = [], toUpdate = [];
+      const fneq = (a, b) => Math.abs((parseFloat(a) || 0) - (parseFloat(b) || 0)) > 0.000001;
+      const now  = new Date().toISOString();
 
-        const fp = `${date}|${type}|${ticker}|${qty}|${acct}`;
-        if (fpSet.has(fp)) continue;
-        fpSet.add(fp);  // prevent within-batch duplicates
-
-        toInsert.push({
-          id: crypto.randomUUID(),
-          trade_date: date,
-          transaction_type: type,
-          ticker,
-          quantity: qty,
-          amount_per_unit: price,
-          total_amount: total,
-          trading_fees: fees,
-          investment_account: acct,
-          split_ratio: split || null,
-          fx_rate: fx || null,
-          row_hash: fp,
-          synced_at: now,
-        });
+      for (const [key, sheetGrp] of Object.entries(sheetByKey)) {
+        const dbGrp = dbByKey[key] || [];
+        for (let i = 0; i < sheetGrp.length; i++) {
+          const s = sheetGrp[i];
+          if (i < dbGrp.length) {
+            // Existing row — check if any numeric field changed
+            const d = dbGrp[i];
+            const changed = fneq(s.qty,   d.quantity)
+              || fneq(s.price, d.amount_per_unit)
+              || fneq(s.total, d.total_amount)
+              || fneq(s.fees,  d.trading_fees);
+            if (changed) {
+              toUpdate.push({ id: d.id, fields: {
+                quantity: s.qty, amount_per_unit: s.price, total_amount: s.total,
+                trading_fees: s.fees, split_ratio: s.split, fx_rate: s.fx,
+                synced_at: now,
+              }});
+            }
+          } else {
+            // Extra sheet row with no DB counterpart — insert
+            const fp = `${s.date}|${s.type}|${s.ticker}|${s.qty}|${s.acct}`;
+            toInsert.push({
+              id: crypto.randomUUID(), trade_date: s.date, transaction_type: s.type,
+              ticker: s.ticker, quantity: s.qty, amount_per_unit: s.price,
+              total_amount: s.total, trading_fees: s.fees, investment_account: s.acct,
+              split_ratio: s.split, fx_rate: s.fx, row_hash: fp, synced_at: now,
+            });
+          }
+        }
       }
 
-      // 4. Batch insert (100 rows at a time)
+      // 4. Batch insert new rows (100 at a time)
       let inserted = 0;
       for (let i = 0; i < toInsert.length; i += 100) {
         const batch = toInsert.slice(i, i + 100);
         const r = await fetch(`${SUPABASE_URL}/rest/v1/transactions`, {
           method: 'POST',
-          headers: {
-            apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json', Prefer: 'return=minimal',
-          },
+          headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json', Prefer: 'return=minimal' },
           body: JSON.stringify(batch),
         });
-        if (!r.ok) { const err = await r.text(); console.warn('[Sync] batch insert error', err); }
-        else inserted += batch.length;
+        if (r.ok) inserted += batch.length;
+        else console.warn('[Sync] insert error', await r.text());
       }
 
-      // 5. Update status + persist timestamp
+      // 5. PATCH changed rows one by one
+      let updated = 0;
+      for (const { id, fields } of toUpdate) {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${id}`, {
+          method: 'PATCH',
+          headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify(fields),
+        });
+        if (r.ok) updated++;
+        else console.warn('[Sync] patch error', await r.text());
+      }
+
+      // 6. Update status
       const ts = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
       localStorage.setItem('omar_sync_ts', ts);
+      const parts = [];
+      if (inserted > 0) parts.push(`↑ ${inserted} new`);
+      if (updated > 0)  parts.push(`✎ ${updated} updated`);
       if (syncSt) {
-        syncSt.style.color = inserted > 0 ? 'var(--green)' : 'var(--muted)';
-        syncSt.textContent = inserted > 0
-          ? `↑ ${inserted} new trade${inserted > 1 ? 's' : ''} synced · ${ts}`
-          : `✓ up to date · ${ts}`;
+        syncSt.style.color = (inserted || updated) ? 'var(--green)' : 'var(--muted)';
+        syncSt.textContent = parts.length ? `${parts.join(' · ')} · ${ts}` : `✓ up to date · ${ts}`;
       }
 
-      // 6. If new rows, reload txs silently and re-render Finance
-      if (inserted > 0 && finData) {
+      // 7. Reload Finance if anything changed
+      if ((inserted > 0 || updated > 0) && finData) {
         const safe = async (fn) => { try { return await fn(); } catch(e) { return []; } };
         const txs = await safe(() => sb('transactions', '?order=trade_date.asc'));
         const holdings = txs.length ? calcHoldings(txs) : [];
@@ -3053,7 +3077,7 @@
         renderFinance();
       }
 
-      return inserted;
+      return inserted + updated;
     } catch(e) {
       console.warn('[Omar OS] syncTradeLog error:', e.message);
       if (syncSt) { syncSt.style.color = 'var(--red)'; syncSt.textContent = '⚠ sync failed'; }
