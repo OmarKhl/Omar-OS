@@ -6070,9 +6070,15 @@ Return raw JSON only.`,
 
     try {
       for (const vehicle of benzoFleet) {
-        const tabName = (vehicle.sheet_tab_name || '').trim() || vehicle.vehicle_name;
+        const tabName = (vehicle.sheet_tab_name || '').trim();
+        if (!tabName) {
+          // No sheet tab configured — skip. Without an explicit tab name Google
+          // silently returns the default sheet's data, corrupting other vehicles.
+          console.log(`[Benzo] Skipping "${vehicle.vehicle_name}" — no Google Sheet Tab Name set`);
+          continue;
+        }
         if (statusEl) statusEl.textContent = `Syncing tab "${tabName}"…`;
-        console.log(`[Benzo] vehicle="${vehicle.vehicle_name}" sheet_tab_name="${vehicle.sheet_tab_name}" → searching tab="${tabName}"`);
+        console.log(`[Benzo] vehicle="${vehicle.vehicle_name}" → tab="${tabName}"`);
         let text;
         try {
           text = await fetchSheetCsv(tabName);
