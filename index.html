@@ -1979,6 +1979,10 @@
         <textarea class="form-textarea" id="veh-notes" placeholder="Any notes…" rows="2"></textarea>
       </div>
       <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Google Sheet Tab Name <span style="color:var(--muted2);font-size:10px;font-weight:400">— leave blank to use vehicle name</span></label>
+        <input class="form-input" id="veh-sheet-tab" placeholder="e.g. Black C43" />
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
         <label class="form-label">Owner Splits (must total 100%)</label>
         <div class="form-splits-grid" id="veh-splits-grid">
           <div style="display:flex;gap:6px;align-items:center">
@@ -2054,6 +2058,25 @@
         </select>
       </div>
     </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.08em;margin:14px 0 8px">RENTAL DETAILS</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group">
+        <label class="form-label">Booking #</label>
+        <input class="form-input" id="ren-booking-number" placeholder="REF-001" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Duration</label>
+        <input class="form-input" id="ren-duration" placeholder="3 days" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Allowed Mileage</label>
+        <input class="form-input" id="ren-allowed-mileage" placeholder="300 km" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Deposit (C$)</label>
+        <input class="form-input" type="number" id="ren-deposit" placeholder="500" min="0" step="any" />
+      </div>
+    </div>
     <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.08em;margin:14px 0 8px">CUSTOMER DETAILS</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="form-group">
@@ -2068,11 +2091,25 @@
         <label class="form-label">Email</label>
         <input class="form-input" type="email" id="ren-email" placeholder="customer@email.com" />
       </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Address</label>
+        <input class="form-input" id="ren-address" placeholder="123 Main St, Dubai" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date of Birth</label>
+        <input class="form-input" id="ren-dob" placeholder="1990-01-15" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Age</label>
+        <input class="form-input" id="ren-age" placeholder="34" />
+      </div>
     </div>
     <div class="form-group" style="margin-top:10px">
       <label class="form-label">Notes</label>
       <textarea class="form-textarea" id="ren-notes" placeholder="Deposit received, paid upfront…" rows="2"></textarea>
     </div>
+    <!-- Extra sheet fields (populated dynamically from extra_data) -->
+    <div id="ren-extra-fields"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeRentalModal()">Cancel</button>
       <button class="btn-save" onclick="saveRental()" id="ren-save-btn">Add Rental</button>
@@ -5546,24 +5583,31 @@ Return raw JSON only.`,
   let activeBenzoTab = 'fleet';
   let selectedVehicleIds = new Set();
   let isBenzoSyncing = false;
-  const BENZO_SHEET_ID = '1qf2Pr2CF4JnSMPKc12xJJSCdxlvOXOxi';
+  const BENZO_SHEET_ID = '1BW-h_tQhuVjZ-lVHE8s3AVhLTWyxkSPXDmkph32vDEo';
   let benzoWriteUrl = localStorage.getItem('omar_benzo_write_url') || '';
 
   // Rental column definitions
   const BENZO_RENT_COLS = [
     { key: 'customer_name',  label: 'CUSTOMER',    def: true  },
     { key: 'vehicle',        label: 'VEHICLE',     def: true  },
-    { key: 'start_date',     label: 'START',       def: true  },
-    { key: 'start_time',     label: 'START TIME',  def: false },
-    { key: 'end_date',       label: 'END',         def: true  },
-    { key: 'end_time',       label: 'END TIME',    def: false },
-    { key: 'total_rent',     label: 'TOTAL RENT',  def: true  },
-    { key: 'daily_rate',     label: 'RATE/DAY',    def: false },
-    { key: 'status',         label: 'STATUS',      def: true  },
-    { key: 'driver_license', label: 'LICENSE',     def: false },
-    { key: 'phone',          label: 'PHONE',       def: false },
-    { key: 'email',          label: 'EMAIL',       def: false },
-    { key: 'notes',          label: 'NOTES',       def: true  },
+    { key: 'start_date',      label: 'START',            def: true  },
+    { key: 'start_time',      label: 'START TIME',       def: false },
+    { key: 'end_date',        label: 'END',              def: true  },
+    { key: 'end_time',        label: 'END TIME',         def: false },
+    { key: 'duration',        label: 'DURATION',         def: false },
+    { key: 'total_rent',      label: 'TOTAL RENT',       def: true  },
+    { key: 'daily_rate',      label: 'RATE/DAY',         def: false },
+    { key: 'deposit',         label: 'DEPOSIT',          def: false },
+    { key: 'status',          label: 'STATUS',           def: true  },
+    { key: 'driver_license',  label: 'LICENSE',          def: false },
+    { key: 'phone',           label: 'PHONE',            def: false },
+    { key: 'email',           label: 'EMAIL',            def: false },
+    { key: 'address',         label: 'ADDRESS',          def: false },
+    { key: 'dob',             label: 'DATE OF BIRTH',    def: false },
+    { key: 'age',             label: 'AGE',              def: false },
+    { key: 'allowed_mileage', label: 'ALLOWED MILEAGE',  def: false },
+    { key: 'booking_number',  label: '#',                def: false },
+    { key: 'notes',           label: 'NOTES',            def: true  },
   ];
   let benzoRentColVis = (() => {
     try {
@@ -5575,24 +5619,54 @@ Return raw JSON only.`,
     return d;
   })();
 
-  // Sheet column name → DB field mapping for dynamic sync
+  // Sheet column header → DB field mapping (all lowercase keys)
   const SHEET_COL_MAP = {
-    'customer': 'customer_name', 'customer name': 'customer_name', 'name': 'customer_name', 'client': 'customer_name',
-    'start': 'start_date', 'start date': 'start_date', 'from': 'start_date', 'pickup': 'start_date',
-    'end': 'end_date', 'end date': 'end_date', 'to': 'end_date', 'return': 'end_date', 'dropoff': 'end_date',
-    'rate': 'daily_rate', 'daily rate': 'daily_rate', 'rate/day': 'daily_rate', 'rate per day': 'daily_rate', 'day rate': 'daily_rate',
-    'status': 'status',
-    'notes': 'notes', 'note': 'notes', 'comments': 'notes', 'remark': 'notes', 'remarks': 'notes',
+    // Customer
+    'customer': 'customer_name', 'customer name': 'customer_name', 'name': 'customer_name',
+    'client': 'customer_name', 'renter': 'customer_name', 'full name': 'customer_name',
+    // Dates
+    'start': 'start_date', 'start date': 'start_date', 'from': 'start_date',
+    'pickup date': 'start_date', 'check in': 'start_date', 'check-in': 'start_date',
+    'end': 'end_date', 'end date': 'end_date', 'to': 'end_date',
+    'return date': 'end_date', 'dropoff date': 'end_date', 'check out': 'end_date', 'check-out': 'end_date',
+    // Times
+    'start time': 'start_time', 'pickup time': 'start_time', 'time out': 'start_time',
+    'check in time': 'start_time', 'check-in time': 'start_time',
+    'end time': 'end_time', 'return time': 'end_time', 'dropoff time': 'end_time',
+    'time in': 'end_time', 'check out time': 'end_time', 'check-out time': 'end_time',
+    // Rates & money
+    'rate': 'daily_rate', 'daily rate': 'daily_rate', 'rate/day': 'daily_rate',
+    'rate per day': 'daily_rate', 'day rate': 'daily_rate', 'price per day': 'daily_rate',
     'total': 'total_rent', 'total rent': 'total_rent', 'total amount': 'total_rent',
     'rent amount': 'total_rent', 'total rent amount': 'total_rent', 'revenue': 'total_rent',
-    'amount': 'total_rent', 'price': 'total_rent',
-    'start time': 'start_time', 'pickup time': 'start_time', 'time out': 'start_time',
-    'end time': 'end_time', 'return time': 'end_time', 'dropoff time': 'end_time', 'time in': 'end_time',
+    'amount': 'total_rent', 'price': 'total_rent', 'cost': 'total_rent',
+    'deposit': 'deposit', 'security deposit': 'deposit', 'deposit amount': 'deposit',
+    // Status & notes
+    'status': 'status',
+    'notes': 'notes', 'note': 'notes', 'comments': 'notes', 'remark': 'notes', 'remarks': 'notes',
+    // License
     'license': 'driver_license', 'driver license': 'driver_license', 'driving license': 'driver_license',
     'dl': 'driver_license', 'licence': 'driver_license', 'driver licence': 'driver_license',
-    'driving licence': 'driver_license', 'id': 'driver_license', 'id number': 'driver_license',
-    'phone': 'phone', 'tel': 'phone', 'mobile': 'phone', 'contact': 'phone', 'telephone': 'phone',
-    'email': 'email', 'e-mail': 'email', 'mail': 'email',
+    'driving licence': 'driver_license', 'license number': 'driver_license', 'licence number': 'driver_license',
+    "driver's license": 'driver_license', "driver's licence": 'driver_license',
+    // Contact
+    'phone': 'phone', 'tel': 'phone', 'mobile': 'phone', 'contact': 'phone',
+    'telephone': 'phone', 'cell': 'phone', 'phone number': 'phone', 'mobile number': 'phone',
+    'email': 'email', 'e-mail': 'email', 'mail': 'email', 'email address': 'email',
+    // Personal details
+    'address': 'address', 'home address': 'address', 'street address': 'address', 'location': 'address',
+    'dob': 'dob', 'date of birth': 'dob', 'birth date': 'dob', 'birthday': 'dob', 'birthdate': 'dob',
+    'age': 'age',
+    // Rental details
+    'duration': 'duration', 'days': 'duration', 'rental days': 'duration',
+    'number of days': 'duration', 'no. of days': 'duration', '# of days': 'duration',
+    'allowed mileage': 'allowed_mileage', 'mileage': 'allowed_mileage', 'mileage limit': 'allowed_mileage',
+    'km limit': 'allowed_mileage', 'km allowed': 'allowed_mileage', 'allowed km': 'allowed_mileage',
+    'mile limit': 'allowed_mileage', 'miles allowed': 'allowed_mileage',
+    '#': 'booking_number', 'no': 'booking_number', 'number': 'booking_number',
+    'booking number': 'booking_number', 'booking #': 'booking_number', 'booking no': 'booking_number',
+    'rental #': 'booking_number', 'rental number': 'booking_number', 'ref': 'booking_number',
+    'reference': 'booking_number', 'ref #': 'booking_number', 'reservation': 'booking_number',
   };
 
   async function loadBenzo() {
@@ -5650,7 +5724,7 @@ Return raw JSON only.`,
             <div class="os-micro-lbl" style="margin-bottom:5px">OWNER SPLITS</div>
             <div class="splits-row">${splitsHtml || '<span style="color:var(--muted2);font-size:10px">—</span>'}</div>
             ${v.last_service_date ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:8px">Last service: ${v.last_service_date}</div>` : ''}
-            <button onclick="switchBenzoTab('rentals');selectedVehicleIds=new Set(['${v.id}']);renderBenzoVehiclePills();renderBenzoRentals();"
+            <button onclick="viewVehicleRentals('${v.id}')"
               style="margin-top:10px;width:100%;padding:5px 0;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--muted);cursor:pointer">VIEW RENTALS →</button>
           </div>`;
         }).join('')
@@ -5680,24 +5754,64 @@ Return raw JSON only.`,
     renderBenzoRentals();
   };
 
+  // Called by "VIEW RENTALS →" on fleet cards — set the filter first so
+  // the single renderBenzoRentals() inside switchBenzoTab sees the right vehicle.
+  window.viewVehicleRentals = (vehicleId) => {
+    selectedVehicleIds = new Set([vehicleId]);
+    renderBenzoVehiclePills();
+    switchBenzoTab('rentals'); // internally calls renderBenzoRentals with correct filter
+  };
+
+  // Returns sorted unique keys found in extra_data across all loaded rentals
+  function getBenzoExtraDataKeys() {
+    const keys = new Set();
+    benzoRentals.forEach(r => {
+      if (r.extra_data && typeof r.extra_data === 'object') {
+        Object.keys(r.extra_data).forEach(k => keys.add(k));
+      }
+    });
+    return Array.from(keys).sort();
+  }
+
+  // Build the full column list: standard cols + extra_data cols (prefixed 'extra:')
+  function buildAllBenzoCols() {
+    const extraKeys = getBenzoExtraDataKeys();
+    const extraCols = extraKeys.map(k => ({
+      key: 'extra:' + k,
+      label: k.toUpperCase(),
+      isExtra: true,
+      extraKey: k,
+    }));
+    return [...BENZO_RENT_COLS, ...extraCols];
+  }
+
   window.toggleBenzoRentColPicker = function() {
     const picker = document.getElementById('benzo-col-picker');
     if (!picker) return;
     const isOpen = picker.style.display !== 'none';
     picker.style.display = isOpen ? 'none' : 'block';
     if (!isOpen) {
-      // Render checkboxes
       const checks = document.getElementById('benzo-col-checks');
-      if (checks) checks.innerHTML = BENZO_RENT_COLS.map(c =>
+      if (!checks) return;
+      const allCols = buildAllBenzoCols();
+      const stdCols   = allCols.filter(c => !c.isExtra);
+      const extraCols = allCols.filter(c => c.isExtra);
+      const mkCheck = c =>
         `<label style="display:flex;align-items:center;gap:7px;margin-bottom:6px;cursor:pointer;font-size:12px">
           <input type="checkbox" ${benzoRentColVis[c.key] ? 'checked' : ''}
             onchange="toggleBenzoRentCol('${c.key}',this.checked)"
             style="accent-color:var(--gold);width:13px;height:13px" />
           ${c.label}
-        </label>`
-      ).join('');
+        </label>`;
+      let html = stdCols.map(mkCheck).join('');
+      if (extraCols.length) {
+        html += `<div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--gold-dim);letter-spacing:.08em;margin:10px 0 6px">SHEET EXTRAS</div>`;
+        html += extraCols.map(mkCheck).join('');
+      }
+      checks.innerHTML = html;
     }
   };
+
   window.toggleBenzoRentCol = function(key, checked) {
     benzoRentColVis[key] = checked;
     try { localStorage.setItem('omar_benzo_rent_cols', JSON.stringify(benzoRentColVis)); } catch(e) {}
@@ -5711,20 +5825,23 @@ Return raw JSON only.`,
 
     let filtered = benzoRentals.filter(r => selectedVehicleIds.has(r.vehicle_id));
     if (statusFilter !== 'all') filtered = filtered.filter(r => r.status === statusFilter);
-    if (search) filtered = filtered.filter(r =>
-      (r.customer_name || '').toLowerCase().includes(search) ||
-      (r.notes || '').toLowerCase().includes(search) ||
-      (r.phone || '').toLowerCase().includes(search) ||
-      (r.email || '').toLowerCase().includes(search) ||
-      (r.driver_license || '').toLowerCase().includes(search) ||
-      (fleetMap[r.vehicle_id]?.vehicle_name || '').toLowerCase().includes(search)
-    );
+    if (search) filtered = filtered.filter(r => {
+      const extraVals = r.extra_data ? Object.values(r.extra_data).join(' ').toLowerCase() : '';
+      return (r.customer_name || '').toLowerCase().includes(search)
+          || (r.notes || '').toLowerCase().includes(search)
+          || (r.phone || '').toLowerCase().includes(search)
+          || (r.email || '').toLowerCase().includes(search)
+          || (r.driver_license || '').toLowerCase().includes(search)
+          || extraVals.includes(search)
+          || (fleetMap[r.vehicle_id]?.vehicle_name || '').toLowerCase().includes(search);
+    });
 
     const countEl = document.getElementById('benzo-rent-count');
     if (countEl) countEl.textContent = `${filtered.length} rental${filtered.length !== 1 ? 's' : ''}`;
 
-    // Visible columns (always show actions column)
-    const visCols = BENZO_RENT_COLS.filter(c => benzoRentColVis[c.key]);
+    // All columns = standard + extra_data-sourced
+    const allCols = buildAllBenzoCols();
+    const visCols = allCols.filter(c => benzoRentColVis[c.key]);
     const colCount = visCols.length + 1;
 
     // Render header
@@ -5736,6 +5853,10 @@ Return raw JSON only.`,
     const statusColors = { active: 'var(--green)', upcoming: 'var(--gold)', completed: 'var(--muted)' };
 
     const cellFor = (col, r, v) => {
+      if (col.isExtra) {
+        const val = r.extra_data ? (r.extra_data[col.extraKey] ?? '—') : '—';
+        return `<td style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${String(val).replace(/"/g,'&quot;')}">${val}</td>`;
+      }
       switch(col.key) {
         case 'customer_name':  return `<td style="font-weight:500">${r.customer_name || '—'}</td>`;
         case 'vehicle':        return `<td style="font-size:11px;color:var(--muted)">${v ? v.vehicle_name : '—'}</td>`;
@@ -5746,11 +5867,18 @@ Return raw JSON only.`,
         case 'total_rent':     return `<td style="font-weight:500;color:var(--gold)">C$${fmt(r.total_rent ?? r.total_revenue)}</td>`;
         case 'daily_rate':     return `<td style="font-size:11px">C$${fmt(r.daily_rate)}/day</td>`;
         case 'status':         return `<td><span class="badge" style="background:var(--bg4);border:1px solid ${statusColors[r.status]||'var(--muted)'};color:${statusColors[r.status]||'var(--muted)'}">${r.status}</span></td>`;
-        case 'driver_license': return `<td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">${r.driver_license || '—'}</td>`;
-        case 'phone':          return `<td style="font-size:11px;color:var(--muted)">${r.phone || '—'}</td>`;
-        case 'email':          return `<td style="font-size:11px;color:var(--muted)">${r.email || '—'}</td>`;
-        case 'notes':          return `<td style="font-size:11px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.notes||'').replace(/"/g,'&quot;')}">${r.notes || '—'}</td>`;
-        default:               return `<td>—</td>`;
+        case 'driver_license':  return `<td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">${r.driver_license || '—'}</td>`;
+        case 'phone':           return `<td style="font-size:11px;color:var(--muted)">${r.phone || '—'}</td>`;
+        case 'email':           return `<td style="font-size:11px;color:var(--muted)">${r.email || '—'}</td>`;
+        case 'address':         return `<td style="font-size:11px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.address||'').replace(/"/g,'&quot;')}">${r.address || '—'}</td>`;
+        case 'dob':             return `<td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">${r.dob || '—'}</td>`;
+        case 'age':             return `<td style="font-size:11px;color:var(--muted);text-align:center">${r.age || '—'}</td>`;
+        case 'duration':        return `<td style="font-size:11px;color:var(--muted);text-align:center">${r.duration || '—'}</td>`;
+        case 'allowed_mileage': return `<td style="font-size:11px;color:var(--muted)">${r.allowed_mileage || '—'}</td>`;
+        case 'booking_number':  return `<td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold-dim)">${r.booking_number || '—'}</td>`;
+        case 'deposit':         return `<td style="font-size:11px;color:var(--muted)">C$${fmt(r.deposit)}</td>`;
+        case 'notes':           return `<td style="font-size:11px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.notes||'').replace(/"/g,'&quot;')}">${r.notes || '—'}</td>`;
+        default:                return `<td>—</td>`;
       }
     };
 
@@ -5808,18 +5936,40 @@ Return raw JSON only.`,
     if (statusEl) statusEl.textContent = 'Syncing…';
 
     let inserted = 0, updated = 0, deleted = 0, errors = 0;
+    const failedTabs = [];
+
+    async function fetchSheetCsv(vehicleName) {
+      const tab = encodeURIComponent(vehicleName);
+      // Try primary gviz URL first, then export fallback
+      const urls = [
+        `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${tab}`,
+        `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/export?format=csv&sheet=${tab}`,
+      ];
+      let lastErr = '';
+      for (const url of urls) {
+        try {
+          const resp = await fetch(url, { signal: AbortSignal.timeout(20000) });
+          if (!resp.ok) { lastErr = `HTTP ${resp.status}`; continue; }
+          const text = await resp.text();
+          // gviz sometimes returns an HTML error page with HTTP 200
+          if (text.trim().startsWith('<!') || text.trim().startsWith('<html')) {
+            lastErr = 'Sheet returned HTML (not public or tab not found)'; continue;
+          }
+          return text;
+        } catch(e) { lastErr = e.message; }
+      }
+      throw new Error(lastErr || 'fetch failed');
+    }
 
     try {
       for (const vehicle of benzoFleet) {
-        const tabName = encodeURIComponent(vehicle.vehicle_name);
-        const csvUrl  = `https://docs.google.com/spreadsheets/d/${BENZO_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${tabName}`;
+        if (statusEl) statusEl.textContent = `Syncing ${vehicle.vehicle_name}…`;
         let text;
         try {
-          const resp = await fetch(csvUrl, { signal: AbortSignal.timeout(15000) });
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          text = await resp.text();
+          text = await fetchSheetCsv(vehicle.sheet_tab_name || vehicle.vehicle_name);
         } catch(e) {
           console.warn(`[Benzo] Sheet fetch failed for "${vehicle.vehicle_name}":`, e.message);
+          failedTabs.push(vehicle.vehicle_name);
           errors++;
           continue;
         }
@@ -5863,8 +6013,9 @@ Return raw JSON only.`,
           const end      = benzoNormalizeDate(getCol('end_date'));
           if (!customer || !start || !end) continue;
 
-          const rateRaw  = getCol('daily_rate');
-          const totalRaw = getCol('total_rent');
+          const rateRaw   = getCol('daily_rate');
+          const totalRaw  = getCol('total_rent');
+          const depositRaw = getCol('deposit');
           const rawStatus = getCol('status').toLowerCase();
 
           const extra = {};
@@ -5872,16 +6023,23 @@ Return raw JSON only.`,
 
           sheetRows.push({
             customer, start, end,
-            rate:       parseFloat(rateRaw.replace(/[^0-9.-]/g,'')) || null,
-            total_rent: parseFloat(totalRaw.replace(/[^0-9.-]/g,'')) || null,
-            status:     (['upcoming','active','completed'].includes(rawStatus) ? rawStatus : 'upcoming'),
-            notes:      getCol('notes'),
-            start_time: getCol('start_time') || null,
-            end_time:   getCol('end_time') || null,
-            driver_license: getCol('driver_license') || null,
-            phone:      getCol('phone') || null,
-            email:      getCol('email') || null,
-            extra_data: Object.keys(extra).length ? extra : null,
+            rate:            parseFloat(rateRaw.replace(/[^0-9.-]/g,'')) || null,
+            total_rent:      parseFloat(totalRaw.replace(/[^0-9.-]/g,'')) || null,
+            deposit:         parseFloat(depositRaw.replace(/[^0-9.-]/g,'')) || null,
+            status:          (['upcoming','active','completed'].includes(rawStatus) ? rawStatus : 'upcoming'),
+            notes:           getCol('notes') || null,
+            start_time:      getCol('start_time') || null,
+            end_time:        getCol('end_time') || null,
+            driver_license:  getCol('driver_license') || null,
+            phone:           getCol('phone') || null,
+            email:           getCol('email') || null,
+            address:         getCol('address') || null,
+            dob:             getCol('dob') || null,
+            age:             getCol('age') || null,
+            duration:        getCol('duration') || null,
+            allowed_mileage: getCol('allowed_mileage') || null,
+            booking_number:  getCol('booking_number') || null,
+            extra_data:      Object.keys(extra).length ? extra : null,
           });
         }
 
@@ -5907,45 +6065,50 @@ Return raw JSON only.`,
             const changed = dbRow.customer_name !== sr.customer
               || dbRow.start_date !== sr.start
               || dbRow.end_date   !== sr.end
-              || (dbRow.daily_rate != null ? parseFloat(dbRow.daily_rate) : null) !== sr.rate
-              || (dbRow.total_rent != null ? parseFloat(dbRow.total_rent) : null) !== sr.total_rent
+              || (dbRow.daily_rate   != null ? parseFloat(dbRow.daily_rate)   : null) !== sr.rate
+              || (dbRow.total_rent   != null ? parseFloat(dbRow.total_rent)   : null) !== sr.total_rent
+              || (dbRow.deposit      != null ? parseFloat(dbRow.deposit)      : null) !== sr.deposit
               || dbRow.status !== sr.status
-              || (dbRow.notes || '') !== (sr.notes || '')
-              || (dbRow.start_time || null) !== sr.start_time
-              || (dbRow.end_time || null) !== sr.end_time
-              || (dbRow.driver_license || null) !== sr.driver_license
-              || (dbRow.phone || null) !== sr.phone
-              || (dbRow.email || null) !== sr.email
+              || (dbRow.notes           || null) !== sr.notes
+              || (dbRow.start_time      || null) !== sr.start_time
+              || (dbRow.end_time        || null) !== sr.end_time
+              || (dbRow.driver_license  || null) !== sr.driver_license
+              || (dbRow.phone           || null) !== sr.phone
+              || (dbRow.email           || null) !== sr.email
+              || (dbRow.address         || null) !== sr.address
+              || (dbRow.dob             || null) !== sr.dob
+              || (dbRow.age             || null) !== sr.age
+              || (dbRow.duration        || null) !== sr.duration
+              || (dbRow.allowed_mileage || null) !== sr.allowed_mileage
+              || (dbRow.booking_number  || null) !== sr.booking_number
               || dbRow.row_hash !== hash;
             if (changed) {
-              await sbPatch('rentals', dbRow.id, {
+              const patch = {
                 customer_name: sr.customer, start_date: sr.start, end_date: sr.end,
-                daily_rate: sr.rate, total_rent: sr.total_rent,
-                status: sr.status, notes: sr.notes || null,
-                start_time: sr.start_time, end_time: sr.end_time,
-                driver_license: sr.driver_license, phone: sr.phone, email: sr.email,
-                extra_data: sr.extra_data,
-                row_hash: hash, synced_at: new Date().toISOString(),
-              });
-              Object.assign(dbRow, {
-                customer_name: sr.customer, start_date: sr.start, end_date: sr.end,
-                daily_rate: sr.rate, total_rent: sr.total_rent,
+                daily_rate: sr.rate, total_rent: sr.total_rent, deposit: sr.deposit,
                 status: sr.status, notes: sr.notes,
                 start_time: sr.start_time, end_time: sr.end_time,
                 driver_license: sr.driver_license, phone: sr.phone, email: sr.email,
-                row_hash: hash,
-              });
+                address: sr.address, dob: sr.dob, age: sr.age,
+                duration: sr.duration, allowed_mileage: sr.allowed_mileage,
+                booking_number: sr.booking_number, extra_data: sr.extra_data,
+                row_hash: hash, synced_at: new Date().toISOString(),
+              };
+              await sbPatch('rentals', dbRow.id, patch);
+              Object.assign(dbRow, patch);
               updated++;
             }
           } else {
             const newRow = await sbPost('rentals', {
               vehicle_id: vehicle.id, customer_name: sr.customer,
               start_date: sr.start, end_date: sr.end,
-              daily_rate: sr.rate, total_rent: sr.total_rent,
-              status: sr.status, notes: sr.notes || null,
+              daily_rate: sr.rate, total_rent: sr.total_rent, deposit: sr.deposit,
+              status: sr.status, notes: sr.notes,
               start_time: sr.start_time, end_time: sr.end_time,
               driver_license: sr.driver_license, phone: sr.phone, email: sr.email,
-              extra_data: sr.extra_data,
+              address: sr.address, dob: sr.dob, age: sr.age,
+              duration: sr.duration, allowed_mileage: sr.allowed_mileage,
+              booking_number: sr.booking_number, extra_data: sr.extra_data,
               row_hash: hash, synced_at: new Date().toISOString(),
             });
             if (newRow?.[0]) { benzoRentals.unshift(newRow[0]); inserted++; }
@@ -5971,7 +6134,10 @@ Return raw JSON only.`,
       if (inserted) parts.push(`↑ ${inserted} new`);
       if (updated)  parts.push(`✎ ${updated} updated`);
       if (deleted)  parts.push(`✕ ${deleted} removed`);
-      if (errors)   parts.push(`⚠ ${errors} tab(s) unreachable`);
+      if (errors) {
+        const names = failedTabs.slice(0, 3).join(', ') + (failedTabs.length > 3 ? '…' : '');
+        parts.push(`⚠ ${errors} tab(s) unreachable: ${names}`);
+      }
       if (!parts.length) parts.push('up to date');
       if (statusEl) statusEl.textContent = parts.join(' · ') + ` · ${ts}`;
       localStorage.setItem('omar_benzo_sync_ts', ts);
@@ -5997,7 +6163,8 @@ Return raw JSON only.`,
     document.getElementById('veh-year').value    = '';
     document.getElementById('veh-status').value  = 'available';
     document.getElementById('veh-service').value = '';
-    document.getElementById('veh-notes').value   = '';
+    document.getElementById('veh-notes').value      = '';
+    document.getElementById('veh-sheet-tab').value  = '';
     [0,1,2,3].forEach(i => {
       document.getElementById(`split-name-${i}`).value = '';
       document.getElementById(`split-pct-${i}`).value  = '';
@@ -6013,8 +6180,9 @@ Return raw JSON only.`,
     document.getElementById('veh-model').value   = v.model           || '';
     document.getElementById('veh-year').value    = v.year            || '';
     document.getElementById('veh-status').value  = v.status          || 'available';
-    document.getElementById('veh-service').value = v.last_service_date || '';
-    document.getElementById('veh-notes').value   = v.notes           || '';
+    document.getElementById('veh-service').value    = v.last_service_date || '';
+    document.getElementById('veh-notes').value      = v.notes            || '';
+    document.getElementById('veh-sheet-tab').value  = v.sheet_tab_name   || '';
     const splits = v.owner_splits || {};
     const splitEntries = Object.entries(splits);
     [0,1,2,3].forEach(i => {
@@ -6043,7 +6211,8 @@ Return raw JSON only.`,
         year:              parseInt(document.getElementById('veh-year').value) || null,
         status:            document.getElementById('veh-status').value,
         last_service_date: document.getElementById('veh-service').value        || null,
-        notes:             document.getElementById('veh-notes').value.trim()   || null,
+        notes:             document.getElementById('veh-notes').value.trim()      || null,
+        sheet_tab_name:    document.getElementById('veh-sheet-tab').value.trim() || null,
         owner_splits:      splits
       };
       const vehEditId = document.getElementById('veh-id').value;
@@ -6067,8 +6236,39 @@ Return raw JSON only.`,
   }
   function rentalModalSetField(id, val) {
     const el = document.getElementById(id);
-    if (el) el.value = val || '';
+    if (el) el.value = (val == null ? '' : val);
   }
+
+  function renderRentalExtraFields(extraData) {
+    const container = document.getElementById('ren-extra-fields');
+    if (!container) return;
+    // Gather all known extra_data keys across all rentals
+    const allKeys = getBenzoExtraDataKeys();
+    if (!allKeys.length) { container.innerHTML = ''; return; }
+    container.innerHTML =
+      `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.08em;margin:14px 0 8px">SHEET EXTRAS</div>` +
+      `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">` +
+      allKeys.map(k =>
+        `<div class="form-group">
+          <label class="form-label">${k}</label>
+          <input class="form-input" id="ren-extra-${k.replace(/[^a-zA-Z0-9]/g,'_')}"
+            placeholder="${k}" value="${((extraData || {})[k] || '').replace(/"/g,'&quot;')}" />
+        </div>`
+      ).join('') +
+      `</div>`;
+  }
+
+  function collectRentalExtraData() {
+    const allKeys = getBenzoExtraDataKeys();
+    if (!allKeys.length) return null;
+    const out = {};
+    allKeys.forEach(k => {
+      const el = document.getElementById('ren-extra-' + k.replace(/[^a-zA-Z0-9]/g,'_'));
+      if (el && el.value.trim()) out[k] = el.value.trim();
+    });
+    return Object.keys(out).length ? out : null;
+  }
+
   window.openAddRental = () => {
     document.getElementById('rental-modal-title').textContent = 'Add Rental';
     document.getElementById('ren-save-btn').textContent = 'Add Rental';
@@ -6081,10 +6281,18 @@ Return raw JSON only.`,
     rentalModalSetField('ren-total-rent', '');
     rentalModalSetField('ren-rate', '');
     rentalModalSetField('ren-status', 'upcoming');
+    rentalModalSetField('ren-booking-number', '');
+    rentalModalSetField('ren-duration', '');
+    rentalModalSetField('ren-allowed-mileage', '');
+    rentalModalSetField('ren-deposit', '');
     rentalModalSetField('ren-license', '');
     rentalModalSetField('ren-phone', '');
     rentalModalSetField('ren-email', '');
+    rentalModalSetField('ren-address', '');
+    rentalModalSetField('ren-dob', '');
+    rentalModalSetField('ren-age', '');
     rentalModalSetField('ren-notes', '');
+    renderRentalExtraFields(null);
     populateRentalVehicleSelect('');
     document.getElementById('rental-modal').classList.add('open');
   };
@@ -6100,10 +6308,18 @@ Return raw JSON only.`,
     rentalModalSetField('ren-total-rent', r.total_rent);
     rentalModalSetField('ren-rate', r.daily_rate);
     rentalModalSetField('ren-status', r.status || 'upcoming');
+    rentalModalSetField('ren-booking-number', r.booking_number);
+    rentalModalSetField('ren-duration', r.duration);
+    rentalModalSetField('ren-allowed-mileage', r.allowed_mileage);
+    rentalModalSetField('ren-deposit', r.deposit);
     rentalModalSetField('ren-license', r.driver_license);
     rentalModalSetField('ren-phone', r.phone);
     rentalModalSetField('ren-email', r.email);
+    rentalModalSetField('ren-address', r.address);
+    rentalModalSetField('ren-dob', r.dob);
+    rentalModalSetField('ren-age', r.age);
     rentalModalSetField('ren-notes', r.notes);
+    renderRentalExtraFields(r.extra_data);
     populateRentalVehicleSelect(r.vehicle_id);
     document.getElementById('rental-modal').classList.add('open');
   };
@@ -6114,26 +6330,38 @@ Return raw JSON only.`,
     const vehId      = document.getElementById('ren-vehicle').value;
     const start      = document.getElementById('ren-start').value;
     const end        = document.getElementById('ren-end').value;
-    const startTime  = document.getElementById('ren-start-time').value.trim() || null;
-    const endTime    = document.getElementById('ren-end-time').value.trim() || null;
-    const totalRent  = parseFloat(document.getElementById('ren-total-rent').value) || null;
-    const rate       = parseFloat(document.getElementById('ren-rate').value) || null;
-    const license    = document.getElementById('ren-license').value.trim() || null;
-    const phone      = document.getElementById('ren-phone').value.trim() || null;
-    const email      = document.getElementById('ren-email').value.trim() || null;
+    const startTime      = document.getElementById('ren-start-time').value.trim() || null;
+    const endTime        = document.getElementById('ren-end-time').value.trim() || null;
+    const totalRent      = parseFloat(document.getElementById('ren-total-rent').value) || null;
+    const rate           = parseFloat(document.getElementById('ren-rate').value) || null;
+    const deposit        = parseFloat(document.getElementById('ren-deposit').value) || null;
+    const license        = document.getElementById('ren-license').value.trim() || null;
+    const phone          = document.getElementById('ren-phone').value.trim() || null;
+    const email          = document.getElementById('ren-email').value.trim() || null;
+    const address        = document.getElementById('ren-address').value.trim() || null;
+    const dob            = document.getElementById('ren-dob').value.trim() || null;
+    const age            = document.getElementById('ren-age').value.trim() || null;
+    const duration       = document.getElementById('ren-duration').value.trim() || null;
+    const allowedMileage = document.getElementById('ren-allowed-mileage').value.trim() || null;
+    const bookingNumber  = document.getElementById('ren-booking-number').value.trim() || null;
     if (!cust || !start || !end) { alert('Customer, start date and end date are required.'); return; }
 
     btn.textContent = 'Saving…'; btn.disabled = true;
     try {
       const status = document.getElementById('ren-status').value;
       const notes  = document.getElementById('ren-notes').value.trim() || null;
+      const extraData = collectRentalExtraData();
       const row = {
         vehicle_id: vehId || null, customer_name: cust,
         start_date: start, end_date: end,
         start_time: startTime, end_time: endTime,
-        daily_rate: rate, total_rent: totalRent,
+        daily_rate: rate, total_rent: totalRent, deposit,
         driver_license: license, phone, email,
+        address, dob, age,
+        duration, allowed_mileage: allowedMileage,
+        booking_number: bookingNumber,
         status, notes,
+        extra_data: extraData,
       };
       const id = document.getElementById('ren-id').value;
       let savedRow;
@@ -6161,9 +6389,12 @@ Return raw JSON only.`,
               vehicle: vehicle?.vehicle_name || '',
               customer: cust, start, end,
               start_time: startTime || '', end_time: endTime || '',
-              total_rent: totalRent, rate: rate,
+              total_rent: totalRent, rate, deposit,
               status, notes: notes || '',
               driver_license: license || '', phone: phone || '', email: email || '',
+              address: address || '', dob: dob || '', age: age || '',
+              duration: duration || '', allowed_mileage: allowedMileage || '',
+              booking_number: bookingNumber || '',
               id: savedRow.id,
             }),
           });
