@@ -645,6 +645,30 @@
     .confetti-piece { position:fixed; width:8px; height:8px; top:0; border-radius:2px; animation:confetti-fall linear forwards; pointer-events:none; z-index:9999; }
 
     #page-journal { flex-direction:column; padding:24px 28px; overflow-y:auto; }
+
+    /* ── GOALS TAB ── */
+    #page-goals { flex-direction:column; padding:24px 28px; overflow-y:auto; }
+    .goals-section-hdr { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.1em; color:var(--gold-dim); margin:20px 0 10px; }
+    .goals-section-hdr:first-child { margin-top:0; }
+    .goal-card { background:var(--bg2); border:1px solid var(--border); border-radius:6px; padding:14px 16px; margin-bottom:8px; display:flex; align-items:center; gap:12px; }
+    .goal-card.completed { opacity:.5; }
+    .goal-check { width:18px; height:18px; border:1.5px solid var(--border2); border-radius:3px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px; transition:background .15s,border-color .15s; }
+    .goal-check.done { background:var(--green); border-color:var(--green); color:#000; }
+    .goal-check:hover { border-color:var(--gold-dim); }
+    .goal-body { flex:1; min-width:0; }
+    .goal-title { font-size:13px; color:var(--text); line-height:1.4; }
+    .goal-card.completed .goal-title { text-decoration:line-through; color:var(--muted); }
+    .goal-meta { display:flex; gap:8px; align-items:center; margin-top:4px; }
+    .goal-cat-pill { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:.08em; padding:2px 6px; border-radius:2px; background:var(--bg3); color:var(--gold-dim); }
+    .goal-date { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--muted); }
+    .goal-date.overdue { color:var(--red); }
+    .goal-del-btn { background:none; border:none; cursor:pointer; color:var(--muted); font-size:12px; padding:2px 4px; opacity:0; transition:opacity .15s; flex-shrink:0; }
+    .goal-card:hover .goal-del-btn { opacity:1; }
+    .goals-add-form { background:var(--bg2); border:1px dashed var(--border2); border-radius:6px; padding:14px 16px; margin-bottom:8px; }
+    .goals-add-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .goals-add-row .form-input { flex:1; min-width:160px; height:30px; font-size:12px; margin:0; }
+    .goals-add-row select { height:30px; font-size:11px; background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:4px; padding:0 8px; font-family:'JetBrains Mono',monospace; letter-spacing:.04em; }
+    .goals-add-row input[type=date] { height:30px; font-size:11px; background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:4px; padding:0 8px; font-family:'JetBrains Mono',monospace; }
     .journal-textarea { width:100%; background:var(--bg2); border:1px solid var(--border); color:var(--text); padding:16px 18px; border-radius:6px; font-size:14px; line-height:1.7; outline:none; resize:vertical; font-family:inherit; min-height:220px; }
     .journal-textarea:focus { border-color:var(--gold-dim); }
     .journal-past-entry.active-entry { border-color: var(--gold-dim); background: rgba(200,168,75,.04); }
@@ -855,6 +879,7 @@
     <button class="nav-tab" data-tab="agents">AGENTS</button>
     <button class="nav-tab" data-tab="benzo">BENZO</button>
     <button class="nav-tab" data-tab="journal">JOURNAL</button>
+    <button class="nav-tab" data-tab="goals">GOALS</button>
   </div>
   <div class="nav-right">
     <div class="tg-pill">
@@ -1268,6 +1293,40 @@
     <div id="journal-entry-count" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)"></div>
   </div>
   <div id="journal-entries-list"></div>
+</div>
+
+<div class="page" id="page-goals">
+  <div class="page-header" style="margin-bottom:20px">
+    <div class="page-title">GOALS</div>
+    <button class="btn-save" onclick="openAddGoalForm()" id="goals-add-btn">+ NEW GOAL</button>
+  </div>
+
+  <!-- Add goal form (hidden by default) -->
+  <div class="goals-add-form" id="goals-add-form" style="display:none;margin-bottom:16px">
+    <div class="goals-add-row">
+      <input class="form-input" id="goal-title-inp" placeholder="Goal title…"
+        onkeydown="if(event.key==='Enter')saveNewGoal();if(event.key==='Escape')closeAddGoalForm()" />
+      <select id="goal-cat-inp">
+        <option value="weekly">WEEKLY</option>
+        <option value="monthly">MONTHLY</option>
+        <option value="quarterly">QUARTERLY</option>
+        <option value="yearly">YEARLY</option>
+      </select>
+      <input type="date" id="goal-date-inp" />
+      <button class="btn-save" onclick="saveNewGoal()" style="height:30px;padding:0 14px">ADD</button>
+      <button class="btn-cancel" onclick="closeAddGoalForm()" style="height:30px;padding:0 10px">✕</button>
+    </div>
+  </div>
+
+  <!-- Open goals -->
+  <div id="goals-open-list"></div>
+
+  <!-- Show completed toggle -->
+  <div style="margin-top:20px;margin-bottom:4px">
+    <button class="btn-cancel" id="goals-show-completed-btn" onclick="toggleCompletedGoals()"
+      style="font-size:10px;letter-spacing:.06em">SHOW COMPLETED</button>
+  </div>
+  <div id="goals-completed-list" style="display:none"></div>
 </div>
 
 </div><!-- /app -->
@@ -1772,6 +1831,12 @@
     const btn  = document.getElementById('home-eye-btn');
     if (wrap) wrap.classList.toggle('blurred', homePrivacyMode);
     if (btn)  btn.textContent = homePrivacyMode ? '🙈' : '🙉';
+    // Re-render net worth text — fmtMoneyHome reads homePrivacyMode at call time
+    const nwEl = document.getElementById('home-nw');
+    if (nwEl && finData) {
+      const val = finData.liveTotal || finData.costTotal || 0;
+      nwEl.textContent = fmtMoneyHome(val);
+    }
   };
 
   window.sortHoldings = (key) => {
@@ -1918,6 +1983,7 @@
     if (tab === 'agents')  await loadAgents();
     if (tab === 'benzo')   await loadBenzo();
     if (tab === 'journal') await loadJournal();
+    if (tab === 'goals')   await loadGoals();
   }
 
   // ── HOME ─────────────────────────────────────────────────
@@ -3360,7 +3426,7 @@ Return raw JSON only.`,
     checkinsData = c;
     const tk  = todayKey();
     const ids = c[tk] || [];
-    fetch(`${SUPABASE_URL}/rest/v1/habit_checkins`, {
+    fetch(`${SUPABASE_URL}/rest/v1/habit_checkins?on_conflict=checkin_date`, {
       method: 'POST',
       headers: {
         apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`,
@@ -3368,7 +3434,9 @@ Return raw JSON only.`,
         'Prefer': 'resolution=merge-duplicates,return=minimal',
       },
       body: JSON.stringify({ checkin_date: tk, checked_ids: ids, updated_at: new Date().toISOString() }),
-    }).catch(e => console.warn('saveCkins error', e));
+    }).then(r => {
+      if (!r.ok) r.text().then(t => console.warn('[Omar OS] saveCkins HTTP error', r.status, t));
+    }).catch(e => console.warn('[Omar OS] saveCkins network error', e));
   }
 
   // Persist habits array order to Supabase (fire-and-forget, updates sort_order)
@@ -4581,6 +4649,142 @@ Return raw JSON only.`,
     }
     saveCkins(c);
     renderHabits();
+  };
+
+  // ── GOALS ────────────────────────────────────────────────────────────────
+  let goalsData = [];
+  let goalsShowCompleted = false;
+
+  async function loadGoals() {
+    goalsData = await sb('goals', '?order=created_at.desc') || [];
+    renderGoals();
+  }
+
+  function renderGoals() {
+    const open      = goalsData.filter(g => !g.completed);
+    const completed = goalsData.filter(g => g.completed);
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    const catLabel = { weekly: 'WEEKLY', monthly: 'MONTHLY', quarterly: 'QUARTERLY', yearly: 'YEARLY' };
+
+    const goalHtml = (g) => {
+      const overdue = !g.completed && g.target_date && g.target_date < today;
+      return `
+        <div class="goal-card${g.completed ? ' completed' : ''}">
+          <div class="goal-check${g.completed ? ' done' : ''}"
+            onclick="toggleGoalTab('${g.id}',${g.completed})" title="${g.completed ? 'Mark open' : 'Mark complete'}">
+            ${g.completed ? '✓' : ''}
+          </div>
+          <div class="goal-body">
+            <div class="goal-title">${g.title}</div>
+            <div class="goal-meta">
+              ${g.category ? `<span class="goal-cat-pill">${catLabel[g.category] || g.category.toUpperCase()}</span>` : ''}
+              ${g.target_date ? `<span class="goal-date${overdue ? ' overdue' : ''}">${overdue ? '⚠ ' : ''}${g.target_date}</span>` : ''}
+            </div>
+          </div>
+          <button class="goal-del-btn" onclick="deleteGoal('${g.id}')" title="Delete goal">✕</button>
+        </div>`;
+    };
+
+    const openEl = document.getElementById('goals-open-list');
+    if (openEl) {
+      if (open.length === 0) {
+        openEl.innerHTML = '<div class="empty" style="margin:8px 0 0">No open goals — hit + NEW GOAL to add one.</div>';
+      } else {
+        // Group by category
+        const cats = ['weekly', 'monthly', 'quarterly', 'yearly'];
+        let html = '';
+        cats.forEach(cat => {
+          const items = open.filter(g => g.category === cat);
+          if (items.length === 0) return;
+          html += `<div class="goals-section-hdr">${catLabel[cat]}</div>`;
+          html += items.map(goalHtml).join('');
+        });
+        // Uncategorised
+        const other = open.filter(g => !cats.includes(g.category));
+        if (other.length) {
+          html += `<div class="goals-section-hdr">OTHER</div>`;
+          html += other.map(goalHtml).join('');
+        }
+        openEl.innerHTML = html;
+      }
+    }
+
+    const compEl = document.getElementById('goals-completed-list');
+    if (compEl) {
+      compEl.innerHTML = completed.length
+        ? completed.map(goalHtml).join('')
+        : '<div class="empty" style="margin:8px 0 0">No completed goals yet.</div>';
+    }
+
+    // Update completed button label
+    const btn = document.getElementById('goals-show-completed-btn');
+    if (btn) btn.textContent = goalsShowCompleted ? 'HIDE COMPLETED' : `SHOW COMPLETED (${completed.length})`;
+  }
+
+  window.toggleCompletedGoals = () => {
+    goalsShowCompleted = !goalsShowCompleted;
+    const el = document.getElementById('goals-completed-list');
+    if (el) el.style.display = goalsShowCompleted ? 'block' : 'none';
+    const btn = document.getElementById('goals-show-completed-btn');
+    const completed = goalsData.filter(g => g.completed);
+    if (btn) btn.textContent = goalsShowCompleted ? 'HIDE COMPLETED' : `SHOW COMPLETED (${completed.length})`;
+  };
+
+  window.toggleGoalTab = async (id, completed) => {
+    const goal = goalsData.find(g => g.id === id);
+    if (!goal) return;
+    goal.completed = !completed;
+    renderGoals();
+    try {
+      await sbPatch('goals', id, { completed: !completed });
+      // Also refresh home if loaded
+      if (loaders['home']) { loaders['home'] = false; await loadHome(); loaders['home'] = true; }
+    } catch(e) { console.warn('toggleGoalTab error', e); goal.completed = completed; renderGoals(); }
+  };
+
+  window.deleteGoal = async (id) => {
+    if (!confirm('Delete this goal?')) return;
+    goalsData = goalsData.filter(g => g.id !== id);
+    renderGoals();
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/goals?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}` }
+      });
+    } catch(e) { console.warn('deleteGoal error', e); }
+  };
+
+  window.openAddGoalForm = () => {
+    const f = document.getElementById('goals-add-form');
+    if (f) { f.style.display = 'block'; document.getElementById('goal-title-inp').focus(); }
+  };
+  window.closeAddGoalForm = () => {
+    const f = document.getElementById('goals-add-form');
+    if (f) f.style.display = 'none';
+    ['goal-title-inp','goal-date-inp'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const cat = document.getElementById('goal-cat-inp');
+    if (cat) cat.value = 'weekly';
+  };
+
+  window.saveNewGoal = async () => {
+    const title = (document.getElementById('goal-title-inp')?.value || '').trim();
+    if (!title) { document.getElementById('goal-title-inp')?.focus(); return; }
+    const category    = document.getElementById('goal-cat-inp')?.value || 'weekly';
+    const target_date = document.getElementById('goal-date-inp')?.value || null;
+    const newGoal = { id: crypto.randomUUID(), title, category, target_date, completed: false, created_at: new Date().toISOString() };
+    goalsData.unshift(newGoal);
+    closeAddGoalForm();
+    renderGoals();
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/goals`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ id: newGoal.id, title, category, target_date, completed: false }),
+      });
+      if (loaders['home']) { loaders['home'] = false; await loadHome(); loaders['home'] = true; }
+    } catch(e) { console.warn('saveNewGoal error', e); }
   };
 
   // ── JOURNAL ──────────────────────────────────────────────────────────────
