@@ -6003,28 +6003,37 @@ Return raw JSON only.`,
         }
 
         const allRows  = parseCSV(text);
-        if (allRows.length < 2) continue; // header only or empty
+        if (allRows.length < 2) continue;
 
-        // Dynamic header mapping: row 0 = header labels
-        const rawHeaders = allRows[0].map(h => (h || '').trim());
-        // Normalize: collapse newlines + extra spaces, lowercase
-        const headerRow  = rawHeaders.map(h => h.replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim().toLowerCase());
-        console.log(`[Benzo] Normalized headers for "${tabName}":`, headerRow);
-        // Build colIdx: dbField → array index in each row
+        // Auto-detect header row: scan first 15 rows, pick the one with most recognized columns
+        const normalize = h => (h||'').replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
+        let headerRowIdx = 0, bestMatches = 0;
+        for (let ri = 0; ri < Math.min(15, allRows.length); ri++) {
+          const matches = allRows[ri].filter(h => SHEET_COL_MAP[normalize(h)]).length;
+          if (matches > bestMatches) { bestMatches = matches; headerRowIdx = ri; }
+        }
+        console.log(`[Benzo] Header row detected at index ${headerRowIdx} with ${bestMatches} recognized columns`);
+
+        const rawHeaders = allRows[headerRowIdx].map(h => (h || '').trim());
+        const headerRow  = rawHeaders.map(normalize);
+        console.log(`[Benzo] Normalized headers:`, headerRow);
+
+        // Build colIdx: dbField → column index
         const colIdx = {};
         headerRow.forEach((h, i) => {
           const dbField = SHEET_COL_MAP[h];
           if (dbField && !(dbField in colIdx)) colIdx[dbField] = i;
         });
         console.log(`[Benzo] Recognized columns:`, colIdx);
-        // Build list of extra unknown columns (go into extra_data)
+
+        // Build list of extra unknown columns
         const extraCols = [];
         headerRow.forEach((h, i) => {
           if (h && !SHEET_COL_MAP[h]) extraCols.push({ name: rawHeaders[i], idx: i });
         });
 
         const sheetRows = [];
-        const startDataRow = 1; // always skip row 0 (header)
+        const startDataRow = headerRowIdx + 1; // skip header row
         for (let i = startDataRow; i < allRows.length; i++) {
           const r = allRows[i];
           const getCol = (field, fallbackIdx) => {
