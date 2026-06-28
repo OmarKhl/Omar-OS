@@ -5963,13 +5963,15 @@ Return raw JSON only.`,
 
     try {
       for (const vehicle of benzoFleet) {
-        if (statusEl) statusEl.textContent = `Syncing ${vehicle.vehicle_name}…`;
+        const tabName = (vehicle.sheet_tab_name || '').trim() || vehicle.vehicle_name;
+        if (statusEl) statusEl.textContent = `Syncing tab "${tabName}"…`;
+        console.log(`[Benzo] vehicle="${vehicle.vehicle_name}" sheet_tab_name="${vehicle.sheet_tab_name}" → searching tab="${tabName}"`);
         let text;
         try {
-          text = await fetchSheetCsv(vehicle.sheet_tab_name || vehicle.vehicle_name);
+          text = await fetchSheetCsv(tabName);
         } catch(e) {
-          console.warn(`[Benzo] Sheet fetch failed for "${vehicle.vehicle_name}":`, e.message);
-          failedTabs.push(vehicle.vehicle_name);
+          console.warn(`[Benzo] Sheet fetch failed for tab "${tabName}":`, e.message);
+          failedTabs.push(`${vehicle.vehicle_name} (tab: "${tabName}")`);
           errors++;
           continue;
         }
@@ -6009,9 +6011,9 @@ Return raw JSON only.`,
             return idx >= 0 ? (r[idx] || '').trim() : '';
           };
           const customer = getCol('customer_name');
+          if (!customer) continue;
           const start    = benzoNormalizeDate(getCol('start_date'));
           const end      = benzoNormalizeDate(getCol('end_date'));
-          if (!customer || !start || !end) continue;
 
           const rateRaw   = getCol('daily_rate');
           const totalRaw  = getCol('total_rent');
@@ -6055,8 +6057,8 @@ Return raw JSON only.`,
         const matchedIds = new Set();
 
         for (const sr of sheetRows) {
-          const hash = `${vehicle.id}|${sr.customer}|${sr.start}|${sr.end}`;
-          const key  = `${sr.customer}|${sr.start}|${sr.end}`;
+          const hash = `${vehicle.id}|${sr.customer}|${sr.start||''}|${sr.end||''}`;
+          const key  = `${sr.customer}|${sr.start||''}|${sr.end||''}`;
           const pool = dbByKey[key];
           const dbRow = pool ? pool.shift() : null;
 
