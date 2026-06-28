@@ -5619,54 +5619,54 @@ Return raw JSON only.`,
     return d;
   })();
 
-  // Sheet column header → DB field mapping (all lowercase keys)
+  // Sheet column header → DB field mapping (all lowercase, newlines collapsed)
   const SHEET_COL_MAP = {
-    // Customer
-    'customer': 'customer_name', 'customer name': 'customer_name', 'name': 'customer_name',
+    // ── YOUR EXACT SHEET HEADERS ─────────────────────────────
+    'client name': 'customer_name',
+    'client driving licence': 'driver_license',
+    'phone number': 'phone',
+    'email address': 'email',
+    'rental start date': 'start_date',
+    'rental start time': 'start_time',
+    'rental finish date': 'end_date',
+    'rental finish time': 'end_time',
+    'duration (days)': 'duration',
+    'allowed milage': 'allowed_mileage',   // typo in sheet intentionally kept
+    'allowed mileage': 'allowed_mileage',
+    'bookin deposit ($)': 'deposit',        // typo in sheet intentionally kept
+    'booking deposit ($)': 'deposit',
+    'rent income ($)': 'total_rent',
+    // ── COMMON ALIASES ───────────────────────────────────────
+    'customer': 'customer_name', 'customer name': 'customer_name',
     'client': 'customer_name', 'renter': 'customer_name', 'full name': 'customer_name',
-    // Dates
     'start': 'start_date', 'start date': 'start_date', 'from': 'start_date',
     'pickup date': 'start_date', 'check in': 'start_date', 'check-in': 'start_date',
     'end': 'end_date', 'end date': 'end_date', 'to': 'end_date',
-    'return date': 'end_date', 'dropoff date': 'end_date', 'check out': 'end_date', 'check-out': 'end_date',
-    // Times
+    'return date': 'end_date', 'dropoff date': 'end_date', 'check out': 'end_date',
     'start time': 'start_time', 'pickup time': 'start_time', 'time out': 'start_time',
-    'check in time': 'start_time', 'check-in time': 'start_time',
-    'end time': 'end_time', 'return time': 'end_time', 'dropoff time': 'end_time',
-    'time in': 'end_time', 'check out time': 'end_time', 'check-out time': 'end_time',
-    // Rates & money
+    'end time': 'end_time', 'return time': 'end_time', 'time in': 'end_time',
     'rate': 'daily_rate', 'daily rate': 'daily_rate', 'rate/day': 'daily_rate',
-    'rate per day': 'daily_rate', 'day rate': 'daily_rate', 'price per day': 'daily_rate',
-    'total': 'total_rent', 'total rent': 'total_rent', 'total amount': 'total_rent',
-    'rent amount': 'total_rent', 'total rent amount': 'total_rent', 'revenue': 'total_rent',
-    'amount': 'total_rent', 'price': 'total_rent', 'cost': 'total_rent',
+    'rate per day': 'daily_rate', 'day rate': 'daily_rate',
+    'total rent': 'total_rent', 'total amount': 'total_rent', 'rent amount': 'total_rent',
+    'revenue': 'total_rent',
     'deposit': 'deposit', 'security deposit': 'deposit', 'deposit amount': 'deposit',
-    // Status & notes
     'status': 'status',
-    'notes': 'notes', 'note': 'notes', 'comments': 'notes', 'remark': 'notes', 'remarks': 'notes',
-    // License
+    'notes': 'notes', 'note': 'notes', 'comments': 'notes', 'remarks': 'notes',
     'license': 'driver_license', 'driver license': 'driver_license', 'driving license': 'driver_license',
     'dl': 'driver_license', 'licence': 'driver_license', 'driver licence': 'driver_license',
-    'driving licence': 'driver_license', 'license number': 'driver_license', 'licence number': 'driver_license',
+    'driving licence': 'driver_license', 'license number': 'driver_license',
     "driver's license": 'driver_license', "driver's licence": 'driver_license',
-    // Contact
-    'phone': 'phone', 'tel': 'phone', 'mobile': 'phone', 'contact': 'phone',
-    'telephone': 'phone', 'cell': 'phone', 'phone number': 'phone', 'mobile number': 'phone',
-    'email': 'email', 'e-mail': 'email', 'mail': 'email', 'email address': 'email',
-    // Personal details
-    'address': 'address', 'home address': 'address', 'street address': 'address', 'location': 'address',
-    'dob': 'dob', 'date of birth': 'dob', 'birth date': 'dob', 'birthday': 'dob', 'birthdate': 'dob',
+    'phone': 'phone', 'tel': 'phone', 'mobile': 'phone', 'telephone': 'phone',
+    'cell': 'phone', 'mobile number': 'phone',
+    'email': 'email', 'e-mail': 'email', 'email address': 'email',
+    'address': 'address', 'home address': 'address', 'street address': 'address',
+    'dob': 'dob', 'date of birth': 'dob', 'birth date': 'dob', 'birthday': 'dob',
     'age': 'age',
-    // Rental details
     'duration': 'duration', 'days': 'duration', 'rental days': 'duration',
-    'number of days': 'duration', 'no. of days': 'duration', '# of days': 'duration',
-    'allowed mileage': 'allowed_mileage', 'mileage': 'allowed_mileage', 'mileage limit': 'allowed_mileage',
-    'km limit': 'allowed_mileage', 'km allowed': 'allowed_mileage', 'allowed km': 'allowed_mileage',
-    'mile limit': 'allowed_mileage', 'miles allowed': 'allowed_mileage',
-    '#': 'booking_number', 'no': 'booking_number', 'number': 'booking_number',
-    'booking number': 'booking_number', 'booking #': 'booking_number', 'booking no': 'booking_number',
+    'number of days': 'duration', 'no. of days': 'duration',
+    '#': 'booking_number', 'booking number': 'booking_number', 'booking #': 'booking_number',
     'rental #': 'booking_number', 'rental number': 'booking_number', 'ref': 'booking_number',
-    'reference': 'booking_number', 'ref #': 'booking_number', 'reservation': 'booking_number',
+    'reservation': 'booking_number',
   };
 
   async function loadBenzo() {
@@ -5987,30 +5987,25 @@ Return raw JSON only.`,
         if (allRows.length < 2) continue; // header only or empty
 
         // Dynamic header mapping: row 0 = header labels
-        const headerRow = allRows[0].map(h => (h || '').trim().toLowerCase());
+        const rawHeaders = allRows[0].map(h => (h || '').trim());
+        // Normalize: collapse newlines + extra spaces, lowercase
+        const headerRow  = rawHeaders.map(h => h.replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim().toLowerCase());
+        console.log(`[Benzo] Normalized headers for "${tabName}":`, headerRow);
         // Build colIdx: dbField → array index in each row
         const colIdx = {};
         headerRow.forEach((h, i) => {
           const dbField = SHEET_COL_MAP[h];
           if (dbField && !(dbField in colIdx)) colIdx[dbField] = i;
         });
-        // Fallback: if no header recognized, use positional B=1 mapping like before
-        const noHeader = Object.keys(colIdx).length === 0;
-        if (noHeader) {
-          colIdx['customer_name'] = 1; colIdx['start_date'] = 2; colIdx['end_date'] = 3;
-          colIdx['daily_rate'] = 4; colIdx['status'] = 5; colIdx['notes'] = 6;
-        }
+        console.log(`[Benzo] Recognized columns:`, colIdx);
         // Build list of extra unknown columns (go into extra_data)
-        const knownDbFields = new Set(Object.values(SHEET_COL_MAP));
-        const extraCols = []; // { headerName, colIndex }
-        if (!noHeader) {
-          headerRow.forEach((h, i) => {
-            if (h && !SHEET_COL_MAP[h] && i > 0) extraCols.push({ name: h, idx: i });
-          });
-        }
+        const extraCols = [];
+        headerRow.forEach((h, i) => {
+          if (h && !SHEET_COL_MAP[h]) extraCols.push({ name: rawHeaders[i], idx: i });
+        });
 
         const sheetRows = [];
-        const startDataRow = noHeader ? 1 : 1; // always skip row 0 (header)
+        const startDataRow = 1; // always skip row 0 (header)
         for (let i = startDataRow; i < allRows.length; i++) {
           const r = allRows[i];
           const getCol = (field, fallbackIdx) => {
