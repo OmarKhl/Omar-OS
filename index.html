@@ -617,10 +617,39 @@
     .sess-greeting { font-size: 22px; font-weight: 300; line-height: 1.2; letter-spacing: -.01em; }
     .sess-greeting em { font-style: italic; color: var(--gold); }
     .sess-date { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .07em; margin: 4px 0 14px; }
-    .sess-weather { margin-top: 8px; text-align: right; }
-    .sess-wx-icon { font-size: 22px; display: block; line-height: 1; margin-bottom: 2px; }
-    .sess-wx-temp { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 300; color: var(--text); letter-spacing: -.01em; }
-    .sess-wx-label { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--muted2); letter-spacing: .07em; text-transform: uppercase; margin-top: 2px; }
+    .sess-time-row { display: flex; align-items: flex-start; gap: 14px; }
+    .sess-weather { text-align: right; transition: opacity .15s; }
+    .sess-weather:hover { opacity: .75; }
+    .sess-wx-icon { font-size: 20px; display: block; line-height: 1; margin-bottom: 2px; }
+    .sess-wx-temp { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 300; color: var(--text); letter-spacing: -.01em; }
+    .sess-wx-label { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; color: var(--muted2); letter-spacing: .07em; text-transform: uppercase; margin-top: 2px; }
+
+    /* ── WEATHER FORECAST MODAL ── */
+    .wx-modal { width: 460px; max-width: 96vw; padding: 20px; max-height: 88vh; overflow-y: auto; }
+    .wx-modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .wx-modal-city { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--gold); letter-spacing: .12em; }
+    .wx-modal-date { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--muted); letter-spacing: .08em; margin-top: 3px; margin-bottom: 16px; }
+    .wx-modal-hero { display: flex; align-items: center; gap: 18px; margin-bottom: 20px; }
+    .wx-hero-icon { font-size: 52px; line-height: 1; }
+    .wx-hero-temp { font-size: 40px; font-weight: 200; letter-spacing: -.03em; line-height: 1; }
+    .wx-hero-feel { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--muted2); letter-spacing: .07em; margin: 4px 0 2px; }
+    .wx-hero-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: .08em; }
+    .wx-modal-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .wx-stat { background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; padding: 7px 10px; display: flex; flex-direction: column; align-items: center; min-width: 60px; flex: 1; }
+    .wx-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); font-weight: 400; }
+    .wx-stat-lbl { font-family: 'JetBrains Mono', monospace; font-size: 7px; color: var(--muted2); letter-spacing: .08em; margin-top: 3px; }
+    .wx-modal-section-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--muted); letter-spacing: .1em; margin-bottom: 10px; }
+    .wx-hourly-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+    .wx-hourly-row::-webkit-scrollbar { height: 3px; }
+    .wx-hourly-row::-webkit-scrollbar-track { background: var(--bg3); }
+    .wx-hourly-row::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    .wx-hour { background: var(--bg3); border: 1px solid var(--border); border-radius: 5px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 52px; flex-shrink: 0; }
+    .wx-hour-now { border-color: var(--gold-dim); background: var(--bg4); }
+    .wx-h-time { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; color: var(--muted); letter-spacing: .05em; }
+    .wx-hour-now .wx-h-time { color: var(--gold); }
+    .wx-h-icon { font-size: 18px; line-height: 1; }
+    .wx-h-temp { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text); }
+    .wx-h-prec { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--muted2); }
     .home-qi-wrap { display: flex; gap: 5px; margin-top: 12px; }
     .home-qi {
       flex: 1; background: var(--bg3); border: 1px solid var(--border);
@@ -1134,12 +1163,16 @@
             <div class="sess-date" id="session-date"></div>
           </div>
           <div class="sess-time-corner">
-            <div class="sess-time-big" id="session-clock">--:--</div>
-            <div class="sess-tz">LOCAL</div>
-            <div class="sess-weather" id="sess-weather">
-              <span class="sess-wx-icon" id="sess-wx-icon">⋯</span>
-              <span class="sess-wx-temp" id="sess-wx-temp">—</span>
-              <div class="sess-wx-label" id="sess-wx-label">loading…</div>
+            <div class="sess-time-row">
+              <div>
+                <div class="sess-time-big" id="session-clock">--:--</div>
+                <div class="sess-tz">LOCAL</div>
+              </div>
+              <div class="sess-weather" id="sess-weather">
+                <span class="sess-wx-icon" id="sess-wx-icon">⋯</span>
+                <span class="sess-wx-temp" id="sess-wx-temp">—</span>
+                <div class="sess-wx-label" id="sess-wx-label">loading…</div>
+              </div>
             </div>
           </div>
         </div>
@@ -2447,43 +2480,44 @@
   setInterval(updateClock, 1000);
 
   // ── WEATHER ──────────────────────────────────────────────
+  // WMO code → [icon, short label]
+  function wxInfo(c) {
+    if (c === 0)             return ['☀️', 'CLEAR'];
+    if (c === 1)             return ['🌤', 'MOSTLY CLEAR'];
+    if (c === 2)             return ['⛅', 'PARTLY CLOUDY'];
+    if (c === 3)             return ['☁️', 'OVERCAST'];
+    if (c >= 45 && c <= 48)  return ['🌫', 'FOG'];
+    if (c >= 51 && c <= 55)  return ['🌦', 'DRIZZLE'];
+    if (c >= 56 && c <= 57)  return ['🌧', 'FREEZING DRIZZLE'];
+    if (c >= 61 && c <= 65)  return ['🌧', 'RAIN'];
+    if (c >= 66 && c <= 67)  return ['🌧', 'FREEZING RAIN'];
+    if (c >= 71 && c <= 77)  return ['❄️', 'SNOW'];
+    if (c >= 80 && c <= 82)  return ['🌦', 'RAIN SHOWERS'];
+    if (c >= 85 && c <= 86)  return ['🌨', 'SNOW SHOWERS'];
+    if (c === 95)            return ['⛈',  'THUNDERSTORM'];
+    if (c >= 96 && c <= 99)  return ['⛈',  'THUNDER + HAIL'];
+    return ['🌡', 'UNKNOWN'];
+  }
+
+  let _wxLat = null, _wxLon = null;
+
   function loadWeather() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(async pos => {
       try {
-        const { latitude: lat, longitude: lon } = pos.coords;
-        // Open-Meteo — free, no API key
+        _wxLat = pos.coords.latitude;
+        _wxLon = pos.coords.longitude;
         const wx = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+          `https://api.open-meteo.com/v1/forecast?latitude=${_wxLat}&longitude=${_wxLon}` +
           `&current=temperature_2m,weathercode&temperature_unit=celsius`
         ).then(r => r.json());
         const temp = Math.round(wx.current.temperature_2m);
-        const code = wx.current.weathercode;
-
-        // WMO weather code → icon + label
-        function wxInfo(c) {
-          if (c === 0)               return ['☀️',  'CLEAR'];
-          if (c === 1)               return ['🌤',  'MOSTLY CLEAR'];
-          if (c === 2)               return ['⛅',  'PARTLY CLOUDY'];
-          if (c === 3)               return ['☁️',  'OVERCAST'];
-          if (c >= 45 && c <= 48)    return ['🌫',  'FOG'];
-          if (c >= 51 && c <= 55)    return ['🌦',  'DRIZZLE'];
-          if (c >= 56 && c <= 57)    return ['🌧',  'FREEZING DRIZZLE'];
-          if (c >= 61 && c <= 65)    return ['🌧',  'RAIN'];
-          if (c >= 66 && c <= 67)    return ['🌧',  'FREEZING RAIN'];
-          if (c >= 71 && c <= 77)    return ['❄️',  'SNOW'];
-          if (c >= 80 && c <= 82)    return ['🌦',  'RAIN SHOWERS'];
-          if (c >= 85 && c <= 86)    return ['🌨',  'SNOW SHOWERS'];
-          if (c === 95)              return ['⛈',   'THUNDERSTORM'];
-          if (c >= 96 && c <= 99)    return ['⛈',   'THUNDER + HAIL'];
-          return ['🌡', 'UNKNOWN'];
-        }
-        const [icon, label] = wxInfo(code);
+        const [icon, label] = wxInfo(wx.current.weathercode);
         const el = id => document.getElementById(id);
         if (el('sess-wx-icon'))  el('sess-wx-icon').textContent  = icon;
         if (el('sess-wx-temp'))  el('sess-wx-temp').textContent  = `${temp}°C`;
         if (el('sess-wx-label')) el('sess-wx-label').textContent = label;
-      } catch (e) {
+      } catch(e) {
         const el = document.getElementById('sess-wx-label');
         if (el) el.textContent = 'unavailable';
       }
@@ -2493,7 +2527,105 @@
     });
   }
   loadWeather();
-  setInterval(loadWeather, 10 * 60 * 1000); // refresh every 10 min
+  setInterval(loadWeather, 10 * 60 * 1000);
+
+  // Click weather widget → open forecast modal
+  document.getElementById('sess-weather').style.cursor = 'pointer';
+  document.getElementById('sess-weather').addEventListener('click', openWeatherModal);
+
+  async function openWeatherModal() {
+    const overlay = document.getElementById('wx-forecast-modal');
+    overlay.classList.add('open');
+    const body = document.getElementById('wx-forecast-body');
+    body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:.05em">LOADING FORECAST…</div>';
+
+    if (!_wxLat) {
+      body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:11px">Location not available yet. Try again in a moment.</div>';
+      return;
+    }
+    try {
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+      const wx = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${_wxLat}&longitude=${_wxLon}` +
+        `&hourly=temperature_2m,weathercode,precipitation_probability,windspeed_10m` +
+        `&daily=temperature_2m_max,temperature_2m_min,weathercode,sunrise,sunset,precipitation_probability_max` +
+        `&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m,apparent_temperature` +
+        `&temperature_unit=celsius&windspeed_unit=kmh&timezone=auto&forecast_days=1`
+      ).then(r => r.json());
+
+      // City name via Nominatim
+      let city = '';
+      try {
+        const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${_wxLat}&lon=${_wxLon}&format=json`).then(r => r.json());
+        city = geo.address?.city || geo.address?.town || geo.address?.village || geo.address?.county || '';
+      } catch(e) {}
+
+      const cur = wx.current;
+      const daily = wx.daily;
+      const [curIcon, curLabel] = wxInfo(cur.weathercode);
+      const sunrise = daily.sunrise?.[0] ? new Date(daily.sunrise[0]).toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit',hour12:false}) : '—';
+      const sunset  = daily.sunset?.[0]  ? new Date(daily.sunset[0]).toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit',hour12:false}) : '—';
+
+      // Filter hourly to today only, starting from current hour
+      const curHour = now.getHours();
+      const hourlyTimes = wx.hourly.time || [];
+      const hourlyTemps = wx.hourly.temperature_2m || [];
+      const hourlyCodes = wx.hourly.weathercode || [];
+      const hourlyPrec  = wx.hourly.precipitation_probability || [];
+      const hourlyWind  = wx.hourly.windspeed_10m || [];
+
+      const hourSlots = hourlyTimes.reduce((acc, t, i) => {
+        const d = new Date(t);
+        if (d.toISOString().slice(0,10) === todayStr && d.getHours() >= curHour) {
+          acc.push({ hour: d.getHours(), temp: Math.round(hourlyTemps[i]), code: hourlyCodes[i], prec: hourlyPrec[i], wind: Math.round(hourlyWind[i]) });
+        }
+        return acc;
+      }, []);
+
+      const hourHTML = hourSlots.map(s => {
+        const [hIcon] = wxInfo(s.code);
+        const hLabel = s.hour === curHour ? 'NOW' : `${String(s.hour).padStart(2,'0')}:00`;
+        const isNow = s.hour === curHour;
+        return `<div class="wx-hour${isNow?' wx-hour-now':''}">
+          <div class="wx-h-time">${hLabel}</div>
+          <div class="wx-h-icon">${hIcon}</div>
+          <div class="wx-h-temp">${s.temp}°</div>
+          <div class="wx-h-prec">${s.prec}%</div>
+        </div>`;
+      }).join('');
+
+      const dateLabel = now.toLocaleDateString('en-CA',{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+
+      body.innerHTML = `
+        <div class="wx-modal-city">${city ? city.toUpperCase() : 'YOUR LOCATION'}</div>
+        <div class="wx-modal-date">${dateLabel}</div>
+        <div class="wx-modal-hero">
+          <div class="wx-hero-icon">${curIcon}</div>
+          <div>
+            <div class="wx-hero-temp">${Math.round(cur.temperature_2m)}°C</div>
+            <div class="wx-hero-feel">FEELS LIKE ${Math.round(cur.apparent_temperature)}°C</div>
+            <div class="wx-hero-label">${curLabel}</div>
+          </div>
+        </div>
+        <div class="wx-modal-stats">
+          <div class="wx-stat"><span class="wx-stat-val">${daily.temperature_2m_max?.[0]?.toFixed(0) ?? '—'}°</span><span class="wx-stat-lbl">HIGH</span></div>
+          <div class="wx-stat"><span class="wx-stat-val">${daily.temperature_2m_min?.[0]?.toFixed(0) ?? '—'}°</span><span class="wx-stat-lbl">LOW</span></div>
+          <div class="wx-stat"><span class="wx-stat-val">${cur.relative_humidity_2m}%</span><span class="wx-stat-lbl">HUMIDITY</span></div>
+          <div class="wx-stat"><span class="wx-stat-val">${cur.windspeed_10m} km/h</span><span class="wx-stat-lbl">WIND</span></div>
+          <div class="wx-stat"><span class="wx-stat-val">${daily.precipitation_probability_max?.[0] ?? '—'}%</span><span class="wx-stat-lbl">RAIN</span></div>
+          <div class="wx-stat"><span class="wx-stat-val">${sunrise}</span><span class="wx-stat-lbl">SUNRISE</span></div>
+          <div class="wx-stat"><span class="wx-stat-val">${sunset}</span><span class="wx-stat-lbl">SUNSET</span></div>
+        </div>
+        <div class="wx-modal-section-lbl">HOURLY FORECAST</div>
+        <div class="wx-hourly-row">${hourHTML}</div>
+      `;
+    } catch(e) {
+      body.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted2);font-size:11px">Failed to load forecast.</div>`;
+    }
+  }
+
+  window.closeWeatherModal = () => document.getElementById('wx-forecast-modal').classList.remove('open');
 
   // ── TABS ─────────────────────────────────────────────────
   const loaders = {};
@@ -8143,11 +8275,26 @@ window.closeAIBrain = () => {
   document.getElementById('ai-brain-overlay').style.display = 'none';
 };
 
+/* ── WEATHER FORECAST MODAL ── */
+window.closeWeatherModal = () => document.getElementById('wx-forecast-modal').classList.remove('open');
+
 window.clearBrainChat = () => {
   brainHistory = [];
   const msgs = document.getElementById('ai-brain-messages');
   if (msgs) msgs.innerHTML = '<div class="ai-msg assistant" style="opacity:.5;font-size:11px">Chat cleared. What do you need?</div>';
 };
 </script>
+
+<!-- ── WEATHER FORECAST MODAL ── -->
+<div class="modal-overlay" id="wx-forecast-modal" onclick="if(event.target===this)closeWeatherModal()">
+  <div class="modal wx-modal">
+    <div class="wx-modal-hdr">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--muted)">WEATHER FORECAST</span>
+      <button onclick="closeWeatherModal()" style="background:none;border:none;color:var(--muted2);cursor:pointer;font-size:16px;line-height:1;padding:0">✕</button>
+    </div>
+    <div id="wx-forecast-body"></div>
+  </div>
+</div>
+
 </body>
 </html>
