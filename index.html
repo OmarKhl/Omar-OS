@@ -2716,15 +2716,59 @@
     setT('hs-goals',   weeklyGoals);
     setT('hs-notes',   notes.length);
 
-    // Finance pulse — net worth from cost basis (no live price call on home)
+    // Finance pulse — use cached live prices so daily/monthly P&L reflects real values
     if (txs && txs.length) {
       const holdings  = calcHoldings(txs);
       const costTotal = holdings.reduce((s, h) => s + h.totalCost, 0);
       setT('hs-holdings', holdings.length);
+
+      // Pull best available prices: localStorage → Supabase cache → cost basis
+      const getCachedPrices = async () => {
+        try {
+          const raw = localStorage.getItem('omar_price_cache');
+          if (raw) {
+            const d = JSON.parse(raw);
+            if (Date.now() - d.ts < 12 * 60 * 60 * 1000 && Object.keys(d.prices || {}).length > 0) return d.prices;
+          }
+        } catch {}
+        // Fallback: Supabase price_cache
+        try {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/price_cache?id=eq.singleton&select=prices,updated_at`, {
+            headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}` }
+          });
+          if (r.ok) {
+            const rows = await r.json();
+            const row  = rows?.[0];
+            if (row && Object.keys(row.prices || {}).length > 0) {
+              // Warm localStorage for next visit
+              localStorage.setItem('omar_price_cache', JSON.stringify({ ts: new Date(row.updated_at).getTime(), prices: row.prices }));
+              return row.prices;
+            }
+          }
+        } catch {}
+        return {};
+      };
+
+      const prices   = await getCachedPrices();
+      const hasLive  = Object.keys(prices).length > 0;
+      const liveTotal = hasLive
+        ? holdings.reduce((s, h) => s + (prices[h.ticker]?.price ? prices[h.ticker].price * h.qty : h.totalCost), 0)
+        : costTotal;
+
       const nwEl = document.getElementById('home-nw');
-      if (nwEl) nwEl.textContent = fmtMoneyHome(costTotal);
-      renderHomeSparkline(txs, costTotal);
-      if (!finData) finData = { txs, liveTotal: costTotal, costTotal, holdings, prices: {}, watchlist: [] };
+      if (nwEl) nwEl.textContent = fmtMoneyHome(liveTotal);
+      renderHomeSparkline(txs, liveTotal, costTotal);
+      if (!finData) finData = { txs, liveTotal, costTotal, holdings, prices, watchlist: [] };
+
+      // After first render, silently fetch fresh live prices in background and update
+      if (holdings.length) {
+        fetchLivePrices(holdings.map(h => h.ticker)).then(freshPrices => {
+          if (!freshPrices || !Object.keys(freshPrices).length) return;
+          const freshLive = holdings.reduce((s, h) => s + (freshPrices[h.ticker]?.price ? freshPrices[h.ticker].price * h.qty : h.totalCost), 0);
+          if (nwEl) nwEl.textContent = fmtMoneyHome(freshLive);
+          renderHomeSparkline(txs, freshLive, costTotal);
+        }).catch(() => {});
+      }
     } else {
       setT('hs-holdings', '0');
       const nwEl = document.getElementById('home-nw');
@@ -2801,11 +2845,12 @@
   }
 
   // ── HOME SPARKLINE ──────────────────────────────────────
-  function renderHomeSparkline(txs, costTotal) {
+  function renderHomeSparkline(txs, liveTotal, costTotal) {
+    if (costTotal === undefined) costTotal = liveTotal; // backwards-compat
     const canvas = document.getElementById('home-sparkline');
     if (!canvas) return;
     if (homeSparkChart) homeSparkChart.destroy();
-    const { values } = buildChartPoints(txs, costTotal, costTotal, '1M');
+    const { values } = buildChartPoints(txs, liveTotal, costTotal, '1M');
     homeSparkChart = new Chart(canvas.getContext('2d'), {
       type: 'line',
       data: {
