@@ -2051,6 +2051,14 @@
       </div>
     </div>
 
+    <!-- DATA / CATEGORIES -->
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin:20px 0 12px">DATA</div>
+    <div class="form-group">
+      <label class="form-label">Ticker Categories <span style="color:var(--muted);font-weight:400">(from Google Sheet Setup tab)</span></label>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:8px" id="cat-sync-status">Maps your holdings to Tech, Energy, Crypto, etc. for the allocation bar.</div>
+      <button class="btn-cancel" id="cat-sync-btn" onclick="syncCategoriesFromSheet()" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em">↻ SYNC CATEGORIES FROM SHEET</button>
+    </div>
+
     <div class="modal-actions" style="justify-content:space-between">
       <button class="btn-cancel" onclick="resetThemeToDefault()" style="color:var(--muted)">↺ Set to Default</button>
       <div style="display:flex;gap:8px">
@@ -3813,10 +3821,15 @@
     // Apply saved currency preference to the button group
     document.querySelectorAll('.fin-cur-btn').forEach(b => b.classList.toggle('active', b.dataset.cur === activeCurrency));
     const safe = async (fn) => { try { return await fn(); } catch(e) { return []; } };
-    const [txs, watchlist] = await Promise.all([
-      safe(() => sb('transactions', '?order=trade_date.asc')),
-      safe(() => sb('watchlist',    '?order=ticker.asc')),
+    const [txs, watchlist, catRows] = await Promise.all([
+      safe(() => sb('transactions',      '?order=trade_date.asc')),
+      safe(() => sb('watchlist',         '?order=ticker.asc')),
+      safe(() => sb('ticker_categories', '?select=ticker,category')),
     ]);
+
+    // Build ticker → category lookup (e.g. { 'NASDAQ:NVDA': 'Tech', ... })
+    const categoryMap = {};
+    catRows.forEach(r => { if (r.ticker) categoryMap[r.ticker] = r.category || null; });
 
     const holdings = txs.length ? calcHoldings(txs) : [];
 
@@ -3893,7 +3906,7 @@
 
     // First pass: show data immediately using cached prices
     const { liveTotal: lt0, costTotal: ct0 } = computeTotals(holdings, cachedPrices);
-    finData = { txs, watchlist, holdings, prices: cachedPrices, liveTotal: lt0, costTotal: ct0 };
+    finData = { txs, watchlist, holdings, prices: cachedPrices, liveTotal: lt0, costTotal: ct0, categoryMap };
     if (Object.keys(cachedPrices).length > 0) {
       const st = document.getElementById('prices-status');
       const srcLabel = cacheSource === 'cloud' ? '☁ cloud cache' : 'local cache';
@@ -3909,7 +3922,7 @@
         const st = document.getElementById('prices-status');
         if (st && !st.textContent.includes('⚠')) st.textContent += ' · some using cost basis';
       }
-      finData = { txs, watchlist, holdings, prices, liveTotal, costTotal };
+      finData = { txs, watchlist, holdings, prices, liveTotal, costTotal, categoryMap };
       renderFinance();
 
       // Persist fresh prices to Supabase + localStorage so all devices benefit
@@ -3937,7 +3950,7 @@
 
   function renderFinance() {
     if (!finData) return;
-    const { txs, watchlist, holdings, prices, liveTotal, costTotal } = finData;
+    const { txs, watchlist, holdings, prices, liveTotal, costTotal, categoryMap = {} } = finData;
 
     const totalGainPct  = costTotal > 0 ? ((liveTotal - costTotal) / costTotal * 100) : 0;
     const isUp          = totalGainPct >= 0;
@@ -3996,10 +4009,11 @@
         const gc  = gainPct != null ? (gainPct >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
         const dc  = changePct >= 0 ? 'var(--green)' : 'var(--red)';
         const qtyFmt = h.qty < 1 ? h.qty.toFixed(6) : h.qty % 1 === 0 ? h.qty.toFixed(0) : h.qty.toFixed(4);
+        const hCategory = categoryMap[h.ticker] || (h.isCrypto ? 'Crypto' : 'Equity / ETF');
         return `<tr>
           <td>
-            <div class="ticker-sym">${h.ticker}</div>
-            <div class="ticker-name">${h.isCrypto ? 'Crypto' : 'Equity / ETF'}</div>
+            <div class="ticker-sym">${h.ticker.includes(':') ? h.ticker.split(':')[1] : h.ticker}</div>
+            <div class="ticker-name">${hCategory}</div>
           </td>
           <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${qtyFmt}</td>
           <td>${fmtMoney(h.avgCost)}</td>
@@ -4024,23 +4038,40 @@
       }).join('');
     }
 
-    // Allocation bar
+    // Allocation bar — grouped by investment category
+    const CAT_COLORS = {
+      'Tech':                 '#4a7cbb',
+      'Aggressive Tech':      '#a855f7',
+      'Energy':               '#f59e0b',
+      'Consumer':             '#10b981',
+      'REIT':                 '#f97316',
+      'Crypto':               '#22c55e',
+      'International equity': '#06b6d4',
+      'Domestic equity':      '#8b5cf6',
+      'Multi-asset':          '#ec4899',
+      'Cash':                 '#6b7280',
+    };
     const byType = {};
     holdings.forEach(h => {
-      const type = h.isCrypto ? 'Crypto' : 'Equity';
-      byType[type] = (byType[type] || 0) + (prices[h.ticker]?.price || h.avgCost) * h.qty;
+      const cat = categoryMap[h.ticker] || (h.isCrypto ? 'Crypto' : 'Equity / ETF');
+      byType[cat] = (byType[cat] || 0) + (prices[h.ticker]?.price || h.avgCost) * h.qty;
     });
-    const colors = { Equity: '#4a7cbb', Crypto: '#22c55e' };
+    // Sort by value descending for a clean bar
+    const sortedTypes = Object.entries(byType).sort((a, b) => b[1] - a[1]);
     const bar = document.getElementById('alloc-bar');
     const leg = document.getElementById('alloc-legend');
     bar.innerHTML = ''; leg.innerHTML = '';
-    Object.entries(byType).forEach(([type, val]) => {
-      const pct = liveTotal > 0 ? (val / liveTotal * 100).toFixed(0) : 0;
+    sortedTypes.forEach(([type, val]) => {
+      const pct = liveTotal > 0 ? (val / liveTotal * 100) : 0;
+      const pctDisplay = pct.toFixed(0);
+      if (pct < 0.5) return; // skip negligible slices
+      const col = CAT_COLORS[type] || '#888';
       const seg = document.createElement('div');
       seg.className = 'alloc-seg';
-      seg.style.cssText = `flex:${pct};background:${colors[type]||'#888'}`;
+      seg.style.cssText = `flex:${pct};background:${col}`;
+      seg.title = `${type}: ${pct.toFixed(1)}%`;
       bar.appendChild(seg);
-      leg.innerHTML += `<span class="alloc-item"><span class="alloc-dot" style="background:${colors[type]}"></span>${type} ${pct}%</span>`;
+      leg.innerHTML += `<span class="alloc-item"><span class="alloc-dot" style="background:${col}"></span>${type} ${pctDisplay}%</span>`;
     });
 
     // Performance chart
@@ -5927,6 +5958,39 @@ Return raw JSON only.`;
       await upsertProfile({ claude_api_key: newKey, claude_api_key_history: history });
     } catch(e) { console.warn('saveApiKeyToDb', e); }
   }
+
+  // ── SYNC CATEGORIES FROM SUPABASE ──────────────────────────────────────
+  // Categories are stored in the `ticker_categories` table (seeded from your
+  // Google Sheet). To add new tickers, ask Claude to re-read the Setup sheet
+  // and upsert the new rows. This button just reloads from Supabase and
+  // refreshes the Finance tab so changes appear without a full page reload.
+  window.syncCategoriesFromSheet = async function() {
+    const btn    = document.getElementById('cat-sync-btn');
+    const status = document.getElementById('cat-sync-status');
+    if (btn) { btn.disabled = true; btn.textContent = '⋯ Loading…'; }
+    if (status) status.textContent = 'Fetching categories…';
+
+    try {
+      const rows = await fetch(
+        `${SUPABASE_URL}/rest/v1/ticker_categories?select=ticker,category,currency`,
+        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}` } }
+      ).then(r => r.json());
+
+      const count = Array.isArray(rows) ? rows.length : 0;
+      if (status) status.textContent = `✓ ${count} categories loaded · ${new Date().toLocaleTimeString()} — to add new tickers ask Claude to re-sync from your Sheet`;
+
+      // Rebuild map and refresh Finance tab if loaded
+      if (finData) {
+        const newMap = {};
+        rows.forEach(r => { if (r.ticker) newMap[r.ticker] = r.category || null; });
+        finData.categoryMap = newMap;
+        renderFinance();
+      }
+    } catch(e) {
+      if (status) status.textContent = `Error: ${e.message}`;
+    }
+    if (btn) { btn.disabled = false; btn.textContent = '↻ SYNC CATEGORIES FROM SHEET'; }
+  };
 
   window.openSettings = async () => {
     // Set key from localStorage immediately (fast), then overwrite from DB
