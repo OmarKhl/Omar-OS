@@ -617,6 +617,10 @@
     .sess-greeting { font-size: 22px; font-weight: 300; line-height: 1.2; letter-spacing: -.01em; }
     .sess-greeting em { font-style: italic; color: var(--gold); }
     .sess-date { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: .07em; margin: 4px 0 14px; }
+    .sess-weather { margin-top: 8px; text-align: right; }
+    .sess-wx-icon { font-size: 22px; display: block; line-height: 1; margin-bottom: 2px; }
+    .sess-wx-temp { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 300; color: var(--text); letter-spacing: -.01em; }
+    .sess-wx-label { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--muted2); letter-spacing: .07em; text-transform: uppercase; margin-top: 2px; }
     .home-qi-wrap { display: flex; gap: 5px; margin-top: 12px; }
     .home-qi {
       flex: 1; background: var(--bg3); border: 1px solid var(--border);
@@ -882,6 +886,96 @@
     }
     .form-textarea:focus { border-color: var(--gold-dim); }
     .form-splits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    /* ── AI BRAIN CHAT PANEL ── */
+    .ai-brain-panel {
+      position: fixed; right: 0; top: 0; bottom: 0; width: 420px;
+      background: var(--bg2); border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; z-index: 1200;
+      transform: translateX(100%); transition: transform .28s cubic-bezier(.4,0,.2,1);
+      box-shadow: -8px 0 32px rgba(0,0,0,.4);
+    }
+    .ai-brain-panel.open { transform: translateX(0); }
+    .ai-brain-header {
+      padding: 13px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .ai-brain-title {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: .12em; color: var(--gold-dim);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .ai-brain-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+      box-shadow: 0 0 6px var(--green); animation: brain-pulse 2s ease-in-out infinite;
+    }
+    @keyframes brain-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .ai-brain-messages {
+      flex: 1; overflow-y: auto; padding: 16px; display: flex;
+      flex-direction: column; gap: 8px;
+    }
+    .ai-brain-messages::-webkit-scrollbar { width: 4px; }
+    .ai-brain-messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    .ai-msg { max-width: 88%; font-size: 12px; line-height: 1.55; }
+    .ai-msg.user {
+      align-self: flex-end; background: var(--gold); color: #000;
+      padding: 8px 12px; border-radius: 12px 12px 2px 12px; font-weight: 500;
+    }
+    .ai-msg.assistant {
+      align-self: flex-start; background: var(--bg3); color: var(--text);
+      padding: 9px 13px; border-radius: 2px 12px 12px 12px;
+      border: 1px solid var(--border); white-space: pre-wrap;
+    }
+    .ai-msg.tool-hint {
+      align-self: flex-start; color: var(--muted); font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; letter-spacing: .06em; padding: 2px 0;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .ai-msg.tool-hint::before { content: ''; width: 16px; height: 1px; background: var(--border2); }
+    .ai-msg.error {
+      align-self: flex-start; background: rgba(239,68,68,.08); color: var(--red);
+      padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(239,68,68,.2);
+      font-size: 11px;
+    }
+    .ai-typing {
+      align-self: flex-start; display: flex; gap: 5px; align-items: center;
+      padding: 10px 14px; background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 2px 12px 12px 12px;
+    }
+    .ai-typing span {
+      width: 5px; height: 5px; border-radius: 50%; background: var(--muted);
+      animation: ai-dot .9s ease-in-out infinite;
+    }
+    .ai-typing span:nth-child(2) { animation-delay: .18s; }
+    .ai-typing span:nth-child(3) { animation-delay: .36s; }
+    @keyframes ai-dot { 0%,80%,100%{opacity:.25;transform:scale(.8)} 40%{opacity:1;transform:scale(1.1)} }
+    .ai-brain-input-row {
+      padding: 12px 14px; border-top: 1px solid var(--border);
+      display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+    }
+    .ai-brain-input {
+      flex: 1; background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text); padding: 9px 12px; border-radius: 6px; outline: none;
+      font-family: inherit; font-size: 12px; resize: none;
+      max-height: 120px; line-height: 1.4; transition: border-color .15s;
+    }
+    .ai-brain-input:focus { border-color: var(--gold-dim); }
+    .ai-brain-send {
+      background: var(--gold); color: #000; border: none;
+      padding: 9px 14px; border-radius: 6px; cursor: pointer;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+      flex-shrink: 0; transition: opacity .15s;
+    }
+    .ai-brain-send:disabled { opacity: .4; cursor: default; }
+    .ai-brain-clear {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-family: 'JetBrains Mono', monospace; font-size: 9px;
+      letter-spacing: .06em; padding: 4px 6px; transition: color .15s;
+    }
+    .ai-brain-clear:hover { color: var(--text); }
+    .ai-brain-overlay {
+      position: fixed; inset: 0; z-index: 1199; display: none;
+    }
   </style>
 </head>
 <body>
@@ -927,6 +1021,7 @@
       <div id="nav-date" style="font-size:9px;letter-spacing:.05em"></div>
     </div>
     <div class="nav-avatar" id="nav-avatar">OB</div>
+    <button class="nav-settings-btn" onclick="openAIBrain()" title="AI Brain" style="margin-right:2px">◈</button>
     <button class="nav-settings-btn" onclick="openSettings()" title="Settings">⚙</button>
     <button class="btn-signout" onclick="signOut()">Sign out</button>
   </div>
@@ -1041,11 +1136,16 @@
           <div class="sess-time-corner">
             <div class="sess-time-big" id="session-clock">--:--</div>
             <div class="sess-tz">LOCAL</div>
+            <div class="sess-weather" id="sess-weather">
+              <span class="sess-wx-icon" id="sess-wx-icon">⋯</span>
+              <span class="sess-wx-temp" id="sess-wx-temp">—</span>
+              <div class="sess-wx-label" id="sess-wx-label">loading…</div>
+            </div>
           </div>
         </div>
         <div class="os-sub-lbl" style="margin-bottom:5px">QUICK INPUT</div>
         <div class="home-qi-wrap">
-          <input class="home-qi" id="home-qi" placeholder="Add task, goal, or note — I'll route it…"
+          <input class="home-qi" id="home-qi" placeholder="Ask me anything — add task, habit, goal, journal, rental…"
             onkeydown="if(event.key==='Enter')processQuickInput()" />
           <button class="home-qi-btn" onclick="processQuickInput()">→</button>
         </div>
@@ -1773,8 +1873,16 @@
     <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:10px">API</div>
     <div class="form-group">
       <label class="form-label">Claude API Key <span style="color:var(--muted);font-weight:400">(enables AI quick input)</span></label>
-      <input class="form-input" id="settings-api-key" type="password" placeholder="sk-ant-…" />
-      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:5px">Stored locally in your browser only.</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="form-input" id="settings-api-key" type="password" placeholder="sk-ant-…" style="flex:1" />
+        <button class="btn-cancel" id="settings-key-toggle" onclick="toggleApiKeyVisibility()" title="Show/hide key" style="padding:5px 10px;flex-shrink:0">👁</button>
+      </div>
+      <div id="settings-key-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:5px">Saved to your account.</div>
+    </div>
+    <!-- Previous keys -->
+    <div id="api-key-history-wrap" style="display:none;margin-top:8px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:6px">PREVIOUS KEYS — click to restore</div>
+      <div id="api-key-history-list" style="display:flex;flex-direction:column;gap:4px"></div>
     </div>
 
     <div style="border-top:1px solid var(--border);margin:18px 0"></div>
@@ -1857,7 +1965,7 @@
       <button class="btn-cancel" onclick="resetThemeToDefault()" style="color:var(--muted)">↺ Set to Default</button>
       <div style="display:flex;gap:8px">
         <button class="btn-cancel" onclick="cancelThemeChanges()">Cancel</button>
-        <button class="btn-save"   onclick="saveSettings()">Save</button>
+        <button class="btn-save" id="settings-save-btn" onclick="(async()=>{const b=document.getElementById('settings-save-btn');b.textContent='Saving…';b.disabled=true;await saveSettings();b.textContent='Save';b.disabled=false;})()">Save</button>
       </div>
     </div>
   </div>
@@ -2337,6 +2445,55 @@
     }
   }
   setInterval(updateClock, 1000);
+
+  // ── WEATHER ──────────────────────────────────────────────
+  function loadWeather() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(async pos => {
+      try {
+        const { latitude: lat, longitude: lon } = pos.coords;
+        // Open-Meteo — free, no API key
+        const wx = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+          `&current=temperature_2m,weathercode&temperature_unit=celsius`
+        ).then(r => r.json());
+        const temp = Math.round(wx.current.temperature_2m);
+        const code = wx.current.weathercode;
+
+        // WMO weather code → icon + label
+        function wxInfo(c) {
+          if (c === 0)               return ['☀️',  'CLEAR'];
+          if (c === 1)               return ['🌤',  'MOSTLY CLEAR'];
+          if (c === 2)               return ['⛅',  'PARTLY CLOUDY'];
+          if (c === 3)               return ['☁️',  'OVERCAST'];
+          if (c >= 45 && c <= 48)    return ['🌫',  'FOG'];
+          if (c >= 51 && c <= 55)    return ['🌦',  'DRIZZLE'];
+          if (c >= 56 && c <= 57)    return ['🌧',  'FREEZING DRIZZLE'];
+          if (c >= 61 && c <= 65)    return ['🌧',  'RAIN'];
+          if (c >= 66 && c <= 67)    return ['🌧',  'FREEZING RAIN'];
+          if (c >= 71 && c <= 77)    return ['❄️',  'SNOW'];
+          if (c >= 80 && c <= 82)    return ['🌦',  'RAIN SHOWERS'];
+          if (c >= 85 && c <= 86)    return ['🌨',  'SNOW SHOWERS'];
+          if (c === 95)              return ['⛈',   'THUNDERSTORM'];
+          if (c >= 96 && c <= 99)    return ['⛈',   'THUNDER + HAIL'];
+          return ['🌡', 'UNKNOWN'];
+        }
+        const [icon, label] = wxInfo(code);
+        const el = id => document.getElementById(id);
+        if (el('sess-wx-icon'))  el('sess-wx-icon').textContent  = icon;
+        if (el('sess-wx-temp'))  el('sess-wx-temp').textContent  = `${temp}°C`;
+        if (el('sess-wx-label')) el('sess-wx-label').textContent = label;
+      } catch (e) {
+        const el = document.getElementById('sess-wx-label');
+        if (el) el.textContent = 'unavailable';
+      }
+    }, () => {
+      const el = document.getElementById('sess-wx-label');
+      if (el) el.textContent = 'no location';
+    });
+  }
+  loadWeather();
+  setInterval(loadWeather, 10 * 60 * 1000); // refresh every 10 min
 
   // ── TABS ─────────────────────────────────────────────────
   const loaders = {};
@@ -4447,10 +4604,84 @@
   };
 
   // ── AI QUICK INPUT AGENT ─────────────────────────────────
-  async function callAIAgent(text) {
+  let qiPending = null; // { action, params, awaiting, question } for multi-turn conversations
+
+  // Parse natural language dates → YYYY-MM-DD or null
+  function parseNLDate(str) {
+    if (!str) return null;
+    const s = str.toLowerCase().trim();
+    if (/^no.?(date|due)|^skip|^none|^n\/a$/i.test(s)) return null;
+    const today = new Date(); today.setHours(0,0,0,0);
+    if (s === 'today') return today.toISOString().slice(0,10);
+    if (s === 'tomorrow') { const d = new Date(today); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); }
+    if (/^next week$/i.test(s)) { const d = new Date(today); d.setDate(d.getDate()+7); return d.toISOString().slice(0,10); }
+    if (/^next month$/i.test(s)) { const d = new Date(today); d.setMonth(d.getMonth()+1); return d.toISOString().slice(0,10); }
+    const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+    const dayIdx = days.indexOf(s.replace(/^(next\s+)/,''));
+    if (dayIdx !== -1) {
+      const d = new Date(today); const cur = d.getDay();
+      let diff = dayIdx - cur; if (diff <= 0) diff += 7;
+      d.setDate(d.getDate() + diff); return d.toISOString().slice(0,10);
+    }
+    // Try direct parse (e.g. "June 30", "06/30", "2026-06-30")
+    const parsed = new Date(str + (str.match(/^\d{4}-\d{2}-\d{2}$/) ? 'T12:00:00' : ''));
+    if (!isNaN(parsed)) return parsed.toISOString().slice(0,10);
+    return null;
+  }
+
+  const QI_AI_SYSTEM = `You are Omar's personal OS AI agent. Parse the user's command and return ONLY valid JSON with no markdown, no explanation, no code fences.
+
+TODAY is ${new Date().toISOString().slice(0,10)}.
+
+ACTIONS — return exactly one of these shapes:
+
+{ "action": "add_task", "task_text": string, "category": "Personal"|"Work"|"Benzo"|null, "priority": "high"|"medium"|"low", "due_date": "YYYY-MM-DD"|null, "is_starred": boolean }
+  — is_starred=true means "key task for today" / "important task today"
+  — Set due_date if mentioned (today/tomorrow/Monday/June 30/etc). Leave null if not mentioned.
+  — Set category null if not mentioned (will be asked).
+
+{ "action": "add_habit", "title": string, "sub_title": string }
+  — sub_title is the subtitle/description line (optional, can be empty)
+
+{ "action": "add_sub_habit", "parent_name": string, "sub_title": string }
+  — Use when user says "add X under [habit]" or "add sub-habit to [habit]"
+  — parent_name = the parent habit name as mentioned
+
+{ "action": "add_goal", "title": string, "category": "weekly"|"monthly"|null }
+  — category null if not mentioned
+
+{ "action": "journal_entry", "content": string }
+  — When user says "journal", "log my day", "write in journal", etc.
+  — content = exactly what they want written
+
+{ "action": "query_finance", "question": string }
+  — When user asks about money, portfolio, net worth, stocks, P&L, holdings, income, expenses
+
+{ "action": "add_rental", "customer_name": string|null, "vehicle_name": string|null, "start_date": string|null, "end_date": string|null }
+  — When user wants to create a new rental booking
+  — Extract any details mentioned; null for anything not mentioned
+
+{ "action": "respond", "message": string }
+  — For questions, greetings, or anything that doesn't fit above
+
+ROUTING PRIORITY (apply in order):
+1. "habit" + "sub"|"under"|"inside" → add_sub_habit
+2. "habit" → add_habit
+3. "goal"|"target"|"achieve"|"this week"|"this month" → add_goal
+4. "journal"|"log my day"|"write"|"diary" → journal_entry
+5. Finance/money questions → query_finance
+6. "rental"|"booking"|"rent out"|"client rental" → add_rental
+7. "key task"|"important today"|"star" + task → add_task with is_starred:true
+8. Task action verbs (call/email/buy/fix/schedule/remind/review/finish/check/send/meet/draft/build/prepare) → add_task
+9. Unclear → respond
+
+Return raw JSON only.`;
+
+  async function callAIAgent(text, context) {
     const apiKey = localStorage.getItem('omar_claude_key');
     if (!apiKey) return null;
     try {
+      const messages = [{ role: 'user', content: context ? `${context}\n\nUser: ${text}` : text }];
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -4459,67 +4690,210 @@
           'content-type': 'application/json',
           'anthropic-dangerous-direct-browser-access': 'true'
         },
-        body: JSON.stringify({
-          model: 'claude-3-5-haiku-20241022',
-          max_tokens: 300,
-          system: `You are Omar's OS AI agent. Parse the user command and return ONLY valid JSON — no markdown, no explanation, no code fences.
-
-Actions available:
-{ action:"add_task",  task_text:string, category:"Personal"|"Work"|"Benzo", priority:"high"|"medium"|"low" }
-{ action:"add_goal",  title:string, category:"weekly"|"monthly" }
-{ action:"add_habit", title:string, sub:string }
-{ action:"add_note",  transcript:string }
-{ action:"respond",   message:string }
-
-Routing rules (apply in order):
-1. Any mention of "habit" → add_habit (title = the habit name without the word "habit" or "add")
-2. "goal", "target", "achieve", "this week", "this month", "monthly" → add_goal
-3. "note:", "voice note", "log this", "remember this" → add_note
-4. Action verbs (call, email, send, buy, book, schedule, remind, fix, review, follow up, finish, complete, check) → add_task
-5. Unclear / question → respond
-
-Return raw JSON only.`,
-          messages: [{ role: 'user', content: text }]
-        })
+        body: JSON.stringify({ model: 'claude-3-5-haiku-20241022', max_tokens: 400, system: QI_AI_SYSTEM, messages })
       });
       const data = await res.json();
-      const raw = data.content?.[0]?.text || '';
-      // Strip markdown code fences if model wraps in them
-      const clean = raw.replace(/^```(?:json)?\n?/,'').replace(/\n?```$/,'').trim();
-      return JSON.parse(clean);
+      const raw = (data.content?.[0]?.text || '').replace(/^```(?:json)?\n?/,'').replace(/\n?```$/,'').trim();
+      return JSON.parse(raw);
     } catch(e) { return null; }
   }
 
   function smartRoute(text) {
     const t = text.toLowerCase().trim();
-    // Habit — any mention of "habit" or "daily" prefix patterns
-    if (/\bhabit\b|^add\s+\w[\w\s]+(daily|every day)$/i.test(t)) {
-      // Extract the habit name: strip "add (a|my|new)? habit" or trailing "habit"
+    if (/\bsub.?habit\b|\bhabit\b.*\bunder\b|\bunder\b.*\bhabit\b/i.test(t))
+      return { action: 'add_sub_habit', parent_name: '', sub_title: text };
+    // Habit check — must come before task verbs (avoids "call it X" triggering task)
+    // Matches "habit", "habits", "a habit", "new habit", "add habit called X", "track habit X"
+    if (/\bhabi[t]s?\b/i.test(t)) {
+      // Extract the habit name — strip leading noise and the word "habit/habits"
       let title = text
-        .replace(/^(add\s+)?(a\s+|my\s+|new\s+)?habit[:\s]*/i, '')
-        .replace(/\s+habit$/i, '')
-        .replace(/\s+(every\s+day|daily)$/i, '')
+        .replace(/^(add\s+|create\s+|new\s+|track\s+|make\s+)?(a\s+|an\s+|my\s+|new\s+)?habi[t]s?[:\s]*/i, '')
+        .replace(/\s+habi[t]s?$/i, '')
+        .replace(/\s+(and\s+)?(call|name)\s+(it\s+)?/i, '') // strip "call it", "name it"
         .trim();
-      if (!title || title.toLowerCase() === text.toLowerCase()) {
-        // Fallback: strip leading action words
-        title = text.replace(/^(add\s+|create\s+|new\s+|track\s+)/i, '').replace(/\bhabit\b/gi, '').trim() || text;
-      }
-      return { action: 'add_habit', title: title || text, sub: '' };
+      if (!title) title = text.replace(/\bhabi[t]s?\b/gi, '').replace(/^(add|create|new|track|make|a|an|my)\s+/i, '').trim() || text;
+      return { action: 'add_habit', title, sub_title: '' };
     }
-    // Goal patterns
     if (/^goal[:\s]|\bgoal\b|\b(this (week|month))\b|\bachieve\b|\btarget\b|\bmonthly\b|\bweekly\b/i.test(t)) {
       const isMonthly = /month/i.test(t);
-      const title = text.replace(/^goal[:\s]*/i,'').replace(/\b(weekly|monthly|this week|this month)\b/gi,'').trim() || text;
-      return { action: 'add_goal', title, category: isMonthly ? 'monthly' : 'weekly' };
+      return { action: 'add_goal', title: text.replace(/^goal[:\s]*/i,'').trim() || text, category: isMonthly ? 'monthly' : 'weekly' };
     }
-    // Note
-    if (/^note[:\s]|voice note|log this|remember this/i.test(t))
-      return { action: 'add_note', transcript: text.replace(/^(note[:\s]|voice note[:\s])/i,'').trim() };
-    // Task action verbs
-    if (/^task[:\s]|\b(remind|buy|call|send|email|fix|finish|schedule|book|check|complete|follow.?up|review|prepare|meet|draft|write|update|build)\b/i.test(t))
-      return { action: 'add_task', task_text: text.replace(/^task[:\s]*/i,'').trim(), category: 'Personal', priority: 'medium' };
-    // Default — short inputs that don't match = task; sentence starters that are statements = task
-    return { action: 'add_task', task_text: text, category: 'Personal', priority: 'medium' };
+    if (/^journal|log my day|diary/i.test(t))
+      return { action: 'journal_entry', content: text.replace(/^journal[:\s]*/i,'').trim() };
+    if (/how much|net worth|portfolio|stocks|holdings|finance|money|income|expense|p&l|profit|loss/i.test(t))
+      return { action: 'query_finance', question: text };
+    if (/rental|booking|rent out|new client/i.test(t))
+      return { action: 'add_rental', customer_name: null, vehicle_name: null, start_date: null, end_date: null };
+    // "call it/name it" is habit naming syntax — only treat "call" as a task verb when followed by a person/number pattern
+    if (/^task[:\s]|\b(remind|buy|send|email|fix|finish|schedule|book|check|complete|follow.?up|review|prepare|meet|draft|write|update|build)\b/i.test(t) || /\bcall\b(?!\s+(it|this|that|the|him|her)\b)/i.test(t))
+      return { action: 'add_task', task_text: text.replace(/^task[:\s]*/i,'').trim(), category: 'Personal', priority: 'medium', due_date: null, is_starred: false };
+    return { action: 'add_task', task_text: text, category: 'Personal', priority: 'medium', due_date: null, is_starred: false };
+  }
+
+  // Show a clarification prompt and store pending state
+  function qiAsk(question, action, params, awaiting) {
+    qiPending = { action, params, awaiting };
+    const inp  = document.getElementById('home-qi');
+    const hint = document.getElementById('home-qi-hint');
+    if (inp) { inp.placeholder = question; inp.value = ''; inp.disabled = false; inp.focus(); }
+    if (hint) hint.innerHTML = `<span style="color:var(--gold-dim)">◈ ${question}</span>`;
+  }
+
+  function qiClear() {
+    qiPending = null;
+    const inp = document.getElementById('home-qi');
+    if (inp) inp.placeholder = 'Ask me anything — add task, habit, goal, journal, rental…';
+  }
+
+  // Execute a fully-resolved action
+  async function qiExecute(result) {
+    let msg = '';
+    switch (result.action) {
+
+      case 'add_habit': {
+        const newId = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+        const newHabit = { id: newId, title: result.title, sub: result.sub_title || '', sub_habits: [], sort_order: habitsData.length };
+        habitsData.push(newHabit);
+        renderHabits();
+        await fetch(`${SUPABASE_URL}/rest/v1/habits`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ id: newId, title: result.title, sub: result.sub_title || '', sub_habits: [], sort_order: habitsData.length - 1 }),
+        }).catch(()=>{});
+        msg = `✓ Habit added — "${result.title}"`;
+        break;
+      }
+
+      case 'add_sub_habit': {
+        const habits = habitsData;
+        const parent = habits.find(h => h.title.toLowerCase().includes((result.parent_name||'').toLowerCase()) || (result.parent_name||'').toLowerCase().includes(h.title.toLowerCase()));
+        if (!parent) {
+          // List available habits and ask again
+          const names = habits.map(h => h.title).join(', ') || '(no habits yet)';
+          qiAsk(`Which habit? Available: ${names}`, 'add_sub_habit', { sub_title: result.sub_title }, 'parent_name');
+          return '…';
+        }
+        const subs = parent.sub_habits || [];
+        const newSub = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), title: result.sub_title };
+        subs.push(newSub);
+        parent.sub_habits = subs;
+        renderHabits();
+        await fetch(`${SUPABASE_URL}/rest/v1/habits?id=eq.${parent.id}`, {
+          method: 'PATCH',
+          headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ sub_habits: subs }),
+        }).catch(()=>{});
+        msg = `✓ Sub-habit "${result.sub_title}" added under "${parent.title}"`;
+        break;
+      }
+
+      case 'add_goal': {
+        await sbPost('goals', { title: result.title, category: result.category || 'weekly', completed: false });
+        loaders['home'] = false; await loadHome(); loaders['home'] = true;
+        msg = `✓ ${result.category === 'monthly' ? 'Monthly' : 'Weekly'} goal added — "${result.title}"`;
+        break;
+      }
+
+      case 'add_task': {
+        const taskObj = {
+          task_text: result.task_text,
+          category:  result.category  || 'Personal',
+          priority:  result.priority  || 'medium',
+          due_date:  result.due_date  || null,
+          is_starred: result.is_starred || false,
+          source: 'ai',
+        };
+        await sbPost('tasks', taskObj);
+        loaders['home'] = false; await loadHome(); loaders['home'] = true;
+        const parts = [];
+        if (result.is_starred) parts.push('⭐ starred');
+        parts.push(taskObj.priority + ' priority');
+        if (taskObj.due_date) parts.push('due ' + taskObj.due_date.slice(5));
+        msg = `✓ Task added — ${parts.join(' · ')}`;
+        break;
+      }
+
+      case 'journal_entry': {
+        const today = new Date().toISOString().slice(0,10);
+        // Append to existing journal entry if one exists
+        let existing = '';
+        try { const rows = await sb('journal_entries', `?entry_date=eq.${today}`); existing = rows?.[0]?.content || ''; } catch(e) {}
+        const newContent = existing ? existing + '\n\n' + result.content : result.content;
+        await fetch(`${SUPABASE_URL}/rest/v1/journal_entries?on_conflict=entry_date`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify({ entry_date: today, content: newContent, updated_at: new Date().toISOString() }),
+        });
+        // Also update the journal textarea if currently on that page
+        const ta = document.getElementById('journal-textarea');
+        if (ta && document.getElementById('page-journal')?.classList.contains('active')) ta.value = newContent;
+        msg = `✓ Journaled for today`;
+        break;
+      }
+
+      case 'query_finance': {
+        // Pull from cached finData or load fresh
+        let fd = finData;
+        if (!fd) {
+          try {
+            const txs = await sb('transactions', '?order=trade_date.asc');
+            if (txs && txs.length) {
+              const holdings = {}; let costTotal = 0;
+              txs.forEach(t => {
+                if (!holdings[t.ticker]) holdings[t.ticker] = { shares:0, cost:0 };
+                const qty = t.transaction_type === 'sell' ? -t.shares : t.shares;
+                holdings[t.ticker].shares += qty;
+                holdings[t.ticker].cost   += (t.cost_per_share || 0) * qty;
+                costTotal += (t.cost_per_share || 0) * qty;
+              });
+              fd = { txs, costTotal, holdings };
+            }
+          } catch(e) {}
+        }
+        if (!fd) { msg = '→ Finance data not available yet — open Finance tab first'; break; }
+        const holdList = Object.entries(fd.holdings || {})
+          .filter(([,v]) => v.shares > 0)
+          .map(([ticker,v]) => `${ticker}: ${v.shares.toFixed(2)} shares @ cost $${(v.cost/Math.max(v.shares,0.001)).toFixed(2)}`)
+          .join(', ') || 'No positions';
+        const summary = `Portfolio cost basis: $${(fd.costTotal||0).toFixed(2)}. Holdings: ${holdList}.`;
+        // Ask Claude to answer the specific question given this data
+        const hasKey = !!localStorage.getItem('omar_claude_key');
+        if (hasKey) {
+          const finAnswer = await callAIAgent(result.question, `Finance data: ${summary}`);
+          msg = '→ ' + (finAnswer?.message || summary);
+        } else {
+          msg = '→ ' + summary;
+        }
+        break;
+      }
+
+      case 'add_rental': {
+        // Build the rental record — vehicles list comes from cached fleet data
+        let fleetRows = [];
+        try { fleetRows = await sb('fleet', '?select=id,vehicle_name,sheet_tab_name'); } catch(e) {}
+        const vName = (result.vehicle_name || '').toLowerCase();
+        const vehicle = fleetRows.find(v => v.vehicle_name.toLowerCase().includes(vName) || vName.includes(v.vehicle_name.toLowerCase().split(' ')[0].toLowerCase()));
+        const rentalObj = {
+          vehicle_id:    vehicle?.id || null,
+          customer_name: result.customer_name || null,
+          start_date:    result.start_date || null,
+          end_date:      result.end_date   || null,
+          status:        'upcoming',
+        };
+        await sbPost('rentals', rentalObj);
+        loaders['home'] = false; await loadHome(); loaders['home'] = true;
+        msg = `✓ Rental created — ${result.customer_name || 'client'} in ${vehicle?.vehicle_name || result.vehicle_name || 'vehicle'}`;
+        break;
+      }
+
+      case 'respond':
+        msg = '→ ' + (result.message || '');
+        break;
+
+      default:
+        msg = '⚠ Not sure what to do — try being more specific';
+    }
+    return msg;
   }
 
   window.processQuickInput = async () => {
@@ -4528,53 +4902,115 @@ Return raw JSON only.`,
     const text = inp.value.trim();
     if (!text) return;
 
-    // If no API key, show a nudge but still use smartRoute
     const hasKey = !!localStorage.getItem('omar_claude_key');
-
     inp.disabled = true;
     if (hint) hint.textContent = hasKey ? '⟳ Thinking…' : '⟳ Routing…';
 
-    let result = await callAIAgent(text);
-    if (!result) result = smartRoute(text);
-
     let msg = '';
     try {
-      switch (result.action) {
-        case 'add_habit':
-          const habits = getHabits();
-          habits.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), title: result.title || text, sub: result.sub || '' });
-          saveHabits(habits);
-          renderHabits();
-          msg = `✓ Habit added — "${result.title || text}"`;
-          break;
-        case 'add_goal':
-          await sbPost('goals', { title: result.title || text, category: result.category || 'weekly', completed: false });
-          loaders['home'] = false; await loadHome(); loaders['home'] = true;
-          msg = `✓ ${result.category === 'monthly' ? 'Monthly' : 'Weekly'} goal added`;
-          break;
-        case 'add_task':
-          await sbPost('tasks', { task_text: result.task_text || text, category: result.category || 'Personal', priority: result.priority || 'medium', source: 'manual' });
-          loaders['home'] = false; await loadHome(); loaders['home'] = true;
-          msg = `✓ Task added — ${result.priority || 'medium'} priority`;
-          break;
-        case 'add_note':
-          await sbPost('voice_notes', { transcript: result.transcript || text, source: 'in-app', routed_to: 'ignored', processed: false });
-          loaders['home'] = false; await loadHome(); loaders['home'] = true;
-          msg = '✓ Saved as note';
-          break;
-        case 'respond':
-          msg = '→ ' + (result.message || 'Done');
-          break;
-        default:
-          msg = '⚠ Could not process — try "task:", "goal:", "habit:", or "note:" prefix';
+      // ── CONTINUATION: filling in a clarification answer ──
+      if (qiPending) {
+        const { action, params, awaiting } = qiPending;
+        const merged = { ...params };
+
+        if (awaiting === 'due_date') {
+          merged.due_date = parseNLDate(text);
+          // Now check if category still needed
+          if (!merged.category) {
+            qiAsk('Category? Personal, Work, or Benzo (or skip)', action, { ...merged }, 'category');
+            return;
+          }
+          qiClear();
+          msg = await qiExecute({ action, ...merged });
+
+        } else if (awaiting === 'category') {
+          const t = text.toLowerCase();
+          merged.category = t.includes('work') ? 'Work' : t.includes('benzo') ? 'Benzo' : 'Personal';
+          qiClear();
+          msg = await qiExecute({ action, ...merged });
+
+        } else if (awaiting === 'goal_category') {
+          const t = text.toLowerCase();
+          merged.category = t.includes('month') ? 'monthly' : 'weekly';
+          qiClear();
+          msg = await qiExecute({ action, ...merged });
+
+        } else if (awaiting === 'parent_name') {
+          merged.parent_name = text;
+          qiClear();
+          msg = await qiExecute({ action, ...merged });
+
+        } else if (awaiting === 'rental_customer') {
+          merged.customer_name = text;
+          if (!merged.vehicle_name) { qiAsk('Which car?', action, merged, 'rental_vehicle'); return; }
+          if (!merged.start_date)   { qiAsk('Start date?', action, merged, 'rental_start');   return; }
+          qiClear();
+          msg = await qiExecute({ action, ...merged });
+
+        } else if (awaiting === 'rental_vehicle') {
+          merged.vehicle_name = text;
+          if (!merged.start_date) { qiAsk('Start date?', action, merged, 'rental_start'); return; }
+          qiClear();
+          msg = await qiExecute({ action, ...merged });
+
+        } else if (awaiting === 'rental_start') {
+          merged.start_date = parseNLDate(text) || text;
+          if (!merged.end_date) { qiAsk('End date?', action, merged, 'rental_end'); return; }
+          qiClear();
+          msg = await qiExecute({ action, ...merged });
+
+        } else if (awaiting === 'rental_end') {
+          merged.end_date = parseNLDate(text) || text;
+          qiClear();
+          msg = await qiExecute({ action, ...merged });
+
+        } else {
+          qiClear();
+          msg = await qiExecute({ action, ...merged });
+        }
+
+      } else {
+        // ── FRESH INPUT ──
+        let result = await callAIAgent(text);
+        if (!result) result = smartRoute(text);
+
+        // ── CLARIFICATION TRIGGERS ──
+        if (result.action === 'add_task') {
+          if (!result.due_date) {
+            qiAsk('When is this due? (tomorrow / Monday / June 30 / no date)', 'add_task',
+              { task_text: result.task_text, category: result.category, priority: result.priority || 'medium', due_date: null, is_starred: result.is_starred || false }, 'due_date');
+            return;
+          }
+          if (!result.category) {
+            qiAsk('Category? Personal, Work, or Benzo', 'add_task',
+              { task_text: result.task_text, priority: result.priority || 'medium', due_date: result.due_date, is_starred: result.is_starred || false }, 'category');
+            return;
+          }
+        }
+
+        if (result.action === 'add_goal' && !result.category) {
+          qiAsk('Weekly or monthly goal?', 'add_goal', { title: result.title }, 'goal_category');
+          return;
+        }
+
+        if (result.action === 'add_rental') {
+          if (!result.customer_name) { qiAsk("Client's name?", 'add_rental', { vehicle_name: result.vehicle_name, start_date: result.start_date, end_date: result.end_date }, 'rental_customer'); return; }
+          if (!result.vehicle_name)  { qiAsk('Which car?',    'add_rental', { customer_name: result.customer_name, start_date: result.start_date, end_date: result.end_date }, 'rental_vehicle'); return; }
+          if (!result.start_date)    { qiAsk('Start date?',   'add_rental', { customer_name: result.customer_name, vehicle_name: result.vehicle_name, end_date: result.end_date }, 'rental_start'); return; }
+          if (!result.end_date)      { qiAsk('End date?',     'add_rental', { customer_name: result.customer_name, vehicle_name: result.vehicle_name, start_date: result.start_date }, 'rental_end'); return; }
+        }
+
+        msg = await qiExecute(result);
       }
+
       inp.value = '';
-    } catch(e) { msg = '⚠ Error — ' + e.message; }
+    } catch(e) { msg = '⚠ Error — ' + e.message; qiClear(); }
+
     inp.disabled = false; inp.focus();
-    if (hint) {
-      const suffix = !hasKey ? ' · <span style="cursor:pointer;text-decoration:underline" onclick="openSettings()">Add Claude key for smarter AI</span>' : '';
+    if (hint && msg && msg !== '…') {
+      const suffix = !hasKey ? ' · <span style="cursor:pointer;text-decoration:underline;opacity:.6" onclick="openSettings()">Add Claude key for smarter AI</span>' : '';
       hint.innerHTML = msg + suffix;
-      setTimeout(() => { if (hint) hint.innerHTML = ''; }, 6000);
+      setTimeout(() => { if (hint && !qiPending) hint.innerHTML = ''; }, 7000);
     }
   };
 
@@ -4904,29 +5340,106 @@ Return raw JSON only.`,
   let _themeSnapshot = null;
   let _fontSizeSnapshot = 14;
 
-  window.openSettings = () => {
-    const key = localStorage.getItem('omar_claude_key') || '';
-    document.getElementById('settings-api-key').value = key;
+  // ── API KEY HELPERS ──────────────────────────────────────
+  function maskKey(k) {
+    if (!k || k.length < 12) return k;
+    return k.slice(0, 10) + '•'.repeat(Math.max(0, k.length - 14)) + k.slice(-4);
+  }
+
+  window.toggleApiKeyVisibility = () => {
+    const inp = document.getElementById('settings-api-key');
+    if (!inp) return;
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  };
+
+  window.restoreApiKey = (key) => {
+    const inp = document.getElementById('settings-api-key');
+    if (inp) { inp.value = key; inp.type = 'password'; }
+    const status = document.getElementById('settings-key-status');
+    if (status) { status.textContent = '← Restored — click Save to apply'; status.style.color = 'var(--gold-dim)'; }
+  };
+
+  async function loadApiKeyHistory() {
+    try {
+      const rows = await sb('user_profile', '?id=eq.default&select=claude_api_key,claude_api_key_history');
+      const row = rows?.[0];
+      const currentKey = row?.claude_api_key || localStorage.getItem('omar_claude_key') || '';
+      const history    = Array.isArray(row?.claude_api_key_history) ? row.claude_api_key_history : [];
+
+      const inp = document.getElementById('settings-api-key');
+      if (inp && currentKey) inp.value = currentKey;
+      // Keep localStorage in sync
+      if (currentKey) localStorage.setItem('omar_claude_key', currentKey);
+
+      const wrap = document.getElementById('api-key-history-wrap');
+      const list = document.getElementById('api-key-history-list');
+      if (!list) return;
+      list.innerHTML = '';
+
+      // Filter out the current key from history display
+      const pastKeys = history.filter(h => h.key !== currentKey);
+      if (pastKeys.length === 0) { if (wrap) wrap.style.display = 'none'; return; }
+      if (wrap) wrap.style.display = '';
+
+      pastKeys.forEach(h => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-cancel';
+        btn.style.cssText = 'text-align:left;font-family:JetBrains Mono,monospace;font-size:10px;padding:5px 10px;display:flex;justify-content:space-between;gap:12px;width:100%';
+        const saved = h.saved_at ? new Date(h.saved_at).toLocaleDateString() : '';
+        btn.innerHTML = `<span>${maskKey(h.key)}</span><span style="color:var(--muted);font-size:9px">${saved}</span>`;
+        btn.onclick = () => restoreApiKey(h.key);
+        list.appendChild(btn);
+      });
+    } catch(e) { console.warn('loadApiKeyHistory', e); }
+  }
+
+  async function saveApiKeyToDb(newKey) {
+    if (!newKey) return;
+    try {
+      // Fetch existing history
+      const rows = await sb('user_profile', '?id=eq.default&select=claude_api_key,claude_api_key_history');
+      const row  = rows?.[0];
+      const oldKey = row?.claude_api_key || '';
+      let history  = Array.isArray(row?.claude_api_key_history) ? row.claude_api_key_history : [];
+
+      // Push old key into history if it's different and not already there
+      if (oldKey && oldKey !== newKey && !history.find(h => h.key === oldKey)) {
+        history = [{ key: oldKey, saved_at: new Date().toISOString() }, ...history].slice(0, 10);
+      }
+
+      await upsertProfile({ claude_api_key: newKey, claude_api_key_history: history });
+    } catch(e) { console.warn('saveApiKeyToDb', e); }
+  }
+
+  window.openSettings = async () => {
+    // Set key from localStorage immediately (fast), then overwrite from DB
+    const localKey = localStorage.getItem('omar_claude_key') || '';
+    const inp = document.getElementById('settings-api-key');
+    if (inp) inp.value = localKey;
     // Snapshot current theme for cancel
     _themeSnapshot = readCurrentThemeVars();
     _fontSizeSnapshot = parseInt(localStorage.getItem('omar_font_size')) || 14;
-    // Sync pickers
     syncPickersToTheme(_themeSnapshot);
-    // Set font size slider
-    const slider = document.getElementById('font-size-slider');
+    const slider  = document.getElementById('font-size-slider');
     const display = document.getElementById('font-size-display');
-    if (slider) slider.value = _fontSizeSnapshot;
+    if (slider)  slider.value = _fontSizeSnapshot;
     if (display) display.textContent = _fontSizeSnapshot + 'px';
     document.getElementById('settings-modal').classList.add('open');
+    // Load from DB (async — fills in after modal opens)
+    await loadApiKeyHistory();
   };
 
   window.closeSettings = () => document.getElementById('settings-modal').classList.remove('open');
 
-  window.saveSettings = () => {
+  window.saveSettings = async () => {
     const key = document.getElementById('settings-api-key').value.trim();
-    if (key) localStorage.setItem('omar_claude_key', key);
-    else     localStorage.removeItem('omar_claude_key');
-    // Save current theme vars to localStorage
+    if (key) {
+      localStorage.setItem('omar_claude_key', key);
+      await saveApiKeyToDb(key);
+    } else {
+      localStorage.removeItem('omar_claude_key');
+    }
+    // Save theme
     const current = readCurrentThemeVars();
     localStorage.setItem('omar_theme', JSON.stringify(current));
     // Save font size
@@ -6141,6 +6654,38 @@ Return raw JSON only.`,
           });
         }
 
+        // ── Step 4: Positional fallback ──────────────────────────
+        // gviz strips the first sheet row (which holds the full column headers),
+        // so most headers never appear in the CSV. Once customer_name is located
+        // we can fill in all other fields at known fixed offsets from it.
+        if ('customer_name' in colIdx) {
+          const cn = colIdx['customer_name'];
+          const BENZO_POSITIONAL = [
+            [-1, 'booking_number'],
+            [+5, 'dob'],
+            [+6, 'age'],
+            [+7, 'start_date'],
+            [+8, 'start_time'],
+            [+9, 'end_date'],
+            [+10, 'end_time'],
+            [+11, 'duration'],
+            [+12, 'allowed_mileage'],
+            [+13, 'extra_mileage_km'],
+            [+14, 'extra_mileage_charge'],
+            [+15, 'extra_mileage_total'],
+            [+16, 'deposit'],
+            [+17, 'security_deposit'],
+            [+18, 'security_deposit_taken'],
+            [+19, 'total_rent'],
+            [+20, 'total_amount'],
+          ];
+          for (const [offset, field] of BENZO_POSITIONAL) {
+            if (!(field in colIdx) && (cn + offset) >= 0) {
+              colIdx[field] = cn + offset;
+            }
+          }
+        }
+
         // ── Build debug log for this tab ────────────────────────
         let tabDebug = `\n━━━ TAB: "${tabName}" (${allRows.length} CSV rows) ━━━\n`;
         tabDebug += `Primary header row: index ${primaryRowIdx} (${bestMatches} matches)\n\n`;
@@ -6200,7 +6745,7 @@ Return raw JSON only.`,
           sheetRows.push({
             customer, start, end,
             rate:                    parseNum(rateRaw),
-            total_rent:              parseNum(totalRaw),
+            total_rent:              parseNum(totalRaw)                            || parseNum(getCol('total_rent')),
             deposit:                 parseNum(depositRaw),
             security_deposit:        parseNum(secDepRaw),
             security_deposit_taken:  parseNum(secDepTakenRaw),
@@ -6212,15 +6757,15 @@ Return raw JSON only.`,
             phone:                   getCol('phone')            || null,
             email:                   getCol('email')            || null,
             address:                 getCol('address')          || null,
-            dob:                     getCol('dob')              || null,
-            age:                     getCol('age')              || null,
-            duration:                getCol('duration')         || null,
-            allowed_mileage:         getCol('allowed_mileage')  || null,
+            dob:                     benzoNormalizeDate(getCol('dob')) || null,
+            age:                     parseNum(getCol('age'))    || null,
+            duration:                parseNum(getCol('duration')) || null,
+            allowed_mileage:         parseNum(getCol('allowed_mileage')) || null,
             booking_number:          getCol('booking_number')   || null,
-            extra_mileage_km:        getCol('extra_mileage_km') || null,
-            extra_mileage_charge:    getCol('extra_mileage_charge') || null,
-            extra_mileage_total:     getCol('extra_mileage_total')  || null,
-            total_amount:            getCol('total_amount')     || null,
+            extra_mileage_km:        parseNum(getCol('extra_mileage_km'))     || null,
+            extra_mileage_charge:    parseNum(getCol('extra_mileage_charge')) || null,
+            extra_mileage_total:     parseNum(getCol('extra_mileage_total'))  || null,
+            total_amount:            parseNum(getCol('total_amount'))         || null,
             rent_income_with:        getCol('rent_income_with') || null,
             extra_data:              Object.keys(extra).length ? extra : null,
           });
@@ -7088,6 +7633,521 @@ Return raw JSON only.`,
     if (h < 24) return h + 'h ago';
     return Math.floor(h / 24) + 'd ago';
   }
+</script>
+
+<!-- ══════════════════════════════════════════════════════ AI BRAIN PANEL ══ -->
+<div class="ai-brain-overlay" id="ai-brain-overlay" onclick="closeAIBrain()"></div>
+<div class="ai-brain-panel" id="ai-brain-panel">
+  <div class="ai-brain-header">
+    <div class="ai-brain-title">
+      <div class="ai-brain-dot"></div>
+      OMAR AI — BRAIN
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="ai-brain-clear" onclick="clearBrainChat()">CLEAR</button>
+      <button onclick="closeAIBrain()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 4px">×</button>
+    </div>
+  </div>
+  <div class="ai-brain-messages" id="ai-brain-messages">
+    <div class="ai-msg assistant" style="opacity:.5;font-size:11px">
+      Hey Omar. Ask me anything about your habits, tasks, goals, finances, or rentals — or tell me to create something.
+    </div>
+  </div>
+  <div class="ai-brain-input-row">
+    <textarea class="ai-brain-input" id="ai-brain-input" rows="1"
+      placeholder="Ask anything or give me a command…"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendBrainMessage()}"
+      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+    <button class="ai-brain-send" id="ai-brain-send" onclick="sendBrainMessage()">→</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+// OMAR AI BRAIN — full tool-calling loop with Supabase
+// ══════════════════════════════════════════════════════════════════════════
+
+let brainHistory   = [];   // full Claude message history
+let brainBusy      = false;
+
+const BRAIN_SYSTEM = `You are Omar's personal AI assistant — the brain of his life OS dashboard.
+You manage: his daily habit tracker, personal tasks, weekly/monthly goals, investment finance portfolio (stocks/transactions), and his Benzo Rentals luxury car rental business.
+Be concise and direct. Always use tools to read real data before answering questions about numbers, names, or status.
+Never invent data. When you create something, confirm exactly what was created.
+Today: ${new Date().toISOString().slice(0,10)}.`;
+
+const BRAIN_TOOLS = [
+  {
+    name: 'get_habits',
+    description: 'Fetch all of Omar\'s habits including sub-habits and current streaks',
+    input_schema: { type: 'object', properties: {}, required: [] }
+  },
+  {
+    name: 'create_habit',
+    description: 'Create a new habit',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title:      { type: 'string', description: 'Habit name' },
+        sub_title:  { type: 'string', description: 'Optional subtitle/description line' },
+        sub_habits: { type: 'array', items: { type: 'string' }, description: 'Optional list of sub-habit names' }
+      },
+      required: ['title']
+    }
+  },
+  {
+    name: 'add_sub_habit',
+    description: 'Add a sub-habit to an existing parent habit',
+    input_schema: {
+      type: 'object',
+      properties: {
+        parent_title: { type: 'string', description: 'Name of the parent habit (fuzzy match)' },
+        sub_title:    { type: 'string', description: 'Name of the new sub-habit' }
+      },
+      required: ['parent_title', 'sub_title']
+    }
+  },
+  {
+    name: 'get_tasks',
+    description: 'Fetch tasks, optionally filtered by completion status, category, or due date',
+    input_schema: {
+      type: 'object',
+      properties: {
+        completed: { type: 'boolean', description: 'Filter by completed status. Omit for all.' },
+        category:  { type: 'string', description: 'Filter by category: Personal, Work, or Benzo' },
+        due_today: { type: 'boolean', description: 'If true, only return tasks due today or overdue' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'create_task',
+    description: 'Create a new task',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task_text:  { type: 'string', description: 'Task description' },
+        category:   { type: 'string', enum: ['Personal','Work','Benzo'], description: 'Category' },
+        priority:   { type: 'string', enum: ['high','medium','low'], description: 'Priority level' },
+        due_date:   { type: 'string', description: 'Due date as YYYY-MM-DD, or omit for no date' },
+        is_starred: { type: 'boolean', description: 'Mark as a key/starred task for today' }
+      },
+      required: ['task_text']
+    }
+  },
+  {
+    name: 'get_goals',
+    description: 'Fetch all weekly and monthly goals',
+    input_schema: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', enum: ['weekly','monthly'], description: 'Filter by category. Omit for all.' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'create_goal',
+    description: 'Create a new goal',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title:    { type: 'string', description: 'Goal description' },
+        category: { type: 'string', enum: ['weekly','monthly'], description: 'Weekly or monthly goal' }
+      },
+      required: ['title', 'category']
+    }
+  },
+  {
+    name: 'get_finances',
+    description: 'Fetch investment portfolio transactions and compute holdings summary',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ticker: { type: 'string', description: 'Filter by stock ticker symbol. Omit for all.' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'get_rentals',
+    description: 'Fetch car rental bookings, optionally filtered by status',
+    input_schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['active','upcoming','completed'], description: 'Filter by status. Omit for all.' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'create_rental',
+    description: 'Create a new rental booking',
+    input_schema: {
+      type: 'object',
+      properties: {
+        customer_name: { type: 'string', description: 'Client full name' },
+        vehicle_name:  { type: 'string', description: 'Car name (fuzzy matched to fleet)' },
+        start_date:    { type: 'string', description: 'Start date YYYY-MM-DD' },
+        end_date:      { type: 'string', description: 'End date YYYY-MM-DD' },
+        status:        { type: 'string', enum: ['upcoming','active','completed'], description: 'Booking status' }
+      },
+      required: ['customer_name', 'vehicle_name', 'start_date', 'end_date']
+    }
+  },
+  {
+    name: 'get_fleet',
+    description: 'Fetch all vehicles in the rental fleet with their status',
+    input_schema: { type: 'object', properties: {}, required: [] }
+  },
+  {
+    name: 'get_journal',
+    description: 'Fetch journal entries',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date:  { type: 'string', description: 'Specific date YYYY-MM-DD. Omit for today.' },
+        limit: { type: 'number', description: 'How many recent entries to return. Default 5.' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'write_journal',
+    description: 'Write or append to a journal entry for a specific date',
+    input_schema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'Journal text to write' },
+        date:    { type: 'string', description: 'Date YYYY-MM-DD. Defaults to today.' },
+        append:  { type: 'boolean', description: 'If true, append to existing entry instead of replacing' }
+      },
+      required: ['content']
+    }
+  }
+];
+
+// ── TOOL EXECUTOR ─────────────────────────────────────────
+async function executeBrainTool(name, input) {
+  const today = new Date().toISOString().slice(0,10);
+
+  switch (name) {
+
+    case 'get_habits': {
+      const habits = await sb('habits', '?order=sort_order.asc,created_at.asc');
+      const checkins = await sb('habit_checkins', `?checkin_date=eq.${today}`).catch(()=>[]);
+      const checkedToday = new Set((checkins||[]).map(c => c.habit_id));
+      return (habits||[]).map(h => ({
+        id: h.id, title: h.title, sub: h.sub,
+        sub_habits: h.sub_habits || [],
+        done_today: checkedToday.has(h.id),
+      }));
+    }
+
+    case 'create_habit': {
+      const subHabits = (input.sub_habits || []).map((t,i) => ({ id: Date.now().toString(36)+i, title: t }));
+      const newId = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+      await fetch(`${SUPABASE_URL}/rest/v1/habits`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ id: newId, title: input.title, sub: input.sub_title||'', sub_habits: subHabits, sort_order: habitsData.length }),
+      });
+      habitsData.push({ id: newId, title: input.title, sub: input.sub_title||'', sub_habits: subHabits });
+      if (document.getElementById('habits-grid')) renderHabits();
+      return { created: true, id: newId, title: input.title };
+    }
+
+    case 'add_sub_habit': {
+      const parent = habitsData.find(h => h.title.toLowerCase().includes(input.parent_title.toLowerCase()) || input.parent_title.toLowerCase().includes(h.title.toLowerCase()));
+      if (!parent) return { error: `No habit found matching "${input.parent_title}". Available: ${habitsData.map(h=>h.title).join(', ')}` };
+      const subs = parent.sub_habits || [];
+      const newSub = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), title: input.sub_title };
+      subs.push(newSub);
+      parent.sub_habits = subs;
+      await fetch(`${SUPABASE_URL}/rest/v1/habits?id=eq.${parent.id}`, {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ sub_habits: subs }),
+      });
+      if (document.getElementById('habits-grid')) renderHabits();
+      return { created: true, parent: parent.title, sub_habit: input.sub_title };
+    }
+
+    case 'get_tasks': {
+      let qs = '?order=created_at.desc';
+      if (input.completed !== undefined) qs += `&completed=eq.${input.completed}`;
+      if (input.category) qs += `&category=eq.${encodeURIComponent(input.category)}`;
+      if (input.due_today) qs += `&due_date=lte.${today}`;
+      const tasks = await sb('tasks', qs);
+      return (tasks||[]).map(t => ({ id:t.id, text:t.task_text, category:t.category, priority:t.priority, due_date:t.due_date, completed:t.completed, starred:t.is_starred }));
+    }
+
+    case 'create_task': {
+      const obj = { task_text: input.task_text, category: input.category||'Personal', priority: input.priority||'medium', due_date: input.due_date||null, is_starred: input.is_starred||false, source:'ai' };
+      const rows = await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+        method:'POST', headers:{ apikey:SUPABASE_ANON, Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json', Prefer:'return=representation' },
+        body: JSON.stringify(obj),
+      }).then(r=>r.json()).catch(()=>[]);
+      loaders['home'] = false; loadHome().then(()=>{ loaders['home']=true; }).catch(()=>{});
+      if (typeof loadTasks === 'function' && document.getElementById('page-tasks')?.classList.contains('active')) loadTasks();
+      return { created: true, task: input.task_text, id: rows?.[0]?.id };
+    }
+
+    case 'get_goals': {
+      let qs = '?order=created_at.desc';
+      if (input.category) qs += `&category=eq.${input.category}`;
+      const goals = await sb('goals', qs);
+      return (goals||[]).map(g => ({ id:g.id, title:g.title, category:g.category, completed:g.completed, target_date:g.target_date }));
+    }
+
+    case 'create_goal': {
+      const rows = await fetch(`${SUPABASE_URL}/rest/v1/goals`, {
+        method:'POST', headers:{ apikey:SUPABASE_ANON, Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json', Prefer:'return=representation' },
+        body: JSON.stringify({ title:input.title, category:input.category, completed:false }),
+      }).then(r=>r.json()).catch(()=>[]);
+      loaders['home'] = false; loadHome().then(()=>{ loaders['home']=true; }).catch(()=>{});
+      return { created: true, goal: input.title, category: input.category };
+    }
+
+    case 'get_finances': {
+      let qs = '?order=trade_date.asc';
+      if (input.ticker) qs += `&ticker=eq.${encodeURIComponent(input.ticker.toUpperCase())}`;
+      const txs = await sb('transactions', qs);
+      // Compute holdings
+      const holdings = {};
+      (txs||[]).forEach(t => {
+        if (!holdings[t.ticker]) holdings[t.ticker] = { shares:0, cost_basis:0, transactions:[] };
+        const qty = t.transaction_type === 'sell' ? -t.shares : t.shares;
+        holdings[t.ticker].shares     += qty;
+        holdings[t.ticker].cost_basis += (t.cost_per_share||0) * qty;
+        holdings[t.ticker].transactions.push({ type:t.transaction_type, shares:t.shares, price:t.cost_per_share, date:t.trade_date });
+      });
+      return { holdings, total_cost_basis: Object.values(holdings).reduce((s,h)=>s+h.cost_basis,0) };
+    }
+
+    case 'get_rentals': {
+      let qs = '?order=start_date.desc&select=id,customer_name,vehicle_id,start_date,end_date,status,total_rent,total_amount';
+      if (input.status) qs += `&status=eq.${input.status}`;
+      const rentals = await sb('rentals', qs);
+      const fleet   = await sb('fleet','?select=id,vehicle_name').catch(()=>[]);
+      const fleetMap = Object.fromEntries((fleet||[]).map(v=>[v.id,v.vehicle_name]));
+      return (rentals||[]).map(r=>({ ...r, vehicle: fleetMap[r.vehicle_id]||r.vehicle_id }));
+    }
+
+    case 'create_rental': {
+      const fleet = await sb('fleet','?select=id,vehicle_name').catch(()=>[]);
+      const vName = (input.vehicle_name||'').toLowerCase();
+      const vehicle = (fleet||[]).find(v => v.vehicle_name.toLowerCase().includes(vName) || vName.includes(v.vehicle_name.toLowerCase().split(' ')[0]));
+      const obj = { customer_name:input.customer_name, vehicle_id:vehicle?.id||null, start_date:input.start_date, end_date:input.end_date, status:input.status||'upcoming' };
+      await fetch(`${SUPABASE_URL}/rest/v1/rentals`, {
+        method:'POST', headers:{ apikey:SUPABASE_ANON, Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json', Prefer:'return=minimal' },
+        body: JSON.stringify(obj),
+      });
+      loaders['home'] = false; loadHome().then(()=>{ loaders['home']=true; }).catch(()=>{});
+      return { created:true, customer:input.customer_name, vehicle:vehicle?.vehicle_name||input.vehicle_name, start:input.start_date, end:input.end_date };
+    }
+
+    case 'get_fleet': {
+      const fleet = await sb('fleet','?order=vehicle_name.asc');
+      return (fleet||[]).map(v=>({ id:v.id, name:v.vehicle_name, status:v.status, tab:v.sheet_tab_name }));
+    }
+
+    case 'get_journal': {
+      const date  = input.date || today;
+      const limit = input.limit || 5;
+      const rows  = await sb('journal_entries', `?order=entry_date.desc&limit=${limit}`);
+      if (input.date) {
+        const exact = (rows||[]).find(r=>r.entry_date===date);
+        return exact ? { date:exact.entry_date, content:exact.content } : { date, content: null };
+      }
+      return (rows||[]).map(r=>({ date:r.entry_date, preview: (r.content||'').slice(0,200) }));
+    }
+
+    case 'write_journal': {
+      const date = input.date || today;
+      let content = input.content;
+      if (input.append) {
+        const existing = await sb('journal_entries',`?entry_date=eq.${date}`).catch(()=>[]);
+        const prev = existing?.[0]?.content || '';
+        content = prev ? prev + '\n\n' + content : content;
+      }
+      await fetch(`${SUPABASE_URL}/rest/v1/journal_entries?on_conflict=entry_date`, {
+        method:'POST',
+        headers:{ apikey:SUPABASE_ANON, Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json', Prefer:'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ entry_date:date, content, updated_at:new Date().toISOString() }),
+      });
+      const ta = document.getElementById('journal-textarea');
+      if (ta && document.getElementById('page-journal')?.classList.contains('active')) ta.value = content;
+      return { written:true, date, length: content.length };
+    }
+
+    default:
+      return { error: `Unknown tool: ${name}` };
+  }
+}
+
+// ── UI HELPERS ────────────────────────────────────────────
+function brainScroll() {
+  const msgs = document.getElementById('ai-brain-messages');
+  if (msgs) msgs.scrollTop = msgs.scrollHeight;
+}
+
+function appendBrainMsg(type, text) {
+  const msgs = document.getElementById('ai-brain-messages');
+  if (!msgs) return null;
+  const div = document.createElement('div');
+  div.className = `ai-msg ${type}`;
+  div.textContent = text;
+  msgs.appendChild(div);
+  brainScroll();
+  return div;
+}
+
+function appendBrainTyping() {
+  const msgs = document.getElementById('ai-brain-messages');
+  if (!msgs) return null;
+  const div = document.createElement('div');
+  div.className = 'ai-typing';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  msgs.appendChild(div);
+  brainScroll();
+  return div;
+}
+
+function removeBrainEl(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
+
+// ── MAIN SEND FUNCTION ────────────────────────────────────
+window.sendBrainMessage = async () => {
+  const inp  = document.getElementById('ai-brain-input');
+  const send = document.getElementById('ai-brain-send');
+  const text = inp.value.trim();
+  if (!text || brainBusy) return;
+
+  const apiKey = localStorage.getItem('omar_claude_key');
+  if (!apiKey) {
+    appendBrainMsg('error', 'No Claude API key set — open ⚙ Settings to add one.');
+    return;
+  }
+
+  inp.value = ''; inp.style.height = 'auto';
+  appendBrainMsg('user', text);
+  brainHistory.push({ role: 'user', content: text });
+
+  brainBusy = true;
+  if (send) send.disabled = true;
+
+  const typingEl = appendBrainTyping();
+
+  try {
+    await runBrainLoop(apiKey, typingEl);
+  } catch(e) {
+    removeBrainEl(typingEl);
+    appendBrainMsg('error', '⚠ ' + (e.message || 'Unknown error'));
+  }
+
+  brainBusy = false;
+  if (send) send.disabled = false;
+  inp.focus();
+};
+
+async function runBrainLoop(apiKey, typingEl) {
+  let removed = false;
+
+  while (true) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        system: BRAIN_SYSTEM,
+        tools: BRAIN_TOOLS,
+        messages: brainHistory,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `API error ${res.status}`);
+
+    // Add full assistant turn to history
+    brainHistory.push({ role: 'assistant', content: data.content });
+
+    if (data.stop_reason === 'end_turn') {
+      if (!removed) { removeBrainEl(typingEl); removed = true; }
+      const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      if (textBlocks) appendBrainMsg('assistant', textBlocks);
+      break;
+    }
+
+    if (data.stop_reason === 'tool_use') {
+      const toolBlocks = (data.content || []).filter(b => b.type === 'tool_use');
+      const toolResults = [];
+
+      // Show tool hints + execute each
+      for (const block of toolBlocks) {
+        if (!removed) { removeBrainEl(typingEl); removed = true; }
+        const label = {
+          get_habits:    'Reading your habits…',
+          create_habit:  'Creating habit…',
+          add_sub_habit: 'Adding sub-habit…',
+          get_tasks:     'Checking your tasks…',
+          create_task:   'Creating task…',
+          get_goals:     'Fetching goals…',
+          create_goal:   'Creating goal…',
+          get_finances:  'Loading portfolio…',
+          get_rentals:   'Checking rentals…',
+          create_rental: 'Creating rental booking…',
+          get_fleet:     'Fetching fleet…',
+          get_journal:   'Reading journal…',
+          write_journal: 'Writing to journal…',
+        }[block.name] || `Running ${block.name}…`;
+
+        const hintEl = appendBrainMsg('tool-hint', label);
+        const result = await executeBrainTool(block.name, block.input || {});
+        // Subtle update to hint after completion
+        if (hintEl) hintEl.textContent = '✓ ' + label.replace('…','');
+
+        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
+      }
+
+      // Send results back and continue loop
+      brainHistory.push({ role: 'user', content: toolResults });
+
+      // Show new typing indicator for next round
+      const newTyping = appendBrainTyping();
+      typingEl = newTyping;
+      removed = false;
+
+    } else {
+      // Unexpected stop reason
+      if (!removed) { removeBrainEl(typingEl); removed = true; }
+      break;
+    }
+  }
+}
+
+// ── PANEL OPEN / CLOSE ────────────────────────────────────
+window.openAIBrain = () => {
+  document.getElementById('ai-brain-panel').classList.add('open');
+  document.getElementById('ai-brain-overlay').style.display = 'block';
+  setTimeout(() => document.getElementById('ai-brain-input')?.focus(), 300);
+};
+
+window.closeAIBrain = () => {
+  document.getElementById('ai-brain-panel').classList.remove('open');
+  document.getElementById('ai-brain-overlay').style.display = 'none';
+};
+
+window.clearBrainChat = () => {
+  brainHistory = [];
+  const msgs = document.getElementById('ai-brain-messages');
+  if (msgs) msgs.innerHTML = '<div class="ai-msg assistant" style="opacity:.5;font-size:11px">Chat cleared. What do you need?</div>';
+};
 </script>
 </body>
 </html>
