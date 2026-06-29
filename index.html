@@ -1347,6 +1347,7 @@
     <div style="display:flex;gap:8px;align-items:center">
       <span id="benzo-sync-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)"></span>
       <button class="fin-icon-btn" id="benzo-sync-btn" onclick="syncBenzoRentals()" title="Sync with Google Sheets">↻ SYNC</button>
+      <button class="fin-icon-btn" id="benzo-debug-btn" onclick="debugBenzoSync()" title="Show what columns were detected in last sync" style="display:none">🔍</button>
       <button class="fin-icon-btn" onclick="openBenzoSettings()" title="Integrations & write-back settings">⚙</button>
       <button class="btn-add" style="background:var(--bg4);color:var(--muted);border:1px solid var(--border2)" onclick="openAddRental()">+ Add Rental</button>
       <button class="btn-add" onclick="openAddVehicle()">+ Add Vehicle</button>
@@ -1573,6 +1574,19 @@
       <div id="hist-sheets-write" style="margin-top:10px"></div>
     </details>
 
+  </div>
+</div>
+
+<!-- BENZO SYNC DEBUG MODAL -->
+<div class="modal-overlay" id="benzo-debug-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none">
+  <div class="modal" style="width:760px;max-height:90vh;overflow-y:auto">
+    <h3 style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em">🔍 SYNC COLUMN DETECTION</h3>
+    <p style="font-size:11px;color:var(--muted);margin:8px 0 16px">Share this with support to diagnose missing columns.</p>
+    <div id="benzo-debug-content" style="font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;white-space:pre-wrap;background:var(--bg);padding:12px;border:1px solid var(--border);border-radius:4px;max-height:60vh;overflow-y:auto"></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn-add" onclick="navigator.clipboard.writeText(document.getElementById('benzo-debug-content').textContent)">📋 Copy</button>
+      <button class="btn-add" style="background:var(--bg4);color:var(--muted);border:1px solid var(--border2)" onclick="document.getElementById('benzo-debug-modal').style.display='none'">Close</button>
+    </div>
   </div>
 </div>
 
@@ -5584,6 +5598,7 @@ Return raw JSON only.`,
   let activeBenzoTab = 'fleet';
   let selectedVehicleIds = new Set();
   let isBenzoSyncing = false;
+  let _benzoSyncDebugLog = '';   // filled during sync, shown in debug modal
   const BENZO_SHEET_ID = '1BW-h_tQhuVjZ-lVHE8s3AVhLTWyxkSPXDmkph32vDEo';
   let benzoWriteUrl = localStorage.getItem('omar_benzo_write_url') || '';
 
@@ -5685,18 +5700,14 @@ Return raw JSON only.`,
     'duration': 'duration', 'days': 'duration', 'rental days': 'duration',
     'number of days': 'duration', 'no. of days': 'duration',
     '#': 'booking_number', 'booking number': 'booking_number', 'booking #': 'booking_number',
-    'rental #': 'booking_number', 'rental number': 'booking_number', 'ref': 'booking_number',
-    'reservation': 'booking_number', 'client #': 'booking_number', 'no.': 'booking_number',
-    'no': 'booking_number', 'num': 'booking_number', 'sl': 'booking_number', 'sl.': 'booking_number',
-    'id': 'booking_number',
+    'rental #': 'booking_number', 'rental number': 'booking_number', 'client #': 'booking_number',
     // DOB aliases
-    'd.o.b.': 'dob', 'd.o.b': 'dob', 'birth': 'dob', 'birthdate': 'dob',
+    'd.o.b.': 'dob', 'd.o.b': 'dob', 'date of birth': 'dob', 'birthdate': 'dob',
     // Age aliases
-    'client age': 'age', 'age (yrs)': 'age', 'yrs': 'age', 'years': 'age',
+    'client age': 'age', 'age (yrs)': 'age',
     // Time aliases
-    'check out time': 'start_time', 'check-out time': 'start_time', 'depart time': 'start_time',
-    'return time': 'end_time', 'check in time': 'end_time', 'check-in time': 'end_time',
-    'finish time': 'end_time', 'drop off time': 'end_time',
+    'check out time': 'start_time', 'check-out time': 'start_time',
+    'check in time': 'end_time', 'check-in time': 'end_time', 'finish time': 'end_time',
   };
 
   async function loadBenzo() {
@@ -6045,6 +6056,7 @@ Return raw JSON only.`,
 
     let inserted = 0, updated = 0, deleted = 0, errors = 0;
     const failedTabs = [];
+    _benzoSyncDebugLog = '';
 
     async function fetchSheetCsv(tabName) {
       const tab = encodeURIComponent(tabName);
@@ -6104,20 +6116,12 @@ Return raw JSON only.`,
 
         const normalize = h => (h||'').replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
 
-        // Log raw CSV rows for debugging
-        console.log(`[Benzo] Raw CSV rows 0-7 for tab "${tabName}":`);
-        for (let ri = 0; ri < Math.min(8, allRows.length); ri++) {
-          console.log(`  Row[${ri}]:`, allRows[ri].map(c => (c||'').trim()).join(' | '));
-        }
-
         // Step 1: find the PRIMARY header row — the one with the most recognized columns.
-        // This is the authoritative source for column positions.
         let primaryRowIdx = 0, bestMatches = 0;
         for (let ri = 0; ri < Math.min(12, allRows.length); ri++) {
           const matches = allRows[ri].filter(cell => SHEET_COL_MAP[normalize(cell)]).length;
           if (matches > bestMatches) { bestMatches = matches; primaryRowIdx = ri; }
         }
-        console.log(`[Benzo] Primary header row: index ${primaryRowIdx} (${bestMatches} matches)`);
 
         // Step 2: build colIdx from the primary row
         const colIdx = {};
@@ -6127,9 +6131,7 @@ Return raw JSON only.`,
           if (field && !(field in colIdx)) colIdx[field] = ci;
         });
 
-        // Step 3: supplement from other rows (before and after primary) ONLY for
-        // fields not yet found — this handles split headers without overriding
-        // positions already locked in by the primary row.
+        // Step 3: supplement from other rows ONLY for fields still missing
         for (let ri = 0; ri < Math.min(12, allRows.length); ri++) {
           if (ri === primaryRowIdx) continue;
           allRows[ri].forEach((cell, ci) => {
@@ -6139,10 +6141,27 @@ Return raw JSON only.`,
           });
         }
 
-        console.log(`[Benzo] Column map (primary row ${primaryRowIdx}, supplemented):`, colIdx);
-        const missingImportant = ['customer_name','start_date','end_date','driver_license','phone','booking_number','total_rent']
+        // ── Build debug log for this tab ────────────────────────
+        let tabDebug = `\n━━━ TAB: "${tabName}" (${allRows.length} CSV rows) ━━━\n`;
+        tabDebug += `Primary header row: index ${primaryRowIdx} (${bestMatches} matches)\n\n`;
+        tabDebug += `CSV rows 0–${Math.min(7,allRows.length-1)}:\n`;
+        for (let ri = 0; ri < Math.min(8, allRows.length); ri++) {
+          tabDebug += `  [${ri}] ${allRows[ri].map((c,i)=>`col${i}:"${(c||'').trim()}"`).join('  ')}\n`;
+        }
+        tabDebug += `\nDetected column map:\n`;
+        Object.entries(colIdx).forEach(([f,i]) => { tabDebug += `  col${i} → ${f}\n`; });
+        const missingImportant = ['customer_name','start_date','end_date','booking_number','dob','age','start_time','total_rent']
           .filter(f => !(f in colIdx));
-        if (missingImportant.length) console.warn(`[Benzo] Still unmapped:`, missingImportant);
+        if (missingImportant.length) tabDebug += `\n⚠ NOT MAPPED: ${missingImportant.join(', ')}\n`;
+
+        // Show first data row values
+        if (allRows.length > primaryRowIdx + 1) {
+          const fdr = allRows[primaryRowIdx + 1];
+          tabDebug += `\nFirst data row values (row ${primaryRowIdx+1}):\n`;
+          Object.entries(colIdx).forEach(([f,i]) => { tabDebug += `  ${f}: "${(fdr[i]||'').trim()}"\n`; });
+        }
+        _benzoSyncDebugLog += tabDebug;
+        console.log(tabDebug);
 
         // Collect unrecognized header cells for extra_data
         const extraCols = [];
@@ -6328,7 +6347,17 @@ Return raw JSON only.`,
     } finally {
       isBenzoSyncing = false;
       if (btn) { btn.disabled = false; btn.textContent = '↻ SYNC'; }
+      // Show the debug button whenever a sync has run
+      const dbgBtn = document.getElementById('benzo-debug-btn');
+      if (dbgBtn && _benzoSyncDebugLog) dbgBtn.style.display = '';
     }
+  };
+
+  window.debugBenzoSync = function() {
+    const el = document.getElementById('benzo-debug-content');
+    const modal = document.getElementById('benzo-debug-modal');
+    if (el) el.textContent = _benzoSyncDebugLog || 'No sync has been run yet.';
+    if (modal) modal.style.display = 'flex';
   };
 
   // Vehicle CRUD
