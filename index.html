@@ -626,6 +626,22 @@
     .sess-wx-temp { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 300; color: var(--text); letter-spacing: -.01em; }
     .sess-wx-label { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; color: var(--muted2); letter-spacing: .07em; text-transform: uppercase; margin-top: 2px; }
 
+    /* ── PIN MODAL ── */
+    .pin-modal-wrap { width: 280px; padding: 28px 24px; text-align: center; }
+    .pin-modal-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .12em; color: var(--muted); margin-bottom: 6px; }
+    .pin-modal-sub { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .07em; color: var(--muted2); margin-bottom: 22px; }
+    .pin-dots { display: flex; justify-content: center; gap: 14px; margin-bottom: 24px; }
+    .pin-dot { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--border2); background: transparent; transition: all .15s; }
+    .pin-dot.filled { background: var(--gold); border-color: var(--gold); }
+    .pin-dot.error  { background: var(--red); border-color: var(--red); }
+    .pin-numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+    .pin-key { padding: 13px 0; border-radius: 5px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 16px; cursor: pointer; transition: background .1s, border-color .1s; user-select: none; }
+    .pin-key:hover { background: var(--bg4); border-color: var(--gold-dim); }
+    .pin-key:active { background: var(--bg); }
+    .pin-key.del { font-size: 14px; color: var(--muted); }
+    .pin-error-msg { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--red); letter-spacing: .07em; min-height: 14px; }
+    .pin-setup-steps { display: none; }
+
     /* ── WEATHER FORECAST MODAL ── */
     .wx-modal { width: 460px; max-width: 96vw; padding: 20px; max-height: 88vh; overflow-y: auto; }
     .wx-modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
@@ -1999,6 +2015,42 @@
       </div>
     </div>
 
+    <div style="border-top:1px solid var(--border);margin:18px 0"></div>
+
+    <!-- SECURITY / PIN -->
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:12px">SECURITY</div>
+    <div class="form-group">
+      <label class="form-label">Portfolio PIN <span style="color:var(--muted);font-weight:400">(locks financial values)</span></label>
+      <div id="pin-settings-state" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:8px">—</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-cancel" id="pin-set-btn"    onclick="openPinSetup('set')"    style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em">SET PIN</button>
+        <button class="btn-cancel" id="pin-change-btn" onclick="openPinSetup('change')" style="display:none;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em">CHANGE PIN</button>
+        <button class="btn-cancel" id="pin-remove-btn" onclick="openPinSetup('remove')" style="display:none;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--red)">REMOVE PIN</button>
+      </div>
+      <!-- inline PIN setup flow -->
+      <div id="pin-setup-area" style="display:none;margin-top:14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:5px">
+        <div id="pin-setup-prompt" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:10px"></div>
+        <!-- password verify row (for change/remove) -->
+        <div id="pin-setup-pw-row" style="display:none;margin-bottom:10px">
+          <input class="form-input" id="pin-setup-pw" type="password" placeholder="Account password" style="margin-bottom:6px" />
+          <button class="btn-save" onclick="pinSetupVerifyPassword()" style="font-size:9px;padding:5px 12px;font-family:'JetBrains Mono',monospace">VERIFY →</button>
+          <div id="pin-setup-pw-err" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--red);margin-top:5px"></div>
+        </div>
+        <!-- PIN entry row (for set/new pin) -->
+        <div id="pin-setup-entry-row" style="display:none">
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <input class="form-input" id="pin-setup-inp" type="password" inputmode="numeric" maxlength="4" placeholder="4-digit PIN" style="letter-spacing:.2em;font-size:16px;font-family:'JetBrains Mono',monospace;width:130px" oninput="this.value=this.value.replace(/\D/g,'')" />
+            <input class="form-input" id="pin-setup-confirm" type="password" inputmode="numeric" maxlength="4" placeholder="Confirm PIN" style="letter-spacing:.2em;font-size:16px;font-family:'JetBrains Mono',monospace;width:130px" oninput="this.value=this.value.replace(/\D/g,'')" />
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-save" onclick="pinSetupSave()" style="font-size:9px;padding:5px 12px;font-family:'JetBrains Mono',monospace">SAVE PIN</button>
+            <button class="btn-cancel" onclick="closePinSetup()" style="font-size:9px">Cancel</button>
+          </div>
+          <div id="pin-setup-err" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--red);margin-top:6px"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-actions" style="justify-content:space-between">
       <button class="btn-cancel" onclick="resetThemeToDefault()" style="color:var(--muted)">↺ Set to Default</button>
       <div style="display:flex;gap:8px">
@@ -2351,11 +2403,229 @@
     if (finData) renderFinance();
   };
 
+  // ── PIN PROTECTION ──────────────────────────────────────
+  let _pinHash        = localStorage.getItem('omar_pin_hash') || null;
+  let _pinUnlocked    = false;  // resets each session
+  let _pinCallback    = null;   // fn to call after successful unlock
+  let _pinCurrent     = '';     // digits typed so far in the modal
+  let _pinSetupMode   = null;   // 'set' | 'change' | 'remove'
+  let _pinSetupPwOk   = false;  // password verified for change/remove
+
+  async function hashPin(pin) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('omar_pin:' + pin));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  function pinIsSet() { return !!_pinHash; }
+
+  // Relock portfolio (call when switching away from finance or page hidden)
+  function portfolioRelock() {
+    if (!pinIsSet()) return;
+    _pinUnlocked = false;
+    // Re-blur home finance pulse
+    const wrap = document.getElementById('fp-blur-wrap');
+    const btn  = document.getElementById('home-eye-btn');
+    if (wrap) wrap.classList.add('blurred');
+    if (btn)  btn.textContent = '🙈';
+    homePrivacyMode = true;
+    // Re-engage finance privacy
+    privacyMode = true;
+    const fpBtn = document.getElementById('fin-priv-btn');
+    if (fpBtn) fpBtn.classList.add('active');
+    if (finData) renderFinance();
+  }
+
+  // Open PIN entry modal; onSuccess is called if PIN correct
+  window.openPinModal = function(title, sub, onSuccess) {
+    _pinCurrent  = '';
+    _pinCallback = onSuccess;
+    document.getElementById('pin-modal-title').textContent = title || 'ENTER PIN';
+    document.getElementById('pin-modal-sub').textContent   = sub   || 'Portfolio is locked';
+    document.getElementById('pin-error-msg').textContent   = '';
+    pinUpdateDots();
+    document.getElementById('pin-modal').classList.add('open');
+  };
+
+  window.closePinModal = function() {
+    document.getElementById('pin-modal').classList.remove('open');
+    _pinCurrent  = '';
+    _pinCallback = null;
+    pinUpdateDots();
+  };
+
+  function pinUpdateDots() {
+    for (let i = 0; i < 4; i++) {
+      const d = document.getElementById('pd-' + i);
+      d.classList.toggle('filled', i < _pinCurrent.length);
+      d.classList.remove('error');
+    }
+  }
+
+  window.pinKey = async function(k) {
+    document.getElementById('pin-error-msg').textContent = '';
+    if (k === 'del') {
+      _pinCurrent = _pinCurrent.slice(0, -1);
+      pinUpdateDots();
+      return;
+    }
+    if (_pinCurrent.length >= 4) return;
+    _pinCurrent += k;
+    pinUpdateDots();
+    if (_pinCurrent.length === 4) {
+      const h = await hashPin(_pinCurrent);
+      if (h === _pinHash) {
+        closePinModal();
+        _pinUnlocked = true;
+        if (_pinCallback) _pinCallback();
+      } else {
+        // Shake dots red then reset
+        for (let i = 0; i < 4; i++) {
+          const d = document.getElementById('pd-' + i);
+          d.classList.add('error');
+          d.classList.remove('filled');
+        }
+        document.getElementById('pin-error-msg').textContent = 'INCORRECT PIN';
+        setTimeout(() => { _pinCurrent = ''; pinUpdateDots(); }, 900);
+      }
+    }
+  };
+
+  // Keyboard support for PIN modal
+  document.addEventListener('keydown', e => {
+    if (!document.getElementById('pin-modal').classList.contains('open')) return;
+    if (/^[0-9]$/.test(e.key)) pinKey(e.key);
+    else if (e.key === 'Backspace') pinKey('del');
+    else if (e.key === 'Escape') closePinModal();
+  });
+
+  // Update settings UI to reflect current PIN state
+  function refreshPinSettingsUI() {
+    const state     = document.getElementById('pin-settings-state');
+    const setBtn    = document.getElementById('pin-set-btn');
+    const changeBtn = document.getElementById('pin-change-btn');
+    const removeBtn = document.getElementById('pin-remove-btn');
+    if (!state) return;
+    if (pinIsSet()) {
+      state.textContent = '● PIN is set';
+      state.style.color = 'var(--green)';
+      if (setBtn)    setBtn.style.display    = 'none';
+      if (changeBtn) changeBtn.style.display = '';
+      if (removeBtn) removeBtn.style.display = '';
+    } else {
+      state.textContent = '○ No PIN set — values are unprotected';
+      state.style.color = 'var(--muted)';
+      if (setBtn)    setBtn.style.display    = '';
+      if (changeBtn) changeBtn.style.display = 'none';
+      if (removeBtn) removeBtn.style.display = 'none';
+    }
+  }
+
+  // PIN settings UI refresh is called inside the real openSettings() below
+
+  window.openPinSetup = function(mode) {
+    _pinSetupMode  = mode;
+    _pinSetupPwOk  = false;
+    const area     = document.getElementById('pin-setup-area');
+    const prompt   = document.getElementById('pin-setup-prompt');
+    const pwRow    = document.getElementById('pin-setup-pw-row');
+    const entryRow = document.getElementById('pin-setup-entry-row');
+    const pwErr    = document.getElementById('pin-setup-pw-err');
+    const pwInp    = document.getElementById('pin-setup-pw');
+    const inp      = document.getElementById('pin-setup-inp');
+    const conf     = document.getElementById('pin-setup-confirm');
+    const err      = document.getElementById('pin-setup-err');
+    if (pwErr)  pwErr.textContent  = '';
+    if (err)    err.textContent    = '';
+    if (pwInp)  pwInp.value        = '';
+    if (inp)    inp.value          = '';
+    if (conf)   conf.value         = '';
+    area.style.display = '';
+    if (mode === 'set') {
+      prompt.textContent = 'CHOOSE A 4-DIGIT PIN TO LOCK PORTFOLIO VALUES';
+      pwRow.style.display    = 'none';
+      entryRow.style.display = '';
+    } else if (mode === 'change') {
+      prompt.textContent = 'ENTER YOUR ACCOUNT PASSWORD TO CONTINUE';
+      pwRow.style.display    = '';
+      entryRow.style.display = 'none';
+    } else if (mode === 'remove') {
+      prompt.textContent = 'ENTER YOUR ACCOUNT PASSWORD TO REMOVE THE PIN';
+      pwRow.style.display    = '';
+      entryRow.style.display = 'none';
+    }
+  };
+
+  window.closePinSetup = function() {
+    const area = document.getElementById('pin-setup-area');
+    if (area) area.style.display = 'none';
+    _pinSetupMode = null;
+    _pinSetupPwOk = false;
+  };
+
+  window.pinSetupVerifyPassword = async function() {
+    const pw    = document.getElementById('pin-setup-pw').value;
+    const err   = document.getElementById('pin-setup-pw-err');
+    const btn   = document.querySelector('#pin-setup-pw-row .btn-save');
+    err.textContent = '';
+    if (!pw) { err.textContent = 'Enter your account password'; return; }
+    if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
+    // Re-authenticate with Supabase to verify identity
+    const { data: { user } } = await sbClient.auth.getUser();
+    const email = user?.email;
+    if (!email) { err.textContent = 'Could not determine account email'; if (btn) { btn.textContent = 'VERIFY →'; btn.disabled = false; } return; }
+    const { error } = await sbClient.auth.signInWithPassword({ email, password: pw });
+    if (btn) { btn.textContent = 'VERIFY →'; btn.disabled = false; }
+    if (error) { err.textContent = 'Incorrect password'; return; }
+    // Password verified — proceed
+    _pinSetupPwOk = true;
+    const pwRow    = document.getElementById('pin-setup-pw-row');
+    const entryRow = document.getElementById('pin-setup-entry-row');
+    const prompt   = document.getElementById('pin-setup-prompt');
+    if (_pinSetupMode === 'remove') {
+      // Remove PIN immediately
+      _pinHash = null;
+      localStorage.removeItem('omar_pin_hash');
+      _pinUnlocked = true;
+      closePinSetup();
+      refreshPinSettingsUI();
+    } else if (_pinSetupMode === 'change') {
+      prompt.textContent = 'CHOOSE YOUR NEW 4-DIGIT PIN';
+      pwRow.style.display    = 'none';
+      entryRow.style.display = '';
+    }
+  };
+
+  window.pinSetupSave = async function() {
+    const inp  = document.getElementById('pin-setup-inp').value;
+    const conf = document.getElementById('pin-setup-confirm').value;
+    const err  = document.getElementById('pin-setup-err');
+    err.textContent = '';
+    if (inp.length !== 4 || !/^\d{4}$/.test(inp)) { err.textContent = 'PIN must be exactly 4 digits'; return; }
+    if (inp !== conf) { err.textContent = 'PINs do not match'; return; }
+    _pinHash = await hashPin(inp);
+    localStorage.setItem('omar_pin_hash', _pinHash);
+    _pinUnlocked = true; // stay unlocked after setting
+    closePinSetup();
+    refreshPinSettingsUI();
+    // Lock immediately so PIN is enforced next time
+    portfolioRelock();
+  };
+
+  // Intercept togglePrivacy to require PIN before revealing
   window.togglePrivacy = () => {
+    if (privacyMode && pinIsSet() && !_pinUnlocked) {
+      // Locked — ask for PIN first
+      openPinModal('ENTER PIN', 'Unlock portfolio values', () => {
+        privacyMode = false;
+        const btn = document.getElementById('fin-priv-btn');
+        if (btn) btn.classList.remove('active');
+        if (finData) renderFinance();
+      });
+      return;
+    }
     privacyMode = !privacyMode;
     const btn = document.getElementById('fin-priv-btn');
     if (btn) btn.classList.toggle('active', privacyMode);
-    // Always re-render; if no finData yet, still hide/show known elements
     if (finData) {
       renderFinance();
     } else {
@@ -2368,18 +2638,44 @@
   };
 
   window.toggleHomePrivacy = () => {
+    if (homePrivacyMode && pinIsSet() && !_pinUnlocked) {
+      // Locked — ask for PIN first
+      openPinModal('ENTER PIN', 'Unlock portfolio values', () => {
+        homePrivacyMode = false;
+        const wrap = document.getElementById('fp-blur-wrap');
+        const btn  = document.getElementById('home-eye-btn');
+        if (wrap) wrap.classList.remove('blurred');
+        if (btn)  btn.textContent = '🙉';
+        const nwEl = document.getElementById('home-nw');
+        if (nwEl && finData) {
+          const val = finData.liveTotal || finData.costTotal || 0;
+          nwEl.textContent = fmtMoneyHome(val);
+        }
+      });
+      return;
+    }
     homePrivacyMode = !homePrivacyMode;
     const wrap = document.getElementById('fp-blur-wrap');
     const btn  = document.getElementById('home-eye-btn');
     if (wrap) wrap.classList.toggle('blurred', homePrivacyMode);
     if (btn)  btn.textContent = homePrivacyMode ? '🙈' : '🙉';
-    // Re-render net worth text — fmtMoneyHome reads homePrivacyMode at call time
     const nwEl = document.getElementById('home-nw');
     if (nwEl && finData) {
       const val = finData.liveTotal || finData.costTotal || 0;
       nwEl.textContent = fmtMoneyHome(val);
     }
   };
+
+  // Auto-relock when page loses visibility (e.g. switching tabs / locking phone)
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && pinIsSet()) portfolioRelock();
+  });
+
+  // Ensure portfolio starts locked if PIN is set
+  if (pinIsSet()) {
+    homePrivacyMode = true;
+    privacyMode     = true;
+  }
 
   window.sortHoldings = (key) => {
     if (holdingsSortKey === key) {
@@ -5646,6 +5942,9 @@ Return raw JSON only.`;
     if (slider)  slider.value = _fontSizeSnapshot;
     if (display) display.textContent = _fontSizeSnapshot + 'px';
     document.getElementById('settings-modal').classList.add('open');
+    // Refresh PIN settings UI
+    refreshPinSettingsUI();
+    closePinSetup();
     // Load from DB (async — fills in after modal opens)
     await loadApiKeyHistory();
   };
@@ -8373,6 +8672,34 @@ window.clearBrainChat = () => {
   if (msgs) msgs.innerHTML = '<div class="ai-msg assistant" style="opacity:.5;font-size:11px">Chat cleared. What do you need?</div>';
 };
 </script>
+
+<!-- ── PIN ENTRY MODAL ── -->
+<div class="modal-overlay" id="pin-modal" onclick="if(event.target===this)closePinModal()">
+  <div class="modal pin-modal-wrap">
+    <div class="pin-modal-title" id="pin-modal-title">ENTER PIN</div>
+    <div class="pin-modal-sub" id="pin-modal-sub">Portfolio is locked</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="pd-0"></div>
+      <div class="pin-dot" id="pd-1"></div>
+      <div class="pin-dot" id="pd-2"></div>
+      <div class="pin-dot" id="pd-3"></div>
+    </div>
+    <div class="pin-numpad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key" onclick="pinKey('0')" style="grid-column:2">0</button>
+      <button class="pin-key del" onclick="pinKey('del')">⌫</button>
+    </div>
+    <div class="pin-error-msg" id="pin-error-msg"></div>
+  </div>
+</div>
 
 <!-- ── WEATHER FORECAST MODAL ── -->
 <div class="modal-overlay" id="wx-forecast-modal" onclick="if(event.target===this)closeWeatherModal()">
