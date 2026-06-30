@@ -2021,11 +2021,9 @@
     <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold-dim);letter-spacing:.1em;margin-bottom:12px">SECURITY</div>
     <div class="form-group">
       <label class="form-label">Portfolio PIN <span style="color:var(--muted);font-weight:400">(locks financial values)</span></label>
-      <div id="pin-settings-state" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:8px">—</div>
+      <div id="pin-settings-state" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);margin-bottom:8px">● PIN is active</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn-cancel" id="pin-set-btn"    onclick="openPinSetup('set')"    style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em">SET PIN</button>
-        <button class="btn-cancel" id="pin-change-btn" onclick="openPinSetup('change')" style="display:none;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em">CHANGE PIN</button>
-        <button class="btn-cancel" id="pin-remove-btn" onclick="openPinSetup('remove')" style="display:none;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--red)">REMOVE PIN</button>
+        <button class="btn-cancel" id="pin-change-btn" onclick="openPinSetup('change')" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em">CHANGE PIN</button>
       </div>
       <!-- inline PIN setup flow -->
       <div id="pin-setup-area" style="display:none;margin-top:14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:5px">
@@ -2508,32 +2506,23 @@
     else if (e.key === 'Escape') closePinModal();
   });
 
-  // Update settings UI to reflect current PIN state
+  // Update settings UI to reflect current PIN state (PIN is always mandatory)
   function refreshPinSettingsUI() {
     const state     = document.getElementById('pin-settings-state');
-    const setBtn    = document.getElementById('pin-set-btn');
     const changeBtn = document.getElementById('pin-change-btn');
-    const removeBtn = document.getElementById('pin-remove-btn');
     if (!state) return;
-    if (pinIsSet()) {
-      state.textContent = '● PIN is set';
-      state.style.color = 'var(--green)';
-      if (setBtn)    setBtn.style.display    = 'none';
-      if (changeBtn) changeBtn.style.display = '';
-      if (removeBtn) removeBtn.style.display = '';
-    } else {
-      state.textContent = '○ No PIN set — values are unprotected';
-      state.style.color = 'var(--muted)';
-      if (setBtn)    setBtn.style.display    = '';
-      if (changeBtn) changeBtn.style.display = 'none';
-      if (removeBtn) removeBtn.style.display = 'none';
-    }
+    // PIN is always required — only state is "active"
+    state.textContent = '● PIN is active';
+    state.style.color = 'var(--green)';
+    if (changeBtn) changeBtn.style.display = '';
   }
 
   // PIN settings UI refresh is called inside the real openSettings() below
 
   window.openPinSetup = function(mode) {
-    _pinSetupMode  = mode;
+    // PIN is mandatory — only 'change' mode is permitted
+    if (mode !== 'change') return;
+    _pinSetupMode  = 'change';
     _pinSetupPwOk  = false;
     const area     = document.getElementById('pin-setup-area');
     const prompt   = document.getElementById('pin-setup-prompt');
@@ -2550,19 +2539,9 @@
     if (inp)    inp.value          = '';
     if (conf)   conf.value         = '';
     area.style.display = '';
-    if (mode === 'set') {
-      prompt.textContent = 'CHOOSE A 4-DIGIT PIN TO LOCK PORTFOLIO VALUES';
-      pwRow.style.display    = 'none';
-      entryRow.style.display = '';
-    } else if (mode === 'change') {
-      prompt.textContent = 'ENTER YOUR ACCOUNT PASSWORD TO CONTINUE';
-      pwRow.style.display    = '';
-      entryRow.style.display = 'none';
-    } else if (mode === 'remove') {
-      prompt.textContent = 'ENTER YOUR ACCOUNT PASSWORD TO REMOVE THE PIN';
-      pwRow.style.display    = '';
-      entryRow.style.display = 'none';
-    }
+    prompt.textContent = 'ENTER YOUR ACCOUNT PASSWORD TO CONTINUE';
+    pwRow.style.display    = '';
+    entryRow.style.display = 'none';
   };
 
   window.closePinSetup = function() {
@@ -2591,16 +2570,7 @@
     const pwRow    = document.getElementById('pin-setup-pw-row');
     const entryRow = document.getElementById('pin-setup-entry-row');
     const prompt   = document.getElementById('pin-setup-prompt');
-    if (_pinSetupMode === 'remove') {
-      // Remove PIN — clear from Supabase + localStorage
-      try {
-        await savePinHashToSb(null);
-      } catch(e) { /* non-critical — still clear locally */ }
-      _pinHash = null;
-      _pinUnlocked = true;
-      closePinSetup();
-      refreshPinSettingsUI();
-    } else if (_pinSetupMode === 'change') {
+    if (_pinSetupMode === 'change') {
       prompt.textContent = 'CHOOSE YOUR NEW 4-DIGIT PIN';
       pwRow.style.display    = 'none';
       entryRow.style.display = '';
@@ -2785,28 +2755,114 @@
     try {
       const rows = await sb('user_profile', '?id=eq.default&select=pin_hash');
       const sbHash = rows?.[0]?.pin_hash ?? null;
-      // Sync local cache to match Supabase
       if (sbHash) {
+        // Valid PIN found — sync cache and lock
         localStorage.setItem('omar_pin_hash', sbHash);
-      } else {
-        localStorage.removeItem('omar_pin_hash');
-      }
-      _pinHash = sbHash;
-      // Apply lock state based on fresh Supabase value
-      if (pinIsSet()) {
+        _pinHash = sbHash;
         homePrivacyMode = true;
         privacyMode     = true;
+        refreshPinSettingsUI();
       } else {
-        // No PIN in DB — ensure we don't hold a stale local hash
-        homePrivacyMode = false;
-        privacyMode     = false;
+        // No PIN in DB — PIN is mandatory, force setup immediately
+        localStorage.removeItem('omar_pin_hash');
+        _pinHash = null;
+        forcePinSetup();
       }
-      refreshPinSettingsUI();
     } catch(e) {
       // Network failure — fall back to localStorage cache silently
       console.warn('loadPinHash:', e);
+      if (_pinHash) {
+        homePrivacyMode = true;
+        privacyMode     = true;
+      } else {
+        forcePinSetup();
+      }
     }
   }
+
+  // Full-screen blocking PIN setup — no dismiss, no escape.
+  // Called when user has no PIN in Supabase (first login / PIN was cleared).
+  function forcePinSetup() {
+    // Prevent duplicate overlays
+    if (document.getElementById('force-pin-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'force-pin-overlay';
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:99999;
+      background:rgba(10,11,13,0.97);
+      display:flex;align-items:center;justify-content:center;
+      font-family:'JetBrains Mono',monospace;
+    `;
+    overlay.innerHTML = `
+      <div style="
+        background:var(--bg2,#111316);
+        border:1px solid var(--border2,#2a2d35);
+        border-radius:8px;
+        padding:32px 28px;
+        width:340px;
+        max-width:90vw;
+        text-align:center;
+      ">
+        <div style="font-size:28px;margin-bottom:16px">🔐</div>
+        <div style="font-size:11px;color:var(--gold,#d4a843);letter-spacing:.12em;margin-bottom:6px">PORTFOLIO PIN REQUIRED</div>
+        <div style="font-size:9px;color:var(--muted,#6b7280);letter-spacing:.04em;margin-bottom:24px;line-height:1.6">
+          A PIN is required to access Omar OS.<br>Choose a 4-digit PIN to protect your data.
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;margin-bottom:10px">
+          <input id="force-pin-inp" type="password" inputmode="numeric" maxlength="4"
+            placeholder="New PIN"
+            style="width:120px;padding:9px 12px;background:var(--bg3,#1a1d24);border:1px solid var(--border2,#2a2d35);border-radius:4px;color:var(--text,#e8eaed);font-family:'JetBrains Mono',monospace;font-size:16px;letter-spacing:.2em;text-align:center;outline:none"
+            oninput="this.value=this.value.replace(/\\D/g,'')"
+          />
+          <input id="force-pin-conf" type="password" inputmode="numeric" maxlength="4"
+            placeholder="Confirm"
+            style="width:120px;padding:9px 12px;background:var(--bg3,#1a1d24);border:1px solid var(--border2,#2a2d35);border-radius:4px;color:var(--text,#e8eaed);font-family:'JetBrains Mono',monospace;font-size:16px;letter-spacing:.2em;text-align:center;outline:none"
+            oninput="this.value=this.value.replace(/\\D/g,'')"
+          />
+        </div>
+        <div id="force-pin-err" style="font-size:9px;color:var(--red,#ef4444);min-height:14px;margin-bottom:12px"></div>
+        <button id="force-pin-btn" onclick="forcePinSave()"
+          style="width:100%;padding:10px;background:var(--gold,#d4a843);color:#000;border:none;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;cursor:pointer;font-weight:700">
+          SET PIN &amp; CONTINUE →
+        </button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    // Focus first input
+    setTimeout(() => document.getElementById('force-pin-inp')?.focus(), 80);
+  }
+
+  window.forcePinSave = async function() {
+    const inp  = document.getElementById('force-pin-inp')?.value || '';
+    const conf = document.getElementById('force-pin-conf')?.value || '';
+    const err  = document.getElementById('force-pin-err');
+    const btn  = document.getElementById('force-pin-btn');
+    if (err) err.textContent = '';
+    if (inp.length !== 4 || !/^\d{4}$/.test(inp)) {
+      if (err) err.textContent = 'PIN must be exactly 4 digits';
+      return;
+    }
+    if (inp !== conf) {
+      if (err) err.textContent = 'PINs do not match';
+      return;
+    }
+    if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+    try {
+      _pinHash = await hashPin(inp);
+      await savePinHashToSb(_pinHash);
+    } catch(e) {
+      if (err) err.textContent = 'Failed to save — check connection';
+      if (btn) { btn.textContent = 'SET PIN & CONTINUE →'; btn.disabled = false; }
+      return;
+    }
+    _pinUnlocked = true;
+    homePrivacyMode = true;
+    privacyMode     = true;
+    // Dismiss overlay
+    const overlay = document.getElementById('force-pin-overlay');
+    if (overlay) overlay.remove();
+    refreshPinSettingsUI();
+  };
 
   // Write pin_hash to Supabase + warm localStorage cache
   async function savePinHashToSb(hash) {
