@@ -6299,9 +6299,9 @@ Return raw JSON only.`;
     // Refresh PIN settings UI
     refreshPinSettingsUI();
     closePinSetup();
-    // Populate Google Calendar client ID
+    // Populate Google Calendar client ID (fast path: in-memory / localStorage cache)
     const gcalInp = document.getElementById('gcal-client-id-input');
-    if (gcalInp) gcalInp.value = localStorage.getItem('gcal_client_id') || '';
+    if (gcalInp) gcalInp.value = gcalClientId();
     gcalRefreshSettingsStatus();
     // Load from DB (async — fills in after modal opens)
     await loadApiKeyHistory();
@@ -6317,13 +6317,9 @@ Return raw JSON only.`;
     } else {
       localStorage.removeItem('omar_claude_key');
     }
-    // Save Google Calendar client ID
+    // Save Google Calendar client ID to Supabase + localStorage
     const gcalInp = document.getElementById('gcal-client-id-input');
-    if (gcalInp) {
-      const cid = gcalInp.value.trim();
-      if (cid) localStorage.setItem('gcal_client_id', cid);
-      else     localStorage.removeItem('gcal_client_id');
-    }
+    if (gcalInp) await gcalSaveClientId(gcalInp.value.trim());
     // Save theme
     const current = readCurrentThemeVars();
     localStorage.setItem('omar_theme', JSON.stringify(current));
@@ -9364,10 +9360,51 @@ let _gcalEvents  = [];       // cached events for the displayed range
 let _gcalEditId  = null;     // event being edited in the modal
 let _gcalGisReady = false;   // whether GIS library is loaded
 
-// ── Token helpers ────────────────────────────────────────────────────────────
+// ── Client ID helpers (Supabase is source of truth; localStorage is fast cache) ──
+
+let _gcalClientIdCache = '';    // in-memory; populated by gcalLoadClientId()
 
 function gcalClientId() {
-  return localStorage.getItem('gcal_client_id') || '';
+  // In-memory first, then localStorage fallback
+  return _gcalClientIdCache || localStorage.getItem('gcal_client_id') || '';
+}
+
+// Fetch from Supabase and warm caches
+async function gcalLoadClientId() {
+  try {
+    const rows = await sb('user_profile', '?id=eq.default&select=google_client_id');
+    const cid  = rows?.[0]?.google_client_id ?? null;
+    if (cid) {
+      _gcalClientIdCache = cid;
+      localStorage.setItem('gcal_client_id', cid);
+    } else {
+      // Nothing in DB — keep whatever localStorage has (allows offline fallback)
+      _gcalClientIdCache = localStorage.getItem('gcal_client_id') || '';
+    }
+  } catch(e) {
+    // Network failure — fall back to localStorage cache
+    console.warn('gcalLoadClientId:', e);
+    _gcalClientIdCache = localStorage.getItem('gcal_client_id') || '';
+  }
+}
+
+// Persist to Supabase + both caches
+async function gcalSaveClientId(cid) {
+  _gcalClientIdCache = cid;
+  if (cid) localStorage.setItem('gcal_client_id', cid);
+  else     localStorage.removeItem('gcal_client_id');
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/user_profile?id=eq.default`, {
+      method:  'PATCH',
+      headers: {
+        apikey:         SUPABASE_ANON,
+        Authorization:  `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        Prefer:         'return=minimal',
+      },
+      body: JSON.stringify({ google_client_id: cid || null }),
+    });
+  } catch(e) { console.warn('gcalSaveClientId:', e); }
 }
 
 function gcalTokenValid() {
@@ -9418,6 +9455,8 @@ function gcalLoadGIS() {
 // ── Init ─────────────────────────────────────────────────────────────────────
 
 async function gcalInit() {
+  // Fetch Client ID from Supabase (cross-device source of truth) before doing anything
+  await gcalLoadClientId();
   if (!gcalClientId()) {
     gcalShowConnect('Add your Google Client ID in Settings → Google Calendar to enable this widget.');
     return;
@@ -9486,12 +9525,11 @@ window.gcalConnect = async function() {
   window._gcalTokenClient.requestAccessToken({ prompt: '' });
 };
 
-window.gcalConnectFromSettings = function() {
-  // Save the client ID from the input first, then connect
+window.gcalConnectFromSettings = async function() {
+  // Persist the client ID from the input first (Supabase + localStorage), then connect
   const inp = document.getElementById('gcal-client-id-input');
   if (inp) {
-    const cid = inp.value.trim();
-    if (cid) localStorage.setItem('gcal_client_id', cid);
+    await gcalSaveClientId(inp.value.trim());
   }
   gcalConnect();
 };
