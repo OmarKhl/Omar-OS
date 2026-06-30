@@ -2412,6 +2412,8 @@
   };
 
   // ── PIN PROTECTION ──────────────────────────────────────
+  // PIN hash lives in Supabase user_profile.pin_hash (cross-device source of truth).
+  // localStorage is used only as a same-device fast-cache; Supabase always wins.
   let _pinHash        = localStorage.getItem('omar_pin_hash') || null;
   let _pinUnlocked    = false;  // resets each session
   let _pinCallback    = null;   // fn to call after successful unlock
@@ -2590,9 +2592,11 @@
     const entryRow = document.getElementById('pin-setup-entry-row');
     const prompt   = document.getElementById('pin-setup-prompt');
     if (_pinSetupMode === 'remove') {
-      // Remove PIN immediately
+      // Remove PIN — clear from Supabase + localStorage
+      try {
+        await savePinHashToSb(null);
+      } catch(e) { /* non-critical — still clear locally */ }
       _pinHash = null;
-      localStorage.removeItem('omar_pin_hash');
       _pinUnlocked = true;
       closePinSetup();
       refreshPinSettingsUI();
@@ -2607,15 +2611,24 @@
     const inp  = document.getElementById('pin-setup-inp').value;
     const conf = document.getElementById('pin-setup-confirm').value;
     const err  = document.getElementById('pin-setup-err');
+    const btn  = document.getElementById('pin-setup-entry-row')?.querySelector('.btn-save');
     err.textContent = '';
     if (inp.length !== 4 || !/^\d{4}$/.test(inp)) { err.textContent = 'PIN must be exactly 4 digits'; return; }
     if (inp !== conf) { err.textContent = 'PINs do not match'; return; }
-    _pinHash = await hashPin(inp);
-    localStorage.setItem('omar_pin_hash', _pinHash);
+    if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+    try {
+      _pinHash = await hashPin(inp);
+      await savePinHashToSb(_pinHash);   // write to Supabase + localStorage
+    } catch(e) {
+      err.textContent = 'Failed to save PIN — check connection';
+      if (btn) { btn.textContent = 'SAVE PIN'; btn.disabled = false; }
+      return;
+    }
+    if (btn) { btn.textContent = 'SAVE PIN'; btn.disabled = false; }
     _pinUnlocked = true; // stay unlocked after setting
     closePinSetup();
     refreshPinSettingsUI();
-    // Lock immediately so PIN is enforced next time
+    // Lock immediately so PIN is enforced on next session
     portfolioRelock();
   };
 
@@ -2679,11 +2692,7 @@
     if (document.hidden && pinIsSet()) portfolioRelock();
   });
 
-  // Ensure portfolio starts locked if PIN is set
-  if (pinIsSet()) {
-    homePrivacyMode = true;
-    privacyMode     = true;
-  }
+  // PIN lock state is applied by loadPinHash() after Supabase fetch on login
 
   window.sortHoldings = (key) => {
     if (holdingsSortKey === key) {
@@ -2765,6 +2774,49 @@
     renderHabits();
     loadHome();
     loaders['home'] = true;
+    // Fetch PIN hash from Supabase (cross-device source of truth)
+    loadPinHash();
+  }
+
+  // Fetch pin_hash from Supabase and apply it. localStorage is used as a
+  // fast same-device cache so there's no visual flicker on repeat visits,
+  // but Supabase always overrides it.
+  async function loadPinHash() {
+    try {
+      const rows = await sb('user_profile', '?id=eq.default&select=pin_hash');
+      const sbHash = rows?.[0]?.pin_hash ?? null;
+      // Sync local cache to match Supabase
+      if (sbHash) {
+        localStorage.setItem('omar_pin_hash', sbHash);
+      } else {
+        localStorage.removeItem('omar_pin_hash');
+      }
+      _pinHash = sbHash;
+      // Apply lock state based on fresh Supabase value
+      if (pinIsSet()) {
+        homePrivacyMode = true;
+        privacyMode     = true;
+      } else {
+        // No PIN in DB — ensure we don't hold a stale local hash
+        homePrivacyMode = false;
+        privacyMode     = false;
+      }
+      refreshPinSettingsUI();
+    } catch(e) {
+      // Network failure — fall back to localStorage cache silently
+      console.warn('loadPinHash:', e);
+    }
+  }
+
+  // Write pin_hash to Supabase + warm localStorage cache
+  async function savePinHashToSb(hash) {
+    await fetch(`${SUPABASE_URL}/rest/v1/user_profile?id=eq.default`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ pin_hash: hash }),
+    });
+    if (hash) localStorage.setItem('omar_pin_hash', hash);
+    else       localStorage.removeItem('omar_pin_hash');
   }
 
   // ── CLOCK + GREETING ────────────────────────────────────
@@ -8255,9 +8307,22 @@ let brainHistory   = [];   // full Claude message history
 let brainBusy      = false;
 
 const BRAIN_SYSTEM = `You are Omar's personal AI assistant — the brain of his life OS dashboard.
-You manage: his daily habit tracker, personal tasks, weekly/monthly goals, investment finance portfolio (stocks/transactions), and his Benzo Rentals luxury car rental business.
-Be concise and direct. Always use tools to read real data before answering questions about numbers, names, or status.
-Never invent data. When you create something, confirm exactly what was created.
+You have full read + write access to:
+• Habits — daily tracker with sub-habits and streak data
+• Tasks — personal, work, and Benzo tasks with priorities and due dates
+• Goals — weekly and monthly goal tracking
+• Finance — investment portfolio with 500+ transactions, live price cache, holdings by category
+• Benzo Rentals — 200+ rental bookings, fleet of 10 cars
+• Journal — daily journal entries
+
+Rules:
+- ALWAYS use tools to read real data before answering questions about numbers, names, or status.
+- Never invent or estimate data — fetch it.
+- When you create or update something, confirm exactly what changed.
+- When a user says "mark done", "complete", or "finish" a task, use complete_task.
+- When asked about portfolio value, total gain, or live prices, use get_portfolio_value.
+- When asked about Benzo revenue or earnings, use get_rental_revenue.
+- Be concise. Omit apologies and filler phrases.
 Today: ${new Date().toISOString().slice(0,10)}.`;
 
 const BRAIN_TOOLS = [
@@ -8408,6 +8473,100 @@ const BRAIN_TOOLS = [
       },
       required: ['content']
     }
+  },
+
+  // ── TASK MUTATIONS ───────────────────────────────────────────────────────
+  {
+    name: 'complete_task',
+    description: 'Mark a task as completed. Use when the user says a task is done, finished, or completed.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task_id:   { type: 'string', description: 'UUID of the task to complete. Fetch tasks first if you don\'t have it.' },
+        task_text: { type: 'string', description: 'Fuzzy text match to find the task if task_id is unknown.' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'update_task',
+    description: 'Update a task\'s text, due date, priority, category, or starred status.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task_id:    { type: 'string', description: 'UUID of the task to update' },
+        task_text:  { type: 'string', description: 'Fuzzy text to find the task if task_id unknown' },
+        new_text:   { type: 'string', description: 'New task description (if changing)' },
+        due_date:   { type: 'string', description: 'New due date YYYY-MM-DD (or null to clear)' },
+        priority:   { type: 'string', enum: ['high','medium','low'], description: 'New priority' },
+        category:   { type: 'string', enum: ['Personal','Work','Benzo'], description: 'New category' },
+        is_starred: { type: 'boolean', description: 'Star / unstar the task' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'delete_task',
+    description: 'Permanently delete a task. Only use when the user explicitly asks to delete/remove it.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task_id:   { type: 'string', description: 'UUID of the task' },
+        task_text: { type: 'string', description: 'Fuzzy text to find the task if task_id unknown' }
+      },
+      required: []
+    }
+  },
+
+  // ── GOAL MUTATIONS ───────────────────────────────────────────────────────
+  {
+    name: 'complete_goal',
+    description: 'Mark a goal as completed.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        goal_id:    { type: 'string', description: 'UUID of the goal' },
+        goal_title: { type: 'string', description: 'Fuzzy title match to find the goal if goal_id unknown' }
+      },
+      required: []
+    }
+  },
+
+  // ── FINANCE READ ─────────────────────────────────────────────────────────
+  {
+    name: 'get_portfolio_value',
+    description: 'Get current portfolio value from the live price cache — total value, total cost basis, total gain/loss, and a breakdown per holding.',
+    input_schema: { type: 'object', properties: {}, required: [] }
+  },
+
+  // ── RENTAL MUTATIONS ─────────────────────────────────────────────────────
+  {
+    name: 'update_rental',
+    description: 'Update a rental booking — change status (upcoming/active/completed) or add notes.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        rental_id:     { type: 'string', description: 'UUID of the rental to update' },
+        customer_name: { type: 'string', description: 'Fuzzy customer name match if rental_id unknown' },
+        status:        { type: 'string', enum: ['upcoming','active','completed'], description: 'New status' },
+        notes:         { type: 'string', description: 'Notes to set on the booking' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'get_rental_revenue',
+    description: 'Get Benzo Rentals revenue stats — total, by vehicle, by month, or for a date range.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        vehicle_name: { type: 'string', description: 'Filter to a specific vehicle (fuzzy match). Omit for all.' },
+        from_date:    { type: 'string', description: 'Start date YYYY-MM-DD. Omit for all time.' },
+        to_date:      { type: 'string', description: 'End date YYYY-MM-DD. Omit for today.' },
+        group_by:     { type: 'string', enum: ['vehicle','month'], description: 'Group results by vehicle or by month. Omit for overall total.' }
+      },
+      required: []
+    }
   }
 ];
 
@@ -8497,16 +8656,22 @@ async function executeBrainTool(name, input) {
       let qs = '?order=trade_date.asc';
       if (input.ticker) qs += `&ticker=eq.${encodeURIComponent(input.ticker.toUpperCase())}`;
       const txs = await sb('transactions', qs);
-      // Compute holdings
-      const holdings = {};
+      // Compute holdings using correct field names
+      const holdMap = {};
       (txs||[]).forEach(t => {
-        if (!holdings[t.ticker]) holdings[t.ticker] = { shares:0, cost_basis:0, transactions:[] };
-        const qty = t.transaction_type === 'sell' ? -t.shares : t.shares;
-        holdings[t.ticker].shares     += qty;
-        holdings[t.ticker].cost_basis += (t.cost_per_share||0) * qty;
-        holdings[t.ticker].transactions.push({ type:t.transaction_type, shares:t.shares, price:t.cost_per_share, date:t.trade_date });
+        const tick = t.ticker;
+        const qty  = parseFloat(t.quantity) || 0;
+        const price = parseFloat(t.amount_per_unit) || 0;
+        const fxRate = Math.max(parseFloat(t.fx_rate) || 1, 0.0001);
+        const type = (t.transaction_type||'').toLowerCase();
+        if (!holdMap[tick]) holdMap[tick] = { quantity:0, cost_basis_usd:0, account: t.investment_account };
+        if (type === 'buy')  { holdMap[tick].quantity += qty; holdMap[tick].cost_basis_usd += (price / fxRate) * qty; }
+        if (type === 'sell') { holdMap[tick].quantity -= qty; holdMap[tick].cost_basis_usd -= holdMap[tick].cost_basis_usd * (qty / Math.max(holdMap[tick].quantity + qty, 0.0001)); }
       });
-      return { holdings, total_cost_basis: Object.values(holdings).reduce((s,h)=>s+h.cost_basis,0) };
+      // Remove zero-qty positions
+      Object.keys(holdMap).forEach(k => { if (holdMap[k].quantity <= 0.0001) delete holdMap[k]; });
+      const totalCost = Object.values(holdMap).reduce((s,h) => s + h.cost_basis_usd, 0);
+      return { holdings: holdMap, total_cost_basis_usd: Math.round(totalCost * 100) / 100 };
     }
 
     case 'get_rentals': {
@@ -8563,6 +8728,199 @@ async function executeBrainTool(name, input) {
       const ta = document.getElementById('journal-textarea');
       if (ta && document.getElementById('page-journal')?.classList.contains('active')) ta.value = content;
       return { written:true, date, length: content.length };
+    }
+
+    // ── TASK MUTATIONS ───────────────────────────────────────────────────────
+    case 'complete_task': {
+      let taskId = input.task_id;
+      if (!taskId && input.task_text) {
+        const all = await sb('tasks', '?completed=eq.false&order=created_at.desc');
+        const match = (all||[]).find(t => t.task_text.toLowerCase().includes(input.task_text.toLowerCase()) || input.task_text.toLowerCase().includes(t.task_text.toLowerCase()));
+        if (!match) return { error: `No open task found matching "${input.task_text}"` };
+        taskId = match.id;
+      }
+      if (!taskId) return { error: 'Provide task_id or task_text to identify the task.' };
+      await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${taskId}`, {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ completed: true }),
+      });
+      loaders['home'] = false; loadHome().then(()=>{ loaders['home']=true; }).catch(()=>{});
+      if (typeof loadTasks === 'function') loadTasks().catch(()=>{});
+      return { completed: true, task_id: taskId };
+    }
+
+    case 'update_task': {
+      let taskId = input.task_id;
+      let taskLabel = input.task_text;
+      if (!taskId && taskLabel) {
+        const all = await sb('tasks', '?order=created_at.desc');
+        const match = (all||[]).find(t => t.task_text.toLowerCase().includes(taskLabel.toLowerCase()) || taskLabel.toLowerCase().includes(t.task_text.toLowerCase()));
+        if (!match) return { error: `No task found matching "${taskLabel}"` };
+        taskId = match.id; taskLabel = match.task_text;
+      }
+      if (!taskId) return { error: 'Provide task_id or task_text to identify the task.' };
+      const patch = {};
+      if (input.new_text  !== undefined) patch.task_text  = input.new_text;
+      if (input.due_date  !== undefined) patch.due_date   = input.due_date || null;
+      if (input.priority  !== undefined) patch.priority   = input.priority;
+      if (input.category  !== undefined) patch.category   = input.category;
+      if (input.is_starred !== undefined) patch.is_starred = input.is_starred;
+      if (!Object.keys(patch).length) return { error: 'No fields to update were provided.' };
+      await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${taskId}`, {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify(patch),
+      });
+      loaders['home'] = false; loadHome().then(()=>{ loaders['home']=true; }).catch(()=>{});
+      if (typeof loadTasks === 'function') loadTasks().catch(()=>{});
+      return { updated: true, task_id: taskId, changes: patch };
+    }
+
+    case 'delete_task': {
+      let taskId = input.task_id;
+      if (!taskId && input.task_text) {
+        const all = await sb('tasks', '?order=created_at.desc');
+        const match = (all||[]).find(t => t.task_text.toLowerCase().includes(input.task_text.toLowerCase()));
+        if (!match) return { error: `No task found matching "${input.task_text}"` };
+        taskId = match.id;
+      }
+      if (!taskId) return { error: 'Provide task_id or task_text.' };
+      await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${taskId}`, {
+        method: 'DELETE',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}` },
+      });
+      loaders['home'] = false; loadHome().then(()=>{ loaders['home']=true; }).catch(()=>{});
+      if (typeof loadTasks === 'function') loadTasks().catch(()=>{});
+      return { deleted: true, task_id: taskId };
+    }
+
+    // ── GOAL MUTATIONS ───────────────────────────────────────────────────────
+    case 'complete_goal': {
+      let goalId = input.goal_id;
+      if (!goalId && input.goal_title) {
+        const all = await sb('goals', '?completed=eq.false');
+        const match = (all||[]).find(g => g.title.toLowerCase().includes(input.goal_title.toLowerCase()) || input.goal_title.toLowerCase().includes(g.title.toLowerCase()));
+        if (!match) return { error: `No open goal found matching "${input.goal_title}"` };
+        goalId = match.id;
+      }
+      if (!goalId) return { error: 'Provide goal_id or goal_title.' };
+      await fetch(`${SUPABASE_URL}/rest/v1/goals?id=eq.${goalId}`, {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ completed: true }),
+      });
+      loaders['home'] = false; loadHome().then(()=>{ loaders['home']=true; }).catch(()=>{});
+      return { completed: true, goal_id: goalId };
+    }
+
+    // ── FINANCE — LIVE PORTFOLIO VALUE ───────────────────────────────────────
+    case 'get_portfolio_value': {
+      // Pull the price cache from Supabase
+      const cacheRow = await fetch(`${SUPABASE_URL}/rest/v1/price_cache?id=eq.singleton&select=prices,updated_at`, {
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}` }
+      }).then(r=>r.json()).then(rows=>rows?.[0]).catch(()=>null);
+
+      const prices = cacheRow?.prices || {};
+      const cacheAge = cacheRow?.updated_at ? Math.round((Date.now() - new Date(cacheRow.updated_at).getTime()) / 60000) : null;
+
+      // Compute holdings from transactions
+      const txs = await sb('transactions','?order=trade_date.asc').catch(()=>[]);
+      const holdMap = {};
+      (txs||[]).forEach(t => {
+        const tick = t.ticker;
+        const qty  = parseFloat(t.quantity) || 0;
+        const price = parseFloat(t.amount_per_unit) || 0;
+        const fxRate = Math.max(parseFloat(t.fx_rate)||1, 0.0001);
+        const type = (t.transaction_type||'').toLowerCase();
+        if (!holdMap[tick]) holdMap[tick] = { quantity:0, cost_basis_usd:0 };
+        if (type === 'buy')  { holdMap[tick].quantity += qty; holdMap[tick].cost_basis_usd += (price/fxRate)*qty; }
+        if (type === 'sell') { holdMap[tick].quantity -= qty; holdMap[tick].cost_basis_usd -= holdMap[tick].cost_basis_usd * (qty / Math.max(holdMap[tick].quantity+qty, 0.0001)); }
+      });
+      Object.keys(holdMap).forEach(k => { if (holdMap[k].quantity <= 0.0001) delete holdMap[k]; });
+
+      let liveTotal = 0, costTotal = 0, missing = [];
+      const breakdown = Object.entries(holdMap).map(([ticker, h]) => {
+        costTotal += h.cost_basis_usd;
+        const lp = prices[ticker];
+        const liveVal = lp?.price ? lp.price * h.quantity : h.cost_basis_usd;
+        if (!lp?.price) missing.push(ticker);
+        liveTotal += liveVal;
+        const gain = liveVal - h.cost_basis_usd;
+        const gainPct = h.cost_basis_usd > 0 ? (gain / h.cost_basis_usd * 100).toFixed(1) : '0.0';
+        return { ticker, qty: Math.round(h.quantity * 1000)/1000, cost: Math.round(h.cost_basis_usd*100)/100, live_value: Math.round(liveVal*100)/100, gain: Math.round(gain*100)/100, gain_pct: gainPct+'%' };
+      }).sort((a,b)=>b.live_value-a.live_value);
+
+      const totalGain = liveTotal - costTotal;
+      return {
+        live_total:   Math.round(liveTotal*100)/100,
+        cost_total:   Math.round(costTotal*100)/100,
+        total_gain:   Math.round(totalGain*100)/100,
+        total_gain_pct: costTotal > 0 ? (totalGain/costTotal*100).toFixed(2)+'%' : '0%',
+        price_cache_age_min: cacheAge,
+        holdings: breakdown,
+        no_price_data: missing
+      };
+    }
+
+    // ── RENTAL MUTATIONS ─────────────────────────────────────────────────────
+    case 'update_rental': {
+      let rentalId = input.rental_id;
+      if (!rentalId && input.customer_name) {
+        const all = await sb('rentals','?order=start_date.desc&limit=50').catch(()=>[]);
+        const match = (all||[]).find(r => r.customer_name?.toLowerCase().includes(input.customer_name.toLowerCase()));
+        if (!match) return { error: `No rental found for customer matching "${input.customer_name}"` };
+        rentalId = match.id;
+      }
+      if (!rentalId) return { error: 'Provide rental_id or customer_name.' };
+      const patch = {};
+      if (input.status !== undefined) patch.status = input.status;
+      if (input.notes  !== undefined) patch.notes  = input.notes;
+      if (!Object.keys(patch).length) return { error: 'No fields to update.' };
+      await fetch(`${SUPABASE_URL}/rest/v1/rentals?id=eq.${rentalId}`, {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify(patch),
+      });
+      return { updated: true, rental_id: rentalId, changes: patch };
+    }
+
+    case 'get_rental_revenue': {
+      let qs = '?select=vehicle_id,start_date,total_rent,status&status=eq.completed';
+      if (input.from_date) qs += `&start_date=gte.${input.from_date}`;
+      if (input.to_date)   qs += `&start_date=lte.${input.to_date}`;
+      const rentals = await sb('rentals', qs).catch(()=>[]);
+      const fleet   = await sb('fleet','?select=id,vehicle_name').catch(()=>[]);
+      const fleetMap = Object.fromEntries((fleet||[]).map(v=>[v.id,v.vehicle_name]));
+
+      // Filter by vehicle name if requested
+      let filtered = rentals || [];
+      if (input.vehicle_name) {
+        const vn = input.vehicle_name.toLowerCase();
+        const matchedIds = (fleet||[]).filter(v=>v.vehicle_name.toLowerCase().includes(vn)).map(v=>v.id);
+        filtered = filtered.filter(r=>matchedIds.includes(r.vehicle_id));
+      }
+
+      const total = filtered.reduce((s,r)=>s+(parseFloat(r.total_rent)||0),0);
+
+      if (input.group_by === 'vehicle') {
+        const byVehicle = {};
+        filtered.forEach(r=>{
+          const name = fleetMap[r.vehicle_id]||r.vehicle_id;
+          byVehicle[name] = (byVehicle[name]||0) + (parseFloat(r.total_rent)||0);
+        });
+        return { total: Math.round(total*100)/100, by_vehicle: Object.fromEntries(Object.entries(byVehicle).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,Math.round(v*100)/100])) };
+      }
+      if (input.group_by === 'month') {
+        const byMonth = {};
+        filtered.forEach(r=>{
+          const month = (r.start_date||'').slice(0,7);
+          byMonth[month] = (byMonth[month]||0) + (parseFloat(r.total_rent)||0);
+        });
+        return { total: Math.round(total*100)/100, by_month: Object.fromEntries(Object.entries(byMonth).sort().reverse().slice(0,12).map(([k,v])=>[k,Math.round(v*100)/100])) };
+      }
+
+      return { total: Math.round(total*100)/100, booking_count: filtered.length };
     }
 
     default:
@@ -8676,19 +9034,26 @@ async function runBrainLoop(apiKey, typingEl) {
       for (const block of toolBlocks) {
         if (!removed) { removeBrainEl(typingEl); removed = true; }
         const label = {
-          get_habits:    'Reading your habits…',
-          create_habit:  'Creating habit…',
-          add_sub_habit: 'Adding sub-habit…',
-          get_tasks:     'Checking your tasks…',
-          create_task:   'Creating task…',
-          get_goals:     'Fetching goals…',
-          create_goal:   'Creating goal…',
-          get_finances:  'Loading portfolio…',
-          get_rentals:   'Checking rentals…',
-          create_rental: 'Creating rental booking…',
-          get_fleet:     'Fetching fleet…',
-          get_journal:   'Reading journal…',
-          write_journal: 'Writing to journal…',
+          get_habits:          'Reading your habits…',
+          create_habit:        'Creating habit…',
+          add_sub_habit:       'Adding sub-habit…',
+          get_tasks:           'Checking your tasks…',
+          create_task:         'Creating task…',
+          complete_task:       'Marking task complete…',
+          update_task:         'Updating task…',
+          delete_task:         'Deleting task…',
+          get_goals:           'Fetching goals…',
+          create_goal:         'Creating goal…',
+          complete_goal:       'Marking goal complete…',
+          get_finances:        'Loading transactions…',
+          get_portfolio_value: 'Fetching live portfolio value…',
+          get_rentals:         'Checking rentals…',
+          create_rental:       'Creating rental booking…',
+          update_rental:       'Updating rental…',
+          get_rental_revenue:  'Calculating revenue…',
+          get_fleet:           'Fetching fleet…',
+          get_journal:         'Reading journal…',
+          write_journal:       'Writing to journal…',
         }[block.name] || `Running ${block.name}…`;
 
         const hintEl = appendBrainMsg('tool-hint', label);
@@ -8735,6 +9100,8 @@ window.clearBrainChat = () => {
   const msgs = document.getElementById('ai-brain-messages');
   if (msgs) msgs.innerHTML = '<div class="ai-msg assistant" style="opacity:.5;font-size:11px">Chat cleared. What do you need?</div>';
 };
+
+
 </script>
 
 <!-- ── PIN ENTRY MODAL ── -->
