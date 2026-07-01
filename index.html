@@ -2978,6 +2978,11 @@
   const sbClient = createClient(SUPABASE_URL, SUPABASE_ANON);
   let accessToken    = SUPABASE_ANON;
   let _currentUserId = '';   // populated after sign-in; used as AES key material
+  // Expose config + auth state to the second <script> block (non-module)
+  window.SUPABASE_URL   = SUPABASE_URL;
+  window.SUPABASE_ANON  = SUPABASE_ANON;
+  window.accessToken    = accessToken;
+  window._currentUserId = _currentUserId;
 
   // ── CURRENCY + PRIVACY STATE ────────────────────────────
   const FX     = { USD: 1, CAD: 1.37, AED: 3.67 };
@@ -3329,6 +3334,8 @@
     if (error) { errEl.textContent = error.message; return; }
     accessToken    = data.session.access_token;
     _currentUserId = data.user?.id || '';
+    window.accessToken    = accessToken;
+    window._currentUserId = _currentUserId;
     _gcalEncKey    = null; // invalidate derived key cache on new login
     document.getElementById('auth-screen').classList.add('hidden');
     initDashboard();
@@ -3336,7 +3343,10 @@
 
   window.signOut = async () => {
     await sbClient.auth.signOut();
-    accessToken = SUPABASE_ANON;
+    accessToken    = SUPABASE_ANON;
+    _currentUserId = '';
+    window.accessToken    = accessToken;
+    window._currentUserId = _currentUserId;
     document.getElementById('auth-screen').classList.remove('hidden');
   };
 
@@ -3345,6 +3355,8 @@
     if (session) {
       accessToken    = session.access_token;
       _currentUserId = session.user?.id || '';
+      window.accessToken    = accessToken;
+      window._currentUserId = _currentUserId;
       document.getElementById('auth-screen').classList.add('hidden');
       initDashboard();
     }
@@ -3352,6 +3364,8 @@
       if (s) {
         accessToken    = s.access_token;
         _currentUserId = s.user?.id || '';
+        window.accessToken    = accessToken;
+        window._currentUserId = _currentUserId;
         _gcalEncKey    = null;
       }
     });
@@ -3383,6 +3397,10 @@
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   }
+  // Expose Supabase helpers globally so the second <script> block can call them
+  window.sb      = sb;
+  window.sbPost  = sbPost;
+  window.sbPatch = sbPatch;
 
   // ── INIT ─────────────────────────────────────────────────
   function initDashboard() {
@@ -6570,6 +6588,7 @@ Return raw JSON only.`;
     if (!r.ok) throw new Error(await r.text());
     return true;
   }
+  window.sbDelete = sbDelete;
 
   // ── SETTINGS ─────────────────────────────────────────────
   // ── THEME SYSTEM ─────────────────────────────────────────────────────────
