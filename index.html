@@ -1144,6 +1144,331 @@
       font-size: 9px;
       color: var(--red);
     }
+
+    /* ── HOME CARD DAY EXPAND ── */
+    .gcal-expand-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5px;
+      color: var(--muted);
+      background: none;
+      border: 1px solid var(--border2);
+      border-radius: 3px;
+      padding: 2px 7px;
+      cursor: pointer;
+      letter-spacing: .04em;
+      transition: color .15s, border-color .15s;
+    }
+    .gcal-expand-btn:hover, .gcal-expand-btn.active { color: var(--gold); border-color: var(--gold-dim); }
+    .gcal-day-expand { display: none; margin-top: 10px; }
+    .gcal-day-expand.open { display: block; }
+    .gcal-day-expand-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--gold-dim);
+      letter-spacing: .08em;
+      margin-bottom: 8px;
+    }
+    .gcal-day-tl-wrap {
+      display: flex;
+      overflow-y: auto;
+      max-height: 320px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--bg3);
+    }
+    .gcal-day-tl-gutter {
+      width: 38px;
+      flex-shrink: 0;
+      position: relative;
+      border-right: 1px solid var(--border);
+    }
+    .gcal-day-tl-body {
+      flex: 1;
+      position: relative;
+    }
+
+    /* ── CALENDAR TAB ── */
+    #page-calendar { padding-bottom: 32px; }
+    .caltab-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .caltab-view-btns {
+      display: flex;
+      border: 1px solid var(--border2);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .caltab-view-btn {
+      padding: 6px 16px;
+      background: var(--bg3);
+      border: none;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .06em;
+      cursor: pointer;
+      border-right: 1px solid var(--border2);
+      transition: all .15s;
+    }
+    .caltab-view-btn:last-child { border-right: none; }
+    .caltab-view-btn.active { background: var(--bg4); color: var(--gold); }
+    .caltab-view-btn:hover:not(.active) { color: var(--text); }
+    .caltab-nav-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .caltab-nav-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      min-width: 170px;
+      text-align: center;
+    }
+    .caltab-nav-btn {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      color: var(--text);
+      width: 30px; height: 30px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color .15s;
+      flex-shrink: 0;
+    }
+    .caltab-nav-btn:hover { border-color: var(--gold-dim); }
+    .caltab-today-btn {
+      padding: 5px 12px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      cursor: pointer;
+      letter-spacing: .05em;
+      transition: all .15s;
+    }
+    .caltab-today-btn:hover { border-color: var(--gold-dim); color: var(--text); }
+    /* Month */
+    .caltab-month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+    .caltab-month-dow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5px;
+      color: var(--muted);
+      text-align: center;
+      padding: 6px 0 5px;
+      letter-spacing: .06em;
+    }
+    .caltab-month-cell {
+      background: var(--bg3);
+      border: 1px solid transparent;
+      border-radius: 5px;
+      padding: 5px 4px;
+      min-height: 86px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .caltab-month-cell:hover { border-color: var(--border2); }
+    .caltab-month-cell.ctm-today { border-color: var(--gold-dim); background: rgba(200,168,75,.05); }
+    .caltab-month-cell.ctm-other { opacity: .35; }
+    .caltab-month-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .caltab-month-cell.ctm-today .caltab-month-num { color: var(--gold); }
+    /* Timeline shared */
+    .caltab-tl-wrap {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .caltab-allday-strip {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+    }
+    .caltab-allday-gutter {
+      width: 52px;
+      flex-shrink: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7px;
+      color: var(--muted2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--border);
+      padding: 4px 2px;
+      letter-spacing: .04em;
+    }
+    .caltab-allday-cells {
+      flex: 1;
+      display: flex;
+      padding: 3px 3px;
+      gap: 3px;
+      flex-wrap: wrap;
+      min-height: 28px;
+    }
+    .caltab-allday-chip {
+      font-size: 8px;
+      padding: 2px 5px;
+      border-radius: 3px;
+      color: #fff;
+      background: #4a7cbb;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+    .caltab-allday-chip:hover { filter: brightness(1.2); }
+    .caltab-day-headers {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .caltab-hdr-gutter {
+      width: 52px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+    }
+    .caltab-hdr-cell {
+      flex: 1;
+      text-align: center;
+      padding: 8px 4px 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5px;
+      color: var(--muted);
+      letter-spacing: .05em;
+      border-right: 1px solid var(--border);
+      cursor: pointer;
+      transition: background .1s;
+      text-transform: uppercase;
+    }
+    .caltab-hdr-cell:last-child { border-right: none; }
+    .caltab-hdr-cell:hover { background: rgba(255,255,255,.02); }
+    .caltab-hdr-num {
+      font-size: 20px;
+      font-weight: 700;
+      display: block;
+      margin-top: 3px;
+      color: var(--text);
+      line-height: 1.1;
+    }
+    .caltab-hdr-cell.ct-today .caltab-hdr-num {
+      background: var(--gold);
+      color: #000;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 3px auto 0;
+    }
+    .caltab-hdr-cell.ct-today { color: var(--gold); }
+    .caltab-body-wrap {
+      display: flex;
+      overflow-y: auto;
+      max-height: calc(100vh - 280px);
+      position: relative;
+      background: var(--bg2);
+    }
+    .caltab-time-gutter {
+      width: 52px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      position: relative;
+    }
+    .caltab-time-lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: var(--muted2);
+      text-align: right;
+      padding-right: 6px;
+      position: absolute;
+      right: 0;
+      transform: translateY(-50%);
+      user-select: none;
+      white-space: nowrap;
+    }
+    .caltab-cols-wrap {
+      flex: 1;
+      display: flex;
+      position: relative;
+    }
+    .caltab-col {
+      flex: 1;
+      position: relative;
+      border-right: 1px solid var(--border);
+    }
+    .caltab-col:last-child { border-right: none; }
+    .caltab-hr-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--border); pointer-events: none; }
+    .caltab-half-line { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(255,255,255,.04); pointer-events: none; }
+    .caltab-event-block {
+      position: absolute;
+      left: 2px; right: 2px;
+      border-radius: 4px;
+      padding: 3px 5px;
+      cursor: pointer;
+      overflow: hidden;
+      background: #4a7cbb;
+      color: #fff;
+      z-index: 2;
+      min-height: 18px;
+      transition: filter .1s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.3);
+    }
+    .caltab-event-block:hover { filter: brightness(1.15); z-index: 3; }
+    .caltab-ev-time { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; opacity: .85; display: block; }
+    .caltab-ev-title { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .caltab-now-line {
+      position: absolute;
+      left: 0; right: 0;
+      border-top: 2px solid var(--red);
+      z-index: 5;
+      pointer-events: none;
+    }
+    .caltab-now-dot {
+      position: absolute;
+      left: -5px;
+      top: -5px;
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--red);
+    }
+    .caltab-click-slot {
+      position: absolute;
+      left: 0; right: 0;
+      cursor: pointer;
+      z-index: 1;
+    }
+    .caltab-click-slot:hover::after {
+      content: '+';
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: var(--gold-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
   </style>
 </head>
 <body>
@@ -1178,6 +1503,7 @@
     <button class="nav-tab" data-tab="benzo">BENZO</button>
     <button class="nav-tab" data-tab="journal">JOURNAL</button>
     <button class="nav-tab" data-tab="goals">GOALS</button>
+    <button class="nav-tab" data-tab="calendar">CALENDAR</button>
   </div>
   <div class="nav-right">
     <div class="tg-pill">
@@ -1359,6 +1685,7 @@
         <div class="os-card-hdr" style="justify-content:space-between">
           <span><span class="os-num">06 //</span> CALENDAR</span>
           <div style="display:flex;align-items:center;gap:5px">
+            <button class="gcal-expand-btn" id="gcal-expand-btn" onclick="gcalToggleDayExpand()" style="display:none" title="Expand today hour-by-hour">▾ TODAY</button>
             <button class="os-icon-btn" id="gcal-prev-btn" onclick="gcalNavigateWeek(-1)" title="Previous week" style="display:none;font-size:14px">‹</button>
             <span id="gcal-week-label" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);min-width:110px;text-align:center"></span>
             <button class="os-icon-btn" id="gcal-next-btn" onclick="gcalNavigateWeek(1)" title="Next week" style="display:none;font-size:14px">›</button>
@@ -1395,6 +1722,16 @@
           <hr class="os-divider" />
           <div class="os-sub-lbl">UPCOMING</div>
           <div id="gcal-upcoming-list"></div>
+        </div>
+
+        <!-- Day expand (hour-by-hour) -->
+        <div class="gcal-day-expand" id="gcal-day-expand">
+          <hr class="os-divider" style="margin-top:4px" />
+          <div class="gcal-day-expand-label" id="gcal-day-expand-label">TODAY — HOUR VIEW</div>
+          <div class="gcal-day-tl-wrap" id="gcal-day-tl-wrap">
+            <div class="gcal-day-tl-gutter" id="gcal-day-tl-gutter"></div>
+            <div class="gcal-day-tl-body" id="gcal-day-tl-body"></div>
+          </div>
         </div>
       </div>
 
@@ -1795,6 +2132,59 @@
       style="font-size:10px;letter-spacing:.06em">SHOW COMPLETED</button>
   </div>
   <div id="goals-completed-list" style="display:none"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ CALENDAR TAB ══ -->
+<div class="page" id="page-calendar" style="flex-direction:column;padding:20px 24px;overflow-y:auto">
+  <!-- Header -->
+  <div class="caltab-header">
+    <div class="caltab-view-btns">
+      <button class="caltab-view-btn active" id="caltab-btn-month" onclick="calTabSetView('month')">MONTH</button>
+      <button class="caltab-view-btn" id="caltab-btn-week" onclick="calTabSetView('week')">WEEK</button>
+      <button class="caltab-view-btn" id="caltab-btn-day" onclick="calTabSetView('day')">DAY</button>
+    </div>
+    <div class="caltab-nav-wrap">
+      <button class="caltab-nav-btn" onclick="calTabNavigate(-1)">‹</button>
+      <span class="caltab-nav-label" id="caltab-nav-label">—</span>
+      <button class="caltab-nav-btn" onclick="calTabNavigate(1)">›</button>
+    </div>
+    <button class="caltab-today-btn" onclick="calTabGoToday()">TODAY</button>
+    <button class="btn-save" onclick="gcalOpenAddModal()" id="caltab-add-btn"
+      style="font-family:'JetBrains Mono',monospace;font-size:9px;padding:6px 14px;margin-left:auto">+ ADD EVENT</button>
+  </div>
+
+  <!-- Auth / connect prompt -->
+  <div id="caltab-connect" style="display:none;text-align:center;padding:48px 0">
+    <div style="font-size:32px;margin-bottom:14px">📅</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:16px">
+      Connect Google Calendar to use this view
+    </div>
+    <button onclick="gcalConnect()" class="btn-save" style="font-family:'JetBrains Mono',monospace;font-size:9px;padding:7px 18px">↗ CONNECT</button>
+  </div>
+
+  <!-- Month view -->
+  <div id="caltab-month" style="display:none">
+    <div class="caltab-month-grid" id="caltab-month-grid"></div>
+  </div>
+
+  <!-- Week / Day timeline (shared) -->
+  <div id="caltab-timeline" style="display:none" class="caltab-tl-wrap">
+    <!-- All-day strip -->
+    <div class="caltab-allday-strip">
+      <div class="caltab-allday-gutter">ALL DAY</div>
+      <div class="caltab-allday-cells" id="caltab-allday-cells"></div>
+    </div>
+    <!-- Day column headers -->
+    <div class="caltab-day-headers" id="caltab-day-headers">
+      <div class="caltab-hdr-gutter"></div>
+      <!-- filled by JS -->
+    </div>
+    <!-- Scrollable body -->
+    <div class="caltab-body-wrap" id="caltab-body-wrap">
+      <div class="caltab-time-gutter" id="caltab-time-gutter"></div>
+      <div class="caltab-cols-wrap" id="caltab-cols-wrap"></div>
+    </div>
+  </div>
 </div>
 
 </div><!-- /app -->
@@ -3280,7 +3670,8 @@
     if (tab === 'agents')  await loadAgents();
     if (tab === 'benzo')   await loadBenzo();
     if (tab === 'journal') await loadJournal();
-    if (tab === 'goals')   await loadGoals();
+    if (tab === 'goals')    await loadGoals();
+    if (tab === 'calendar') await loadCalendarTab();
   }
 
   // ── HOME ─────────────────────────────────────────────────
@@ -9477,7 +9868,7 @@ function gcalShowConnect(msg) {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  ['gcal-prev-btn','gcal-next-btn','gcal-add-btn'].forEach(id => {
+  ['gcal-prev-btn','gcal-next-btn','gcal-add-btn','gcal-expand-btn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -9616,10 +10007,19 @@ async function gcalLoadEvents() {
     if (loadEl) loadEl.style.display = 'none';
     gcalRenderWeek();
     gcalRenderUpcoming();
-    ['gcal-prev-btn','gcal-next-btn','gcal-add-btn'].forEach(id => {
+    ['gcal-prev-btn','gcal-next-btn','gcal-add-btn','gcal-expand-btn'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = '';
     });
+    // Refresh day expand if open
+    if (document.getElementById('gcal-day-expand')?.classList.contains('open')) {
+      gcalRenderDayExpand();
+    }
+    // Refresh calendar tab if visible
+    if (document.getElementById('page-calendar')?.classList.contains('active')) {
+      _calTabEvents = _gcalEvents;
+      calTabRender();
+    }
   } catch(e) {
     if (loadEl) loadEl.style.display = 'none';
     if (!e.message.includes('expired') && !e.message.includes('Unauthorized')) {
@@ -9778,6 +10178,8 @@ function gcalResetModal() {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   document.getElementById('gcal-ev-allday').checked = false;
+  const remEl = document.getElementById('gcal-ev-reminder');
+  if (remEl) remEl.value = '15';
   gcalToggleAllDay();
 }
 
@@ -9813,6 +10215,19 @@ window.gcalOpenEditModal = function(eventId) {
   document.getElementById('gcal-ev-title').value    = ev.summary || '';
   document.getElementById('gcal-ev-location').value = ev.location || '';
   document.getElementById('gcal-ev-desc').value     = (ev.description || '').replace(/<[^>]+>/g, '');
+  // Load reminder from event overrides
+  const remEl = document.getElementById('gcal-ev-reminder');
+  if (remEl) {
+    const override = ev.reminders?.overrides?.[0];
+    if (ev.reminders?.useDefault === false && !override) {
+      remEl.value = 'none';
+    } else if (override) {
+      const mins = String(override.minutes);
+      remEl.value = remEl.querySelector(`option[value="${mins}"]`) ? mins : '15';
+    } else {
+      remEl.value = '15';
+    }
+  }
 
   const isAllDay = !!ev.start?.date;
   document.getElementById('gcal-ev-allday').checked = isAllDay;
@@ -9853,9 +10268,10 @@ window.gcalSaveEvent = async function() {
   const startT   = document.getElementById('gcal-ev-start').value;
   const endT     = document.getElementById('gcal-ev-end').value;
   const endDate  = document.getElementById('gcal-ev-enddate').value;
-  const location = document.getElementById('gcal-ev-location').value.trim();
-  const desc     = document.getElementById('gcal-ev-desc').value.trim();
-  const errEl    = document.getElementById('gcal-modal-err');
+  const location  = document.getElementById('gcal-ev-location').value.trim();
+  const desc      = document.getElementById('gcal-ev-desc').value.trim();
+  const reminderV = document.getElementById('gcal-ev-reminder')?.value ?? '15';
+  const errEl     = document.getElementById('gcal-modal-err');
   const btn      = document.getElementById('gcal-save-btn');
 
   errEl.textContent = '';
@@ -9865,6 +10281,9 @@ window.gcalSaveEvent = async function() {
   if (!allDay && startT >= endT)     { errEl.textContent = 'End time must be after start time'; return; }
 
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const reminders = reminderV === 'none'
+    ? { useDefault: false, overrides: [] }
+    : { useDefault: false, overrides: [{ method: 'popup', minutes: parseInt(reminderV, 10) }] };
   let body;
   if (allDay) {
     const excl = new Date((endDate || date) + 'T00:00:00');
@@ -9872,12 +10291,14 @@ window.gcalSaveEvent = async function() {
     body = {
       summary: title, location, description: desc,
       start: { date }, end: { date: excl.toISOString().slice(0, 10) },
+      reminders,
     };
   } else {
     body = {
       summary: title, location, description: desc,
       start: { dateTime: `${date}T${startT}:00`, timeZone: tz },
       end:   { dateTime: `${date}T${endT}:00`,   timeZone: tz },
+      reminders,
     };
   }
 
@@ -9927,6 +10348,523 @@ window.gcalDeleteEvent = async function() {
 
 // ── Settings status refresh ───────────────────────────────────────────────────
 // Called from openSettings() hook already added above
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HOME CALENDAR — DAY EXPAND (hour-by-hour)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const HOME_PX_PER_HOUR = 48;
+const HOME_START_HOUR  = 6;
+const HOME_END_HOUR    = 23;
+
+window.gcalToggleDayExpand = function() {
+  const wrap = document.getElementById('gcal-day-expand');
+  const btn  = document.getElementById('gcal-expand-btn');
+  if (!wrap) return;
+  const opening = !wrap.classList.contains('open');
+  wrap.classList.toggle('open', opening);
+  if (btn) {
+    btn.textContent = opening ? '▴ TODAY' : '▾ TODAY';
+    btn.classList.toggle('active', opening);
+  }
+  if (opening) gcalRenderDayExpand();
+};
+
+function gcalRenderDayExpand() {
+  const gutter = document.getElementById('gcal-day-tl-gutter');
+  const body   = document.getElementById('gcal-day-tl-body');
+  const label  = document.getElementById('gcal-day-expand-label');
+  if (!gutter || !body) return;
+
+  const now    = new Date();
+  const todayS = now.toISOString().slice(0, 10);
+
+  if (label) {
+    label.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase() + ' — HOUR VIEW';
+  }
+
+  const totalH  = HOME_END_HOUR - HOME_START_HOUR;
+  const totalPx = totalH * HOME_PX_PER_HOUR;
+
+  // Gutter
+  gutter.style.height = totalPx + 'px';
+  let gutterHTML = '';
+  for (let h = HOME_START_HOUR; h <= HOME_END_HOUR; h++) {
+    const top = (h - HOME_START_HOUR) * HOME_PX_PER_HOUR;
+    const lbl = h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`;
+    gutterHTML += `<span style="position:absolute;top:${top}px;right:5px;font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--muted2);transform:translateY(-50%);white-space:nowrap">${lbl}</span>`;
+  }
+  gutter.innerHTML = gutterHTML;
+
+  // Body
+  body.style.height   = totalPx + 'px';
+  body.style.position = 'relative';
+
+  // Hour lines
+  let bodyHTML = '';
+  for (let h = HOME_START_HOUR; h <= HOME_END_HOUR; h++) {
+    const top = (h - HOME_START_HOUR) * HOME_PX_PER_HOUR;
+    bodyHTML += `<div style="position:absolute;left:0;right:0;top:${top}px;border-top:1px solid var(--border);pointer-events:none"></div>`;
+    // half-hour
+    const halfTop = top + HOME_PX_PER_HOUR / 2;
+    if (h < HOME_END_HOUR) {
+      bodyHTML += `<div style="position:absolute;left:0;right:0;top:${halfTop}px;border-top:1px dashed rgba(255,255,255,.04);pointer-events:none"></div>`;
+    }
+  }
+
+  // Today's events
+  const todayEvs = (_gcalEvents || []).filter(ev => {
+    if (ev.start?.date) return ev.start.date === todayS; // all-day
+    if (ev.start?.dateTime) return ev.start.dateTime.slice(0, 10) === todayS;
+    return false;
+  });
+
+  todayEvs.forEach(ev => {
+    if (ev.start?.date) return; // skip all-day in timeline
+    const s   = new Date(ev.start.dateTime);
+    const e   = new Date(ev.end.dateTime);
+    const sMin = s.getHours() * 60 + s.getMinutes();
+    const eMin = e.getHours() * 60 + e.getMinutes();
+    const top    = Math.max(0, (sMin - HOME_START_HOUR * 60)) * (HOME_PX_PER_HOUR / 60);
+    const height = Math.max(18, (eMin - sMin) * (HOME_PX_PER_HOUR / 60));
+    const tFmt   = s.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    bodyHTML += `<div onclick="gcalOpenEditModal('${ev.id}')"
+      style="position:absolute;left:2px;right:2px;top:${top}px;height:${height}px;
+             background:#4a7cbb;color:#fff;border-radius:4px;padding:2px 5px;
+             cursor:pointer;overflow:hidden;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.3);
+             font-family:'JetBrains Mono',monospace;font-size:8.5px;transition:filter .1s"
+      onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter=''">
+      <span style="display:block;font-size:7.5px;opacity:.85">${tFmt}</span>
+      <span style="display:block;font-size:9px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ev.summary || '(no title)'}</span>
+      ${ev.location ? `<span style="display:block;font-size:7px;opacity:.75">📍 ${ev.location}</span>` : ''}
+    </div>`;
+  });
+
+  // Now line
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  if (nowMin >= HOME_START_HOUR * 60 && nowMin <= HOME_END_HOUR * 60) {
+    const nowTop = (nowMin - HOME_START_HOUR * 60) * (HOME_PX_PER_HOUR / 60);
+    bodyHTML += `<div style="position:absolute;left:0;right:0;top:${nowTop}px;border-top:2px solid var(--red);z-index:5;pointer-events:none">
+      <div style="position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--red)"></div>
+    </div>`;
+  }
+
+  // Click slots for adding
+  for (let h = HOME_START_HOUR; h < HOME_END_HOUR; h++) {
+    const top = (h - HOME_START_HOUR) * HOME_PX_PER_HOUR;
+    const hh  = String(h).padStart(2, '0');
+    bodyHTML += `<div onclick="gcalOpenAddModal('${todayS}','${hh}:00')"
+      style="position:absolute;left:0;right:0;top:${top}px;height:${HOME_PX_PER_HOUR}px;z-index:1;cursor:pointer"
+      onmouseover="this.querySelector('.hs').style.opacity='1'"
+      onmouseout="this.querySelector('.hs').style.opacity='0'">
+      <span class="hs" style="opacity:0;position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--gold-dim);font-family:'JetBrains Mono',monospace;transition:opacity .12s;pointer-events:none">+</span>
+    </div>`;
+  }
+
+  body.innerHTML = bodyHTML;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FULL CALENDAR TAB
+// ══════════════════════════════════════════════════════════════════════════════
+
+const CT_PX_PER_HOUR = 64;
+const CT_START_HOUR  = 0;
+const CT_END_HOUR    = 24;
+
+let _calTabView    = 'month';   // 'month' | 'week' | 'day'
+let _calTabDate    = new Date();
+let _calTabEvents  = [];
+let _calTabNowTimer = null;
+
+async function loadCalendarTab() {
+  _calTabDate = new Date();
+
+  if (!gcalTokenValid()) {
+    // show connect prompt
+    document.getElementById('caltab-connect').style.display    = '';
+    document.getElementById('caltab-month').style.display      = 'none';
+    document.getElementById('caltab-timeline').style.display   = 'none';
+    document.getElementById('caltab-add-btn').style.display    = 'none';
+    return;
+  }
+
+  document.getElementById('caltab-connect').style.display  = 'none';
+  document.getElementById('caltab-add-btn').style.display  = '';
+
+  await calTabFetchAndRender();
+  calTabStartNowTimer();
+}
+
+async function calTabFetchAndRender() {
+  // fetch a generous window
+  const from = new Date(_calTabDate);
+  const to   = new Date(_calTabDate);
+  if (_calTabView === 'month') {
+    from.setDate(1); from.setDate(from.getDate() - 7);
+    to.setMonth(to.getMonth() + 1); to.setDate(to.getDate() + 7);
+  } else if (_calTabView === 'week') {
+    const dow = _calTabDate.getDay();
+    from.setDate(from.getDate() - dow);
+    to.setDate(from.getDate() + 7);
+  } else {
+    to.setDate(to.getDate() + 1);
+  }
+
+  try {
+    const data = await gcalFetch(
+      `/calendars/primary/events` +
+      `?timeMin=${from.toISOString()}&timeMax=${to.toISOString()}` +
+      `&singleEvents=true&orderBy=startTime&maxResults=200`
+    );
+    _calTabEvents = data?.items || [];
+  } catch(e) {
+    // reuse cached events if fetch fails
+  }
+  calTabRender();
+}
+
+window.calTabSetView = function(view) {
+  _calTabView = view;
+  ['month','week','day'].forEach(v => {
+    const btn = document.getElementById(`caltab-btn-${v}`);
+    if (btn) btn.classList.toggle('active', v === view);
+  });
+  calTabFetchAndRender();
+};
+
+window.calTabNavigate = function(dir) {
+  if (_calTabView === 'month') {
+    _calTabDate.setMonth(_calTabDate.getMonth() + dir);
+  } else if (_calTabView === 'week') {
+    _calTabDate.setDate(_calTabDate.getDate() + dir * 7);
+  } else {
+    _calTabDate.setDate(_calTabDate.getDate() + dir);
+  }
+  calTabFetchAndRender();
+};
+
+window.calTabGoToday = function() {
+  _calTabDate = new Date();
+  calTabFetchAndRender();
+};
+
+function calTabRender() {
+  const lbl  = document.getElementById('caltab-nav-label');
+  const mon  = document.getElementById('caltab-month');
+  const tl   = document.getElementById('caltab-timeline');
+
+  if (_calTabView === 'month') {
+    if (lbl) lbl.textContent = _calTabDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+    if (mon) mon.style.display = '';
+    if (tl)  tl.style.display  = 'none';
+    calTabRenderMonth();
+  } else if (_calTabView === 'week') {
+    const dow  = _calTabDate.getDay();
+    const sun  = new Date(_calTabDate); sun.setDate(sun.getDate() - dow);
+    const sat  = new Date(sun); sat.setDate(sat.getDate() + 6);
+    if (lbl) lbl.textContent = sun.toLocaleDateString('en-US',{month:'short',day:'numeric'}).toUpperCase() +
+      ' – ' + sat.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}).toUpperCase();
+    if (mon) mon.style.display = 'none';
+    if (tl)  tl.style.display  = '';
+    calTabRenderWeek();
+  } else {
+    if (lbl) lbl.textContent = _calTabDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
+    if (mon) mon.style.display = 'none';
+    if (tl)  tl.style.display  = '';
+    calTabRenderDay();
+  }
+}
+
+// ── Month view ────────────────────────────────────────────────────────────────
+function calTabRenderMonth() {
+  const grid = document.getElementById('caltab-month-grid');
+  if (!grid) return;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const year  = _calTabDate.getFullYear();
+  const month = _calTabDate.getMonth();
+
+  const first = new Date(year, month, 1);
+  const startDow = first.getDay();
+
+  const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  let html = DAYS.map(d => `<div class="caltab-month-dow">${d}</div>`).join('');
+
+  // leading blanks
+  for (let i = 0; i < startDow; i++) {
+    const d = new Date(year, month, 1 - (startDow - i));
+    html += calTabMonthCell(d, month, today);
+  }
+
+  // current month days
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    html += calTabMonthCell(new Date(year, month, d), month, today);
+  }
+
+  // trailing blanks
+  const total = startDow + daysInMonth;
+  const trail = (7 - (total % 7)) % 7;
+  for (let i = 1; i <= trail; i++) {
+    html += calTabMonthCell(new Date(year, month + 1, i), month, today);
+  }
+
+  grid.innerHTML = html;
+}
+
+function calTabMonthCell(date, currentMonth, today) {
+  const iso    = date.toISOString().slice(0, 10);
+  const isToday  = date.getTime() === today.getTime();
+  const isOther  = date.getMonth() !== currentMonth;
+  let cls = 'caltab-month-cell';
+  if (isToday)  cls += ' ctm-today';
+  if (isOther)  cls += ' ctm-other';
+
+  const dayEvs = _calTabEvents.filter(ev => {
+    if (ev.start?.date) {
+      // all-day: check range
+      const s = new Date(ev.start.date + 'T00:00:00');
+      const e = ev.end?.date ? new Date(ev.end.date + 'T00:00:00') : s;
+      return date >= s && date < e;
+    }
+    return ev.start?.dateTime?.slice(0, 10) === iso;
+  }).slice(0, 3);
+
+  const evHTML = dayEvs.map(ev => {
+    const s   = ev.start?.dateTime ? new Date(ev.start.dateTime) : null;
+    const tFmt = s ? s.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
+    return `<div onclick="event.stopPropagation();gcalOpenEditModal('${ev.id}')"
+      style="font-size:7.5px;padding:1px 4px;background:#4a7cbb;color:#fff;border-radius:2px;
+             overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:1px;cursor:pointer;
+             font-family:'JetBrains Mono',monospace">
+      ${tFmt ? `<span style='opacity:.8'>${tFmt}</span> ` : ''}${ev.summary || '(no title)'}
+    </div>`;
+  }).join('');
+
+  return `<div class="${cls}" onclick="gcalOpenAddModal('${iso}')">
+    <div class="caltab-month-num">${date.getDate()}</div>
+    ${evHTML}
+  </div>`;
+}
+
+// ── Week view ─────────────────────────────────────────────────────────────────
+function calTabRenderWeek() {
+  const dow  = _calTabDate.getDay();
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(_calTabDate);
+    d.setDate(d.getDate() - dow + i);
+    days.push(d);
+  }
+  calTabBuildTimeline(days);
+}
+
+// ── Day view ──────────────────────────────────────────────────────────────────
+function calTabRenderDay() {
+  calTabBuildTimeline([new Date(_calTabDate)]);
+}
+
+// ── Shared timeline builder ───────────────────────────────────────────────────
+function calTabBuildTimeline(days) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const totalPx = (CT_END_HOUR - CT_START_HOUR) * CT_PX_PER_HOUR;
+
+  // ── All-day strip ──
+  const alldayCells = document.getElementById('caltab-allday-cells');
+  if (alldayCells) {
+    const allDayEvs = _calTabEvents.filter(ev => {
+      if (!ev.start?.date) return false;
+      const s = new Date(ev.start.date + 'T00:00:00');
+      const e = ev.end?.date ? new Date(ev.end.date + 'T00:00:00') : s;
+      return days.some(d => { const dc = new Date(d); dc.setHours(0,0,0,0); return dc >= s && dc < e; });
+    });
+    alldayCells.innerHTML = allDayEvs.map(ev =>
+      `<div class="caltab-allday-chip" onclick="gcalOpenEditModal('${ev.id}')">${ev.summary || '(no title)'}</div>`
+    ).join('');
+  }
+
+  // ── Day column headers ──
+  const hdrEl = document.getElementById('caltab-day-headers');
+  if (hdrEl) {
+    let hdrHTML = '<div class="caltab-hdr-gutter"></div>';
+    days.forEach(d => {
+      const dc = new Date(d); dc.setHours(0,0,0,0);
+      const isToday = dc.getTime() === today.getTime();
+      const dow   = d.toLocaleDateString('en-US',{weekday:'short'}).toUpperCase();
+      const num   = d.getDate();
+      hdrHTML += `<div class="caltab-hdr-cell${isToday ? ' ct-today' : ''}" onclick="calTabGoToDay('${d.toISOString().slice(0,10)}')">
+        ${dow}<span class="caltab-hdr-num">${num}</span>
+      </div>`;
+    });
+    hdrEl.innerHTML = hdrHTML;
+  }
+
+  // ── Time gutter ──
+  const gutterEl = document.getElementById('caltab-time-gutter');
+  if (gutterEl) {
+    gutterEl.style.height = totalPx + 'px';
+    let g = '';
+    for (let h = CT_START_HOUR; h <= CT_END_HOUR; h++) {
+      const top = (h - CT_START_HOUR) * CT_PX_PER_HOUR;
+      const lbl = h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h-12} PM`;
+      g += `<span class="caltab-time-lbl" style="top:${top}px">${h < CT_END_HOUR ? lbl : ''}</span>`;
+    }
+    gutterEl.innerHTML = g;
+  }
+
+  // ── Day columns ──
+  const colsEl = document.getElementById('caltab-cols-wrap');
+  if (!colsEl) return;
+  colsEl.innerHTML = '';
+  colsEl.style.height = totalPx + 'px';
+
+  days.forEach(d => {
+    const iso = d.toISOString().slice(0, 10);
+    const dc  = new Date(d); dc.setHours(0,0,0,0);
+    const col = document.createElement('div');
+    col.className = 'caltab-col';
+    col.style.height = totalPx + 'px';
+
+    // Hour lines
+    for (let h = CT_START_HOUR; h < CT_END_HOUR; h++) {
+      const top = (h - CT_START_HOUR) * CT_PX_PER_HOUR;
+      col.insertAdjacentHTML('beforeend', `<div class="caltab-hr-line" style="top:${top}px"></div>`);
+      col.insertAdjacentHTML('beforeend', `<div class="caltab-half-line" style="top:${top + CT_PX_PER_HOUR/2}px"></div>`);
+    }
+
+    // Events for this day
+    const dayEvs = _calTabEvents.filter(ev => {
+      if (ev.start?.date) return false; // all-day handled above
+      return ev.start?.dateTime?.slice(0, 10) === iso;
+    });
+
+    // Simple overlap layout
+    const placed = [];
+    dayEvs.forEach(ev => {
+      const s    = new Date(ev.start.dateTime);
+      const e    = new Date(ev.end.dateTime);
+      const sMin = s.getHours() * 60 + s.getMinutes();
+      const eMin = e.getHours() * 60 + e.getMinutes();
+      const top    = (sMin - CT_START_HOUR * 60) * (CT_PX_PER_HOUR / 60);
+      const height = Math.max(20, (eMin - sMin) * (CT_PX_PER_HOUR / 60));
+      const tFmt   = s.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+      // find column slot
+      let col_idx = 0;
+      while (placed.some(p => p.col === col_idx && p.eMin > sMin && p.sMin < eMin)) col_idx++;
+      const totalCols = Math.max(col_idx + 1, placed.filter(p => p.eMin > sMin && p.sMin < eMin).length + 1);
+      placed.push({ sMin, eMin, col: col_idx });
+
+      const leftPct  = (col_idx / totalCols) * 100;
+      const widthPct = (1 / totalCols) * 100;
+
+      const blk = document.createElement('div');
+      blk.className = 'caltab-event-block';
+      blk.style.cssText = `top:${top}px;height:${height}px;left:calc(${leftPct}% + 2px);width:calc(${widthPct}% - 4px);position:absolute;`;
+      blk.innerHTML = `<span class="caltab-ev-time">${tFmt}</span><span class="caltab-ev-title">${ev.summary || '(no title)'}</span>`;
+      if (ev.location) blk.innerHTML += `<span style="display:block;font-size:7px;opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📍 ${ev.location}</span>`;
+      blk.onclick = () => gcalOpenEditModal(ev.id);
+      col.appendChild(blk);
+    });
+
+    // Click slots to add
+    for (let h = CT_START_HOUR; h < CT_END_HOUR; h++) {
+      const top = (h - CT_START_HOUR) * CT_PX_PER_HOUR;
+      const hh  = String(h).padStart(2, '0');
+      const slot = document.createElement('div');
+      slot.className = 'caltab-click-slot';
+      slot.style.cssText = `top:${top}px;height:${CT_PX_PER_HOUR}px;`;
+      slot.onclick = (ev) => {
+        if (ev.target.closest('.caltab-event-block')) return;
+        gcalOpenAddModal(iso, `${hh}:00`);
+      };
+      col.appendChild(slot);
+    }
+
+    colsEl.appendChild(col);
+  });
+
+  // Scroll to 7am
+  const bodyWrap = document.getElementById('caltab-body-wrap');
+  if (bodyWrap) {
+    requestAnimationFrame(() => {
+      bodyWrap.scrollTop = (7 - CT_START_HOUR) * CT_PX_PER_HOUR - 20;
+    });
+  }
+
+  // Now line
+  calTabDrawNowLine(days);
+}
+
+function calTabDrawNowLine(days) {
+  const colsEl = document.getElementById('caltab-cols-wrap');
+  if (!colsEl) return;
+
+  // remove old
+  colsEl.querySelectorAll('.caltab-now-line').forEach(el => el.remove());
+
+  const now   = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const idx   = days.findIndex(d => d.toISOString().slice(0, 10) === today);
+  if (idx < 0) return;
+
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  if (nowMin < CT_START_HOUR * 60 || nowMin > CT_END_HOUR * 60) return;
+
+  const top = (nowMin - CT_START_HOUR * 60) * (CT_PX_PER_HOUR / 60);
+  const cols = colsEl.querySelectorAll('.caltab-col');
+  if (!cols[idx]) return;
+
+  const line = document.createElement('div');
+  line.className = 'caltab-now-line';
+  line.style.top = top + 'px';
+  line.innerHTML = '<div class="caltab-now-dot"></div>';
+  cols[idx].appendChild(line);
+}
+
+window.calTabGoToDay = function(isoDate) {
+  _calTabDate = new Date(isoDate + 'T12:00:00');
+  _calTabView = 'day';
+  ['month','week','day'].forEach(v => {
+    document.getElementById(`caltab-btn-${v}`)?.classList.toggle('active', v === 'day');
+  });
+  calTabFetchAndRender();
+};
+
+function calTabStartNowTimer() {
+  if (_calTabNowTimer) clearInterval(_calTabNowTimer);
+  _calTabNowTimer = setInterval(() => {
+    if (document.getElementById('page-calendar')?.classList.contains('active')) {
+      if (_calTabView !== 'month') calTabDrawNowLine(calTabCurrentDays());
+    }
+  }, 60000);
+}
+
+function calTabCurrentDays() {
+  if (_calTabView === 'day') return [new Date(_calTabDate)];
+  const dow  = _calTabDate.getDay();
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(_calTabDate); d.setDate(d.getDate() - dow + i);
+    days.push(d);
+  }
+  return days;
+}
+
+// Also update gcalOpenAddModal to accept a prefilled time
+(function patchGcalOpenAddModal() {
+  const _orig = window.gcalOpenAddModal;
+  window.gcalOpenAddModal = function(isoDate, startTime) {
+    _orig.call(this, isoDate);
+    if (startTime) {
+      const [hh, mm] = startTime.split(':');
+      const endH = String((parseInt(hh) + 1) % 24).padStart(2, '0');
+      document.getElementById('gcal-ev-start').value = `${hh}:${mm || '00'}`;
+      document.getElementById('gcal-ev-end').value   = `${endH}:${mm || '00'}`;
+    }
+  };
+})();
 
 
 </script>
@@ -10006,11 +10944,26 @@ window.gcalDeleteEvent = async function() {
 
     <div class="form-group">
       <label class="form-label">Location</label>
-      <input class="form-input" id="gcal-ev-location" placeholder="Optional" />
+      <input class="form-input" id="gcal-ev-location" placeholder="Add a location" />
     </div>
     <div class="form-group">
       <label class="form-label">Description</label>
-      <textarea class="form-input" id="gcal-ev-desc" rows="2" placeholder="Optional" style="resize:vertical;min-height:52px"></textarea>
+      <textarea class="form-input" id="gcal-ev-desc" rows="2" placeholder="Add a description" style="resize:vertical;min-height:52px"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reminder</label>
+      <select class="form-input" id="gcal-ev-reminder" style="background:var(--bg3);color:var(--text)">
+        <option value="none">No reminder</option>
+        <option value="0">At time of event</option>
+        <option value="5">5 minutes before</option>
+        <option value="10">10 minutes before</option>
+        <option value="15" selected>15 minutes before</option>
+        <option value="30">30 minutes before</option>
+        <option value="60">1 hour before</option>
+        <option value="120">2 hours before</option>
+        <option value="1440">1 day before</option>
+        <option value="2880">2 days before</option>
+      </select>
     </div>
 
     <div id="gcal-modal-err" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--red);min-height:16px;margin-bottom:6px"></div>
