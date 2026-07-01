@@ -1469,6 +1469,69 @@
       color: var(--gold-dim);
       font-family: 'JetBrains Mono', monospace;
     }
+
+    /* ── CUSTOM CONFIRM MODAL ── */
+    #confirm-modal .modal {
+      width: 380px;
+      text-align: center;
+      padding: 32px 28px 24px;
+    }
+    .confirm-icon {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      margin: 0 auto 18px;
+    }
+    .confirm-icon.danger { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.25); }
+    .confirm-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .confirm-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 26px;
+    }
+    .confirm-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .confirm-cancel-btn {
+      flex: 1;
+      padding: 9px 0;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 5px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .06em;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .confirm-cancel-btn:hover { border-color: var(--muted2); color: var(--text); }
+    .confirm-ok-btn {
+      flex: 1;
+      padding: 9px 0;
+      border-radius: 5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .06em;
+      cursor: pointer;
+      border: none;
+      transition: all .15s;
+    }
+    .confirm-ok-btn.danger { background: var(--red); color: #fff; }
+    .confirm-ok-btn.danger:hover { background: #dc2626; }
+    .confirm-ok-btn.warning { background: var(--gold); color: #000; }
+    .confirm-ok-btn.warning:hover { filter: brightness(1.08); }
   </style>
 </head>
 <body>
@@ -2913,7 +2976,8 @@
 
   const { createClient } = supabase;
   const sbClient = createClient(SUPABASE_URL, SUPABASE_ANON);
-  let accessToken = SUPABASE_ANON;
+  let accessToken    = SUPABASE_ANON;
+  let _currentUserId = '';   // populated after sign-in; used as AES key material
 
   // ── CURRENCY + PRIVACY STATE ────────────────────────────
   const FX     = { USD: 1, CAD: 1.37, AED: 3.67 };
@@ -3263,7 +3327,9 @@
     btn.textContent = 'Sign In →';
     btn.classList.remove('auth-loading');
     if (error) { errEl.textContent = error.message; return; }
-    accessToken = data.session.access_token;
+    accessToken    = data.session.access_token;
+    _currentUserId = data.user?.id || '';
+    _gcalEncKey    = null; // invalidate derived key cache on new login
     document.getElementById('auth-screen').classList.add('hidden');
     initDashboard();
   };
@@ -3276,8 +3342,19 @@
 
   (async () => {
     const { data: { session } } = await sbClient.auth.getSession();
-    if (session) { accessToken = session.access_token; document.getElementById('auth-screen').classList.add('hidden'); initDashboard(); }
-    sbClient.auth.onAuthStateChange((_e, s) => { if (s) accessToken = s.access_token; });
+    if (session) {
+      accessToken    = session.access_token;
+      _currentUserId = session.user?.id || '';
+      document.getElementById('auth-screen').classList.add('hidden');
+      initDashboard();
+    }
+    sbClient.auth.onAuthStateChange((_e, s) => {
+      if (s) {
+        accessToken    = s.access_token;
+        _currentUserId = s.user?.id || '';
+        _gcalEncKey    = null;
+      }
+    });
   })();
 
   // ── API HELPERS ──────────────────────────────────────────
@@ -5533,22 +5610,27 @@
     } catch(e) { console.warn('confirmEditCategory error', e); }
   };
   window.deleteCategory = async (name) => {
-    if (!confirm(`Delete category "${name}"? Tasks in this category will remain but lose their category.`)) return;
-    taskCategories = taskCategories.filter(c => c !== name);
-    // Clear category from in-memory tasks
-    allTasks.forEach(t => { if (t.category === name) t.category = ''; });
-    if (activeFilter === name) activeFilter = 'all';
-    renderCategoryFilters();
-    populateCatDatalist();
-    renderManageCatsList();
-    renderTasks();
-    // Persist
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/task_categories?name=eq.${encodeURIComponent(name)}`, {
-        method: 'DELETE',
-        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Prefer': 'return=minimal' },
-      });
-    } catch(e) { console.warn('deleteCategory error', e); }
+    showConfirm({
+      title: `Delete Category?`,
+      subtitle: `"${name}" will be removed. Tasks assigned to it will remain but lose their category.`,
+      okLabel: 'DELETE CATEGORY',
+      icon: '🏷',
+      onConfirm: async () => {
+        taskCategories = taskCategories.filter(c => c !== name);
+        allTasks.forEach(t => { if (t.category === name) t.category = ''; });
+        if (activeFilter === name) activeFilter = 'all';
+        renderCategoryFilters();
+        populateCatDatalist();
+        renderManageCatsList();
+        renderTasks();
+        try {
+          await fetch(`${SUPABASE_URL}/rest/v1/task_categories?name=eq.${encodeURIComponent(name)}`, {
+            method: 'DELETE',
+            headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Prefer': 'return=minimal' },
+          });
+        } catch(e) { console.warn('deleteCategory error', e); }
+      }
+    });
   };
 
   // Search: expose on window so oninput attribute can reach it
@@ -7325,12 +7407,21 @@ Return raw JSON only.`;
   };
   window.closeEditTask = () => document.getElementById('edit-task-modal').classList.remove('open');
   window.deleteCurrentTask = async () => {
-    const id = document.getElementById('edit-task-id').value;
-    if (!id || !confirm('Delete this task?')) return;
-    await sbDelete('tasks', id);
-    allTasks = allTasks.filter(t => t.id != id);
-    closeEditTask();
-    renderTasks();
+    const id   = document.getElementById('edit-task-id').value;
+    const text = document.getElementById('edit-task-text').value.trim();
+    if (!id) return;
+    showConfirm({
+      title: 'Delete Task?',
+      subtitle: text ? `"${text}" will be permanently removed.` : 'This task will be permanently removed.',
+      okLabel: 'DELETE TASK',
+      icon: '🗑',
+      onConfirm: async () => {
+        await sbDelete('tasks', id);
+        allTasks = allTasks.filter(t => t.id != id);
+        closeEditTask();
+        renderTasks();
+      }
+    });
   };
   window.updateTask = async () => {
     const id = document.getElementById('edit-task-id').value;
@@ -8249,9 +8340,19 @@ Return raw JSON only.`;
     btn.textContent = 'Save Changes'; btn.disabled = false;
   };
   window.confirmDeleteVehicle = async (id) => {
-    if (!confirm('Delete this vehicle? This cannot be undone.')) return;
-    try { await sbDelete('fleet', id); await loadBenzo(); }
-    catch(e) { alert('Error: ' + e.message); }
+    const vehicle = benzoFleet?.find(v => v.id === id);
+    showConfirm({
+      title: 'Delete Vehicle?',
+      subtitle: vehicle?.vehicle_name
+        ? `"${vehicle.vehicle_name}" and all its data will be permanently removed.`
+        : 'This vehicle and all its data will be permanently removed.',
+      okLabel: 'DELETE VEHICLE',
+      icon: '🚗',
+      onConfirm: async () => {
+        try { await sbDelete('fleet', id); await loadBenzo(); }
+        catch(e) { alert('Error: ' + e.message); }
+      }
+    });
   };
 
   // Rental CRUD
@@ -8430,9 +8531,16 @@ Return raw JSON only.`;
   };
 
   window.confirmDeleteRental = async (id) => {
-    if (!confirm('Delete this rental? This cannot be undone.')) return;
+    const r = benzoRentals.find(x => x.id === id);
+    showConfirm({
+      title: 'Delete Rental?',
+      subtitle: r?.customer_name
+        ? `The rental for "${r.customer_name}" will be permanently removed.`
+        : 'This rental will be permanently removed.',
+      okLabel: 'DELETE RENTAL',
+      icon: '📋',
+      onConfirm: async () => {
     try {
-      const r = benzoRentals.find(x => x.id === id);
       await sbDelete('rentals', id);
       const idx = benzoRentals.findIndex(x => x.id === id);
       if (idx !== -1) benzoRentals.splice(idx, 1);
@@ -8453,6 +8561,8 @@ Return raw JSON only.`;
         } catch(sheetErr) { console.warn('[Benzo] Sheet delete write-back failed:', sheetErr.message); }
       }
     } catch(e) { alert('Error: ' + e.message); }
+      }
+    });
   };
 
   // ── CONFETTI ─────────────────────────────────────────────
@@ -8661,7 +8771,15 @@ Return raw JSON only.`;
   };
 
   window.deleteGoal = async (id) => {
-    if (!confirm('Delete this goal?')) return;
+    const goal = goalsData?.find(g => g.id === id);
+    showConfirm({
+      title: 'Delete Goal?',
+      subtitle: goal?.title
+        ? `"${goal.title}" will be permanently removed.`
+        : 'This goal will be permanently removed.',
+      okLabel: 'DELETE GOAL',
+      icon: '🎯',
+      onConfirm: async () => {
     goalsData = goalsData.filter(g => g.id !== id);
     renderGoals();
     try {
@@ -8670,6 +8788,8 @@ Return raw JSON only.`;
         headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}` }
       });
     } catch(e) { console.warn('deleteGoal error', e); }
+      }
+    });
   };
 
   window.openAddGoalForm = () => {
@@ -9751,49 +9871,123 @@ let _gcalEvents  = [];       // cached events for the displayed range
 let _gcalEditId  = null;     // event being edited in the modal
 let _gcalGisReady = false;   // whether GIS library is loaded
 
-// ── Client ID helpers (Supabase is source of truth; localStorage is fast cache) ──
+// ── Client ID helpers — AES-GCM encrypted at rest (Supabase + localStorage) ──
+//
+// Encryption:  AES-256-GCM, key = PBKDF2(userID + APP_SALT, 100k iterations)
+// Stored value format:  "gcid_v1:<base64(12-byte IV ‖ ciphertext)>"
+// In-memory (_gcalClientIdCache) always holds the PLAINTEXT for use by the app.
+// Supabase and localStorage hold only the encrypted blob.
+// On first load, if the stored value has no prefix (legacy plaintext), it is
+// automatically encrypted and written back to both stores.
 
-let _gcalClientIdCache = '';    // in-memory; populated by gcalLoadClientId()
+const GCAL_ENC_PREFIX = 'gcid_v1:';
+let _gcalClientIdCache = '';   // plaintext, in-memory only
+let _gcalEncKey        = null; // CryptoKey, cached after first derivation
 
-function gcalClientId() {
-  // In-memory first, then localStorage fallback
-  return _gcalClientIdCache || localStorage.getItem('gcal_client_id') || '';
+async function _gcalDeriveKey() {
+  if (_gcalEncKey) return _gcalEncKey;
+  const uid     = _currentUserId || 'omar_os_fallback_uid';
+  const APP_SALT = 'omar_os_gcal_cid_v1';
+  const rawKey   = new TextEncoder().encode(uid + APP_SALT);
+  const pbkdf2   = await crypto.subtle.importKey('raw', rawKey, 'PBKDF2', false, ['deriveKey']);
+  _gcalEncKey    = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: new TextEncoder().encode('gcal_pbkdf2_salt_v1'), iterations: 100000, hash: 'SHA-256' },
+    pbkdf2,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+  return _gcalEncKey;
 }
 
-// Fetch from Supabase and warm caches
-async function gcalLoadClientId() {
+async function _gcalEncrypt(plaintext) {
+  const key = await _gcalDeriveKey();
+  const iv  = crypto.getRandomValues(new Uint8Array(12));
+  const buf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plaintext));
+  const out = new Uint8Array(12 + buf.byteLength);
+  out.set(iv, 0);
+  out.set(new Uint8Array(buf), 12);
+  return GCAL_ENC_PREFIX + btoa(String.fromCharCode(...out));
+}
+
+async function _gcalDecrypt(stored) {
+  if (!stored)                             return '';
+  if (!stored.startsWith(GCAL_ENC_PREFIX)) return stored; // legacy plaintext — return as-is so we can migrate it
+  const key      = await _gcalDeriveKey();
+  const bytes    = Uint8Array.from(atob(stored.slice(GCAL_ENC_PREFIX.length)), c => c.charCodeAt(0));
+  const iv       = bytes.slice(0, 12);
+  const cipher   = bytes.slice(12);
   try {
-    const rows = await sb('user_profile', '?id=eq.default&select=google_client_id');
-    const cid  = rows?.[0]?.google_client_id ?? null;
-    if (cid) {
-      _gcalClientIdCache = cid;
-      localStorage.setItem('gcal_client_id', cid);
-    } else {
-      // Nothing in DB — keep whatever localStorage has (allows offline fallback)
-      _gcalClientIdCache = localStorage.getItem('gcal_client_id') || '';
-    }
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
+    return new TextDecoder().decode(plain);
   } catch(e) {
-    // Network failure — fall back to localStorage cache
-    console.warn('gcalLoadClientId:', e);
-    _gcalClientIdCache = localStorage.getItem('gcal_client_id') || '';
+    console.warn('gcalDecrypt failed — returning empty:', e.message);
+    return '';
   }
 }
 
-// Persist to Supabase + both caches
+// Returns the plaintext client ID for immediate use (sync, safe after gcalLoadClientId)
+function gcalClientId() {
+  return _gcalClientIdCache;
+}
+
+// Fetch from Supabase, decrypt, warm caches
+async function gcalLoadClientId() {
+  try {
+    const rows    = await sb('user_profile', '?id=eq.default&select=google_client_id');
+    const stored  = rows?.[0]?.google_client_id ?? null;
+
+    if (stored) {
+      const plain = await _gcalDecrypt(stored);
+      _gcalClientIdCache = plain;
+
+      // Migrate: if legacy plaintext was returned, encrypt and write back now
+      if (!stored.startsWith(GCAL_ENC_PREFIX) && plain) {
+        const enc = await _gcalEncrypt(plain);
+        localStorage.setItem('gcal_client_id', enc);
+        // silently re-save encrypted version
+        fetch(`${SUPABASE_URL}/rest/v1/user_profile?id=eq.default`, {
+          method: 'PATCH',
+          headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ google_client_id: enc }),
+        }).catch(e => console.warn('gcalLoadClientId migrate:', e));
+      } else {
+        localStorage.setItem('gcal_client_id', stored); // already encrypted
+      }
+    } else {
+      // Nothing in DB — try encrypted localStorage fallback
+      const lsVal = localStorage.getItem('gcal_client_id');
+      _gcalClientIdCache = lsVal ? await _gcalDecrypt(lsVal) : '';
+    }
+  } catch(e) {
+    console.warn('gcalLoadClientId:', e);
+    const lsVal = localStorage.getItem('gcal_client_id');
+    try { _gcalClientIdCache = lsVal ? await _gcalDecrypt(lsVal) : ''; }
+    catch { _gcalClientIdCache = ''; }
+  }
+}
+
+// Encrypt and persist to Supabase + localStorage; keep plaintext only in memory
 async function gcalSaveClientId(cid) {
   _gcalClientIdCache = cid;
-  if (cid) localStorage.setItem('gcal_client_id', cid);
-  else     localStorage.removeItem('gcal_client_id');
+  if (!cid) {
+    localStorage.removeItem('gcal_client_id');
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/user_profile?id=eq.default`, {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ google_client_id: null }),
+      });
+    } catch(e) { console.warn('gcalSaveClientId (clear):', e); }
+    return;
+  }
+  const enc = await _gcalEncrypt(cid);
+  localStorage.setItem('gcal_client_id', enc); // encrypted blob
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/user_profile?id=eq.default`, {
       method:  'PATCH',
-      headers: {
-        apikey:         SUPABASE_ANON,
-        Authorization:  `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        Prefer:         'return=minimal',
-      },
-      body: JSON.stringify({ google_client_id: cid || null }),
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ google_client_id: enc }),
     });
   } catch(e) { console.warn('gcalSaveClientId:', e); }
 }
@@ -10328,22 +10522,27 @@ window.gcalDeleteEvent = async function() {
   if (!_gcalEditId) return;
   const ev  = _gcalEvents.find(e => e.id === _gcalEditId);
   const ttl = ev?.summary || 'this event';
-  if (!confirm(`Delete "${ttl}" from Google Calendar?`)) return;
+  const editId = _gcalEditId;
 
-  const btn = document.getElementById('gcal-delete-btn');
-  const err = document.getElementById('gcal-modal-err');
-  btn.textContent = 'Deleting…';
-  btn.disabled = true;
-
-  try {
-    await gcalFetch(`/calendars/primary/events/${_gcalEditId}`, { method: 'DELETE' });
-    closeGcalModal();
-    await gcalLoadEvents();
-  } catch(e) {
-    err.textContent = 'Delete failed: ' + e.message;
-    btn.textContent = 'Delete';
-    btn.disabled = false;
-  }
+  showConfirm({
+    title: 'Delete Event?',
+    subtitle: `"${ttl}" will be permanently removed from your Google Calendar.`,
+    okLabel: 'DELETE EVENT',
+    icon: '📅',
+    onConfirm: async () => {
+      const btn = document.getElementById('gcal-delete-btn');
+      const err = document.getElementById('gcal-modal-err');
+      if (btn) { btn.textContent = 'Deleting…'; btn.disabled = true; }
+      try {
+        await gcalFetch(`/calendars/primary/events/${editId}`, { method: 'DELETE' });
+        closeGcalModal();
+        await gcalLoadEvents();
+      } catch(e) {
+        if (err) err.textContent = 'Delete failed: ' + e.message;
+        if (btn) { btn.textContent = 'Delete'; btn.disabled = false; }
+      }
+    }
+  });
 };
 
 // ── Settings status refresh ───────────────────────────────────────────────────
@@ -10866,6 +11065,50 @@ function calTabCurrentDays() {
   };
 })();
 
+// ══════════════════════════════════════════════════════════════════════════════
+// CUSTOM CONFIRM MODAL — replaces all browser confirm() dialogs
+// ══════════════════════════════════════════════════════════════════════════════
+
+let _confirmCallback = null;
+
+/**
+ * showConfirm({ title, subtitle, okLabel, okClass, icon, onConfirm })
+ * okClass: 'danger' (red) | 'warning' (gold)
+ */
+window.showConfirm = function({ title = 'Are you sure?', subtitle = 'This action cannot be undone.', okLabel = 'DELETE', okClass = 'danger', icon = '🗑', onConfirm }) {
+  _confirmCallback = onConfirm;
+  document.getElementById('confirm-title').textContent    = title;
+  document.getElementById('confirm-subtitle').textContent = subtitle;
+  document.getElementById('confirm-icon').textContent     = icon;
+  document.getElementById('confirm-icon').className       = `confirm-icon ${okClass}`;
+  const okBtn = document.getElementById('confirm-ok-btn');
+  okBtn.textContent = okLabel;
+  okBtn.className   = `confirm-ok-btn ${okClass}`;
+  document.getElementById('confirm-modal').classList.add('open');
+  // Focus the cancel button by default (safer)
+  setTimeout(() => document.querySelector('#confirm-modal .confirm-cancel-btn')?.focus(), 60);
+};
+
+window._confirmClose = function() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  _confirmCallback = null;
+};
+
+window._confirmExecute = function() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  const cb = _confirmCallback;
+  _confirmCallback = null;
+  if (cb) cb();
+};
+
+// Keyboard: Escape = cancel, Enter = confirm (only when modal is open)
+document.addEventListener('keydown', e => {
+  const modal = document.getElementById('confirm-modal');
+  if (!modal?.classList.contains('open')) return;
+  if (e.key === 'Escape') { e.preventDefault(); _confirmClose(); }
+  if (e.key === 'Enter')  { e.preventDefault(); _confirmExecute(); }
+});
+
 
 </script>
 
@@ -10974,6 +11217,19 @@ function calTabCurrentDays() {
         <button class="btn-cancel" onclick="closeGcalModal()">Cancel</button>
         <button class="btn-save" id="gcal-save-btn" onclick="gcalSaveEvent()">Create</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CUSTOM CONFIRM MODAL ── -->
+<div class="modal-overlay" id="confirm-modal" onclick="if(event.target===this)_confirmClose()">
+  <div class="modal">
+    <div class="confirm-icon danger" id="confirm-icon">🗑</div>
+    <div class="confirm-title" id="confirm-title">Delete this item?</div>
+    <div class="confirm-subtitle" id="confirm-subtitle">This action cannot be undone.</div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel-btn" onclick="_confirmClose()">CANCEL</button>
+      <button class="confirm-ok-btn danger" id="confirm-ok-btn" onclick="_confirmExecute()">DELETE</button>
     </div>
   </div>
 </div>
